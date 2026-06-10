@@ -423,7 +423,7 @@ function CreateTaskDialog({ iso, onClose }: { iso: string | null; onClose: () =>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
