@@ -57,6 +57,7 @@ function KanbanPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [openTask, setOpenTask] = useState<Task | null>(null);
+  const [createCol, setCreateCol] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const filtered = useMemo(() => projectFilter === "all" ? tasks : tasks.filter(t => t.projectId === projectFilter), [tasks, projectFilter]);
