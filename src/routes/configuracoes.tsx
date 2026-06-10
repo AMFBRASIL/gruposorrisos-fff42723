@@ -12,7 +12,7 @@ import { useTheme, themeStore } from "@/lib/store";
 import {
   User, Bell, Mail, Plug, Activity, LayoutGrid, Shield, Palette,
   Users, KeyRound, Database, Globe, Sparkles, ChevronRight, Check,
-  Hash, Github as GithubIcon, Calendar, MessageSquare, Zap, Lock, Eye, Languages,
+  Hash, Code2, Calendar, MessageSquare, Zap, Lock, Eye, Languages,
 } from "lucide-react";
 
 export const Route = createFileRoute("/configuracoes")({
