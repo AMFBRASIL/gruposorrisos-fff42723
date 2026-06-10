@@ -28,14 +28,6 @@ function DraggableCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
   );
 }
 
-function DraggableCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
-  return (
-    <div ref={setNodeRef} {...listeners} {...attributes} style={{ opacity: isDragging ? 0.3 : 1 }}>
-      <TaskCard task={task} onClick={onOpen} />
-    </div>
-  );
-}
 
 function Column({ id, title, tasks, onOpen, onCreate }: { id: string; title: string; tasks: Task[]; onOpen: (t: Task) => void; onCreate: (colId: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id });
