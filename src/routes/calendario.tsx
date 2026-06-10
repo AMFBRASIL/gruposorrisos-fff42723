@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Plus, CalendarDays } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, FileText, Users as UsersIcon, Layers, Flag, CheckCircle2, Sparkles, ArrowRight, ArrowLeft, X } from "lucide-react";
 import { getProject, projects, users, COLUMNS, priorityMeta, type Task, type Priority } from "@/lib/mock-data";
 import { TaskDialog } from "@/components/task-dialog";
+import wizardBg from "@/assets/wizard-bg.jpg";
 
 export const Route = createFileRoute("/calendario")({
   head: () => ({ meta: [
