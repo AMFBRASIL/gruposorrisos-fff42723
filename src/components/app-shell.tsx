@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/projetos", label: "Projetos", icon: FolderKanban },
-  { to: "/kanban", label: "Kanban", icon: Trello },
+  { to: "/kanban", label: "Kanban", icon: Columns3 },
   { to: "/minhas-tarefas", label: "Minhas Tarefas", icon: CheckSquare },
   { to: "/calendario", label: "Calendário", icon: Calendar },
   { to: "/equipe", label: "Equipe", icon: Users },
