@@ -9,6 +9,7 @@ import { Plus, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TaskDialog } from "@/components/task-dialog";
+import { CreateTaskWizard } from "@/components/create-task-wizard";
 
 export const Route = createFileRoute("/kanban")({
   head: () => ({ meta: [
@@ -27,7 +28,8 @@ function DraggableCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
   );
 }
 
-function Column({ id, title, tasks, onOpen }: { id: string; title: string; tasks: Task[]; onOpen: (t: Task) => void }) {
+
+function Column({ id, title, tasks, onOpen, onCreate }: { id: string; title: string; tasks: Task[]; onOpen: (t: Task) => void; onCreate: (colId: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div ref={setNodeRef} className={`flex flex-col w-72 shrink-0 rounded-xl border bg-muted/30 transition-colors ${isOver ? "border-primary bg-primary/5" : "border-border"}`}>
@@ -36,11 +38,15 @@ function Column({ id, title, tasks, onOpen }: { id: string; title: string; tasks
           <h3 className="text-sm font-semibold">{title}</h3>
           <span className="text-xs text-muted-foreground bg-background rounded px-1.5 py-0.5">{tasks.length}</span>
         </div>
-        <Button size="icon" variant="ghost" className="h-6 w-6"><Plus className="h-3.5 w-3.5" /></Button>
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onCreate(id)}><Plus className="h-3.5 w-3.5" /></Button>
       </div>
       <div className="flex-1 p-2 space-y-2 overflow-y-auto min-h-32">
         {tasks.map(t => <DraggableCard key={t.id} task={t} onOpen={() => onOpen(t)} />)}
-        {tasks.length === 0 && <div className="text-xs text-muted-foreground text-center py-8">Solte tarefas aqui</div>}
+        {tasks.length === 0 && (
+          <button onClick={() => onCreate(id)} className="w-full text-xs text-muted-foreground text-center py-8 hover:text-primary transition-colors">
+            + Nova tarefa
+          </button>
+        )}
       </div>
     </div>
   );
@@ -51,6 +57,7 @@ function KanbanPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [openTask, setOpenTask] = useState<Task | null>(null);
+  const [createCol, setCreateCol] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const filtered = useMemo(() => projectFilter === "all" ? tasks : tasks.filter(t => t.projectId === projectFilter), [tasks, projectFilter]);
@@ -77,6 +84,7 @@ function KanbanPage() {
   return (
     <AppShell title="Kanban" subtitle="Arraste tarefas entre colunas" actions={
       <div className="hidden md:flex items-center gap-2">
+        <Button size="sm" onClick={() => setCreateCol(COLUMNS[1].id)}><Plus className="h-3.5 w-3.5" /> Nova tarefa</Button>
         <Select value={projectFilter} onValueChange={setProjectFilter}>
           <SelectTrigger className="w-56 h-9"><Filter className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -89,13 +97,14 @@ function KanbanPage() {
       <div className="p-4 md:p-6 overflow-x-auto">
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className="flex gap-4 min-w-max pb-4">
-            {COLUMNS.map(c => <Column key={c.id} id={c.id} title={c.title} tasks={byCol[c.id]} onOpen={setOpenTask} />)}
+            {COLUMNS.map(c => <Column key={c.id} id={c.id} title={c.title} tasks={byCol[c.id]} onOpen={setOpenTask} onCreate={setCreateCol} />)}
             <button className="w-72 shrink-0 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors h-12 flex items-center justify-center gap-2"><Plus className="h-4 w-4" /> Adicionar coluna</button>
           </div>
           <DragOverlay>{activeTask ? <div className="rotate-2"><TaskCard task={activeTask} /></div> : null}</DragOverlay>
         </DndContext>
       </div>
       <TaskDialog task={openTask} onClose={() => setOpenTask(null)} />
+      <CreateTaskWizard open={createCol !== null} defaultStatus={createCol ?? undefined} onClose={() => setCreateCol(null)} />
     </AppShell>
   );
 }
