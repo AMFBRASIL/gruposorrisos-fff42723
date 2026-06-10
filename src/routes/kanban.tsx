@@ -83,7 +83,9 @@ function KanbanPage() {
 
   return (
     <AppShell title="Kanban" subtitle="Arraste tarefas entre colunas" actions={
+    <AppShell title="Kanban" subtitle="Arraste tarefas entre colunas" actions={
       <div className="hidden md:flex items-center gap-2">
+        <Button size="sm" onClick={() => setCreateCol(COLUMNS[1].id)}><Plus className="h-3.5 w-3.5" /> Nova tarefa</Button>
         <Select value={projectFilter} onValueChange={setProjectFilter}>
           <SelectTrigger className="w-56 h-9"><Filter className="h-3.5 w-3.5 mr-1" /><SelectValue /></SelectTrigger>
           <SelectContent>
