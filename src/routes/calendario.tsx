@@ -1,19 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { useTasks, tasksStore } from "@/lib/store";
-import { useState, type ReactNode } from "react";
+import { useTasks } from "@/lib/store";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, FileText, Users as UsersIcon, Layers, Flag, CheckCircle2, Sparkles, ArrowRight, ArrowLeft, X } from "lucide-react";
-import { getProject, projects, users, COLUMNS, priorityMeta, type Task, type Priority } from "@/lib/mock-data";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { getProject, priorityMeta, type Task } from "@/lib/mock-data";
 import { TaskDialog } from "@/components/task-dialog";
-import wizardBg from "@/assets/wizard-bg.jpg";
+import { CreateTaskWizard } from "@/components/create-task-wizard";
 
 export const Route = createFileRoute("/calendario")({
   head: () => ({ meta: [
