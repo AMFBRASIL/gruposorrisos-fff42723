@@ -9,6 +9,7 @@ import { Plus, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TaskDialog } from "@/components/task-dialog";
+import { CreateTaskWizard } from "@/components/create-task-wizard";
 
 export const Route = createFileRoute("/kanban")({
   head: () => ({ meta: [
