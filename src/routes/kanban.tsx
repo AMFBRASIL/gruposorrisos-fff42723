@@ -104,6 +104,7 @@ function KanbanPage() {
         </DndContext>
       </div>
       <TaskDialog task={openTask} onClose={() => setOpenTask(null)} />
+      <CreateTaskWizard open={createCol !== null} defaultStatus={createCol ?? undefined} onClose={() => setCreateCol(null)} />
     </AppShell>
   );
 }
