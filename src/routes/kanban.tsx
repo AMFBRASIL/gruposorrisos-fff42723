@@ -97,7 +97,7 @@ function KanbanPage() {
       <div className="p-4 md:p-6 overflow-x-auto">
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
           <div className="flex gap-4 min-w-max pb-4">
-            {COLUMNS.map(c => <Column key={c.id} id={c.id} title={c.title} tasks={byCol[c.id]} onOpen={setOpenTask} />)}
+            {COLUMNS.map(c => <Column key={c.id} id={c.id} title={c.title} tasks={byCol[c.id]} onOpen={setOpenTask} onCreate={setCreateCol} />)}
             <button className="w-72 shrink-0 rounded-xl border-2 border-dashed border-border text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors h-12 flex items-center justify-center gap-2"><Plus className="h-4 w-4" /> Adicionar coluna</button>
           </div>
           <DragOverlay>{activeTask ? <div className="rotate-2"><TaskCard task={activeTask} /></div> : null}</DragOverlay>
