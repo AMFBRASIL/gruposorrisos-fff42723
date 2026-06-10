@@ -227,9 +227,9 @@ function EmailSec() {
 
 function IntegracoesSec() {
   const items = [
-    { name: "Slack", icon: Slack, status: "Conectado" },
+    { name: "Slack", icon: Hash, status: "Conectado" },
     { name: "Google Calendar", icon: Calendar, status: "Conectado" },
-    { name: "GitHub", icon: Github, status: "Desconectado" },
+    { name: "GitHub", icon: Code2, status: "Desconectado" },
     { name: "WhatsApp Business", icon: MessageSquare, status: "Em breve" },
     { name: "Microsoft Teams", icon: Globe, status: "Desconectado" },
     { name: "Webhook personalizado", icon: Plug, status: "Conectado" },
