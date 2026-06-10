@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as ProjetosRouteImport } from './routes/projetos'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as EquipeRouteImport } from './routes/equipe'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
@@ -31,6 +32,11 @@ const ProjetosRoute = ProjetosRouteImport.update({
 const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
   id: '/minhas-tarefas',
   path: '/minhas-tarefas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KanbanRoute = KanbanRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
   '/kanban': typeof KanbanRoute
+  '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
   '/kanban': typeof KanbanRoute
+  '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
   '/kanban': typeof KanbanRoute
+  '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/equipe'
     | '/kanban'
+    | '/login'
     | '/minhas-tarefas'
     | '/projetos'
     | '/relatorios'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/equipe'
     | '/kanban'
+    | '/login'
     | '/minhas-tarefas'
     | '/projetos'
     | '/relatorios'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/equipe'
     | '/kanban'
+    | '/login'
     | '/minhas-tarefas'
     | '/projetos'
     | '/relatorios'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   EquipeRoute: typeof EquipeRoute
   KanbanRoute: typeof KanbanRoute
+  LoginRoute: typeof LoginRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
   ProjetosRoute: typeof ProjetosRoute
   RelatoriosRoute: typeof RelatoriosRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/minhas-tarefas'
       fullPath: '/minhas-tarefas'
       preLoaderRoute: typeof MinhasTarefasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kanban': {
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   EquipeRoute: EquipeRoute,
   KanbanRoute: KanbanRoute,
+  LoginRoute: LoginRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
   ProjetosRoute: ProjetosRoute,
   RelatoriosRoute: RelatoriosRoute,
@@ -208,13 +229,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
