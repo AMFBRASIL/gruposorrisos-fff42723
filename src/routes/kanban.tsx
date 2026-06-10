@@ -28,7 +28,16 @@ function DraggableCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
   );
 }
 
-function Column({ id, title, tasks, onOpen }: { id: string; title: string; tasks: Task[]; onOpen: (t: Task) => void }) {
+function DraggableCard({ task, onOpen }: { task: Task; onOpen: () => void }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes} style={{ opacity: isDragging ? 0.3 : 1 }}>
+      <TaskCard task={task} onClick={onOpen} />
+    </div>
+  );
+}
+
+function Column({ id, title, tasks, onOpen, onCreate }: { id: string; title: string; tasks: Task[]; onOpen: (t: Task) => void; onCreate: (colId: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <div ref={setNodeRef} className={`flex flex-col w-72 shrink-0 rounded-xl border bg-muted/30 transition-colors ${isOver ? "border-primary bg-primary/5" : "border-border"}`}>
@@ -37,11 +46,15 @@ function Column({ id, title, tasks, onOpen }: { id: string; title: string; tasks
           <h3 className="text-sm font-semibold">{title}</h3>
           <span className="text-xs text-muted-foreground bg-background rounded px-1.5 py-0.5">{tasks.length}</span>
         </div>
-        <Button size="icon" variant="ghost" className="h-6 w-6"><Plus className="h-3.5 w-3.5" /></Button>
+        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onCreate(id)}><Plus className="h-3.5 w-3.5" /></Button>
       </div>
       <div className="flex-1 p-2 space-y-2 overflow-y-auto min-h-32">
         {tasks.map(t => <DraggableCard key={t.id} task={t} onOpen={() => onOpen(t)} />)}
-        {tasks.length === 0 && <div className="text-xs text-muted-foreground text-center py-8">Solte tarefas aqui</div>}
+        {tasks.length === 0 && (
+          <button onClick={() => onCreate(id)} className="w-full text-xs text-muted-foreground text-center py-8 hover:text-primary transition-colors">
+            + Nova tarefa
+          </button>
+        )}
       </div>
     </div>
   );
