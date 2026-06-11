@@ -84,7 +84,9 @@ function fmtLong(d: string) {
   catch { return d; }
 }
 
-export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () => void }) {
+export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onClose: () => void }) {
+  const allTasks = useTasks();
+  const task = taskProp ? (allTasks.find(t => t.id === taskProp.id) ?? taskProp) : null;
   const [tab, setTab] = useState("descricao");
   const [newComment, setNewComment] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
