@@ -191,24 +191,25 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                   <div className="space-y-5">
                     <div>
                       <h3 className="text-xl font-semibold">Qual é o perfil?</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Selecione a função que esse membro terá na equipe.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Selecione o perfil de acesso desse membro. Os perfis são gerenciados em Perfis de Acesso.</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {ROLES.map(r => {
-                        const Icon = r.icon;
-                        const selected = role === r.id;
+                      {profiles.map(p => {
+                        const selected = profileId === p.id;
+                        const liberadas = ACCESS_PAGES.filter(pg => p.access[pg]).length;
                         return (
                           <button
-                            key={r.id} type="button" onClick={() => setRole(r.id)}
+                            key={p.id} type="button" onClick={() => setProfileId(p.id)}
                             className={`rounded-xl border p-5 text-left transition-all ${
                               selected ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" : "border-border hover:border-primary/50"
                             }`}
                           >
-                            <span className={`flex h-11 w-11 items-center justify-center rounded-lg ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                              <Icon className="h-5 w-5" />
+                            <span className="flex h-11 w-11 items-center justify-center rounded-lg text-white" style={{ backgroundColor: p.color }}>
+                              <ShieldCheck className="h-5 w-5" />
                             </span>
-                            <div className="mt-3 text-base font-semibold">{r.label}</div>
-                            <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{r.desc}</div>
+                            <div className="mt-3 text-base font-semibold">{p.name}</div>
+                            <div className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{p.description}</div>
+                            <div className="mt-2 text-[11px] font-medium text-primary">{liberadas} de {ACCESS_PAGES.length} páginas liberadas</div>
                           </button>
                         );
                       })}
