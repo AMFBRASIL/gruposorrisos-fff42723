@@ -581,7 +581,7 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
               <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Linhagem</label>
               <div className="rounded-md border border-border bg-background divide-y divide-border text-xs">
                 <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground">Criada</span><span>{fmtDate(task.createdAt)}</span></div>
-                {task.completedAt && <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground">Concluída</span><span className="text-success font-medium">{fmtDate(task.completedAt)}</span></div>}
+                {task.completedAt && <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground">Concluída</span><span className="text-success font-medium">{fmtDateTime(task.completedAt)}</span></div>}
                 <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground flex items-center gap-1"><GitBranch className="h-3 w-3" /> Projeto</span><span className="font-medium truncate ml-2">{project?.name}</span></div>
               </div>
             </div>
