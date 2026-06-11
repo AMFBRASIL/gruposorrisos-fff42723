@@ -45,7 +45,7 @@ function buildTimeline(task: Task): TLEvent[] {
     events.push({ id: "ev-log", kind: "log", at: task.startDate, user: assignee?.name || "—", title: `${task.loggedHours}h registradas`, detail: `Estimado: ${task.estimatedHours}h` });
   }
   task.checklist.filter(c => c.done).forEach((c) =>
-    events.push({ id: `ev-cl-${c.id}`, kind: "checklist", at: task.startDate, user: assignee?.name || "—", title: `Concluído: ${c.text}` })
+    events.push({ id: `ev-cl-${c.id}`, kind: "checklist", at: c.doneAt || task.startDate, user: assignee?.name || "—", title: `Concluído: ${c.text}`, detail: c.doneAt ? `Marcada em ${fmtDateTime(c.doneAt)}` : undefined })
   );
   task.comments.forEach(c => {
     const u = getUser(c.userId);
@@ -55,14 +55,24 @@ function buildTimeline(task: Task): TLEvent[] {
     events.push({ id: `ev-at-${a.id}`, kind: "attachment", at: task.startDate, user: assignee?.name || "—", title: `Anexo: ${a.name}`, detail: a.size })
   );
   if (task.completedAt) {
-    events.push({ id: "ev-done", kind: "completed", at: task.completedAt, user: assignee?.name || "—", title: "Tarefa concluída", detail: "Movida para Concluído" });
+    events.push({ id: "ev-done", kind: "completed", at: task.completedAt, user: assignee?.name || "—", title: "Tarefa concluída", detail: `Finalizada em ${fmtDateTime(task.completedAt)}` });
   }
   return events.sort((a, b) => a.at.localeCompare(b.at)).reverse();
 }
 
 function fmtDate(d: string) {
-  try { return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }); }
-  catch { return d; }
+  try {
+    const dt = new Date(d);
+    if (d.includes("T")) return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) + " " + dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  } catch { return d; }
+}
+function fmtDateTime(d: string) {
+  try {
+    const dt = new Date(d);
+    if (!d.includes("T")) return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+    return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) + " às " + dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  } catch { return d; }
 }
 function fmtLong(d: string) {
   try { return new Date(d).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "long" }); }
@@ -122,6 +132,13 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
     });
     setNewComment("");
   };
+  const toggleChecklist = (cid: string, v: boolean) => {
+    tasksStore.updateTask(task.id, {
+      checklist: task.checklist.map(x => x.id === cid ? { ...x, done: v, doneAt: v ? new Date().toISOString() : undefined } : x),
+    });
+  };
+  const completeTask = () => tasksStore.moveTask(task.id, "concluido");
+  const allDone = task.checklist.length > 0 && done === task.checklist.length;
 
   return (
     <Dialog open={!!task} onOpenChange={(o) => !o && onClose()}>
@@ -206,6 +223,19 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
                     <span key={t} className="text-xs rounded-full bg-muted/70 px-2 py-1 font-medium text-muted-foreground">#{t}</span>
                   ))}
                 </div>
+                {task.checklist.length > 0 && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <Progress value={pct} className="h-1.5 flex-1" />
+                    <span className="text-[11px] font-semibold tabular-nums text-muted-foreground whitespace-nowrap">
+                      {done}/{task.checklist.length} subtarefas · {pct}%
+                    </span>
+                  </div>
+                )}
+                {task.completedAt && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-success bg-success/10 border border-success/30 rounded-full px-2.5 py-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Concluída em {fmtDateTime(task.completedAt)}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -280,13 +310,37 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
                   <span className="text-xs font-medium text-muted-foreground">{done}/{task.checklist.length} concluídas · {pct}%</span>
                 </div>
                 <Progress value={pct} className="h-1.5" />
+                {allDone && task.status !== "concluido" && (
+                  <div className="rounded-lg border border-success/40 bg-success/10 p-3 flex flex-wrap items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+                    <div className="flex-1 min-w-40 text-sm">
+                      <span className="font-semibold">Todas as subtarefas concluídas!</span>{" "}
+                      <span className="text-muted-foreground">Você já pode finalizar esta tarefa.</span>
+                    </div>
+                    <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={completeTask}>
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Concluir Tarefa
+                    </Button>
+                  </div>
+                )}
+                {task.completedAt && (
+                  <div className="rounded-lg border border-success/40 bg-success/10 p-3 flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+                    <div className="text-sm">
+                      <span className="font-semibold">Tarefa concluída</span>{" "}
+                      <span className="text-muted-foreground">em {fmtDateTime(task.completedAt)}</span>
+                    </div>
+                  </div>
+                )}
                 <ul className="space-y-1">
                   {task.checklist.map(c => (
                     <li key={c.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group border border-transparent hover:border-border">
-                      <Checkbox checked={c.done} onCheckedChange={(v) => {
-                        tasksStore.updateTask(task.id, { checklist: task.checklist.map(x => x.id === c.id ? { ...x, done: !!v } : x) });
-                      }} />
+                      <Checkbox checked={c.done} onCheckedChange={(v) => toggleChecklist(c.id, !!v)} />
                       <span className={`text-sm flex-1 ${c.done ? "line-through text-muted-foreground" : ""}`}>{c.text}</span>
+                      {c.done && c.doneAt && (
+                        <span className="text-[10px] text-success font-medium whitespace-nowrap inline-flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> {fmtDate(c.doneAt)}
+                        </span>
+                      )}
                       <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100"
                         onClick={() => tasksStore.updateTask(task.id, { checklist: task.checklist.filter(x => x.id !== c.id) })}>
                         <Trash2 className="h-3 w-3" />
@@ -527,7 +581,7 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
               <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Linhagem</label>
               <div className="rounded-md border border-border bg-background divide-y divide-border text-xs">
                 <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground">Criada</span><span>{fmtDate(task.createdAt)}</span></div>
-                {task.completedAt && <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground">Concluída</span><span className="text-success font-medium">{fmtDate(task.completedAt)}</span></div>}
+                {task.completedAt && <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground">Concluída</span><span className="text-success font-medium">{fmtDateTime(task.completedAt)}</span></div>}
                 <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground flex items-center gap-1"><GitBranch className="h-3 w-3" /> Projeto</span><span className="font-medium truncate ml-2">{project?.name}</span></div>
               </div>
             </div>
@@ -547,14 +601,20 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
                 Finalize as subtarefas para concluir ({done}/{task.checklist.length})
               </span>
             )}
+            {task.completedAt && (
+              <span className="text-[11px] text-success font-medium hidden sm:inline-flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> Concluída em {fmtDateTime(task.completedAt)}
+              </span>
+            )}
             <Button variant="ghost" size="sm" onClick={onClose}>Fechar</Button>
             {task.status !== "concluido" ? (
               <Button
                 size="sm"
                 disabled={task.checklist.length > 0 && done < task.checklist.length}
-                onClick={() => { tasksStore.moveTask(task.id, "concluido"); onClose(); }}
+                className={allDone ? "bg-success text-success-foreground hover:bg-success/90 animate-in fade-in zoom-in-95 duration-300" : ""}
+                onClick={completeTask}
               >
-                <CheckCircle2 className="h-3.5 w-3.5" /> Concluir tarefa
+                <CheckCircle2 className="h-3.5 w-3.5" /> Concluir Tarefa
               </Button>
             ) : (
               <Button size="sm" variant="outline" onClick={() => tasksStore.moveTask(task.id, "dev")}>
