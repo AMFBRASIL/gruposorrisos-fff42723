@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { users } from "@/lib/mock-data";
-import type { ReactNode } from "react";
+import { CreateTaskWizard } from "@/components/create-task-wizard";
+import { useState, type ReactNode } from "react";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -22,6 +23,7 @@ export function AppShell({ children, title, subtitle, actions }: { children: Rea
   const pathname = useRouterState({ select: s => s.location.pathname });
   const theme = useTheme();
   const me = users[0];
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
@@ -74,10 +76,11 @@ export function AppShell({ children, title, subtitle, actions }: { children: Rea
             <Bell className="h-4 w-4" />
             <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-destructive" />
           </Button>
-          <Button size="sm" className="hidden sm:inline-flex"><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>
+          <Button size="sm" className="hidden sm:inline-flex" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>
         </header>
         <div className="flex-1 min-w-0">{children}</div>
       </main>
+      <CreateTaskWizard open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }
