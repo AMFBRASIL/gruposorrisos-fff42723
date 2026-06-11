@@ -5,15 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   CalendarDays, UserPlus, IdCard, Building2, CheckCircle2,
-  Sparkles, ArrowRight, ArrowLeft, X, Palette, Mail,
-  User as UserIcon, ShieldCheck, Briefcase, Crown,
+  Sparkles, ArrowRight, ArrowLeft, X, Palette, Mail, ShieldCheck,
 } from "lucide-react";
-import { usersStore } from "@/lib/store";
+import { usersStore, useAccessProfiles, ACCESS_PAGES } from "@/lib/store";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
   { id: 0, title: "Identidade", desc: "Nome, e-mail e cor", icon: IdCard },
-  { id: 1, title: "Perfil", desc: "Função na equipe", icon: ShieldCheck },
+  { id: 1, title: "Perfil", desc: "Perfil de acesso", icon: ShieldCheck },
   { id: 2, title: "Departamento", desc: "Área de atuação", icon: Building2 },
   { id: 3, title: "Revisão", desc: "Confirme e cadastre", icon: CheckCircle2 },
 ];
@@ -24,24 +23,18 @@ const COLORS = [
   "oklch(0.6 0.2 295)", "oklch(0.65 0.15 190)",
 ];
 
-const ROLES = [
-  { id: "Colaborador(a)", label: "Colaborador(a)", desc: "Executa tarefas e atualiza o progresso do dia a dia", icon: UserIcon },
-  { id: "Supervisor(a)", label: "Supervisor(a)", desc: "Acompanha a equipe e garante a qualidade das entregas", icon: ShieldCheck },
-  { id: "Gerente", label: "Gerente", desc: "Gerencia projetos, prazos e distribui as demandas", icon: Briefcase },
-  { id: "Diretor(a)", label: "Diretor(a)", desc: "Visão estratégica e decisões de alto nível", icon: Crown },
-];
-
 const DEPARTMENTS = ["Operações", "Diretoria", "Financeiro", "TI", "Marketing", "RH", "Comercial", "Jurídico"];
 
 const initialsOf = (name: string) =>
   name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("") || "?";
 
 export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const profiles = useAccessProfiles();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [color, setColor] = useState(COLORS[0]);
-  const [role, setRole] = useState(ROLES[0].id);
+  const [profileId, setProfileId] = useState<string>(profiles[0]?.id ?? "");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
 
   const prettyDate = new Date().toLocaleDateString("pt-BR", {
@@ -50,27 +43,29 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
 
   const reset = () => {
     setStep(0); setName(""); setEmail(""); setColor(COLORS[0]);
-    setRole(ROLES[0].id); setDepartment(DEPARTMENTS[0]);
+    setProfileId(profiles[0]?.id ?? ""); setDepartment(DEPARTMENTS[0]);
   };
 
   const close = () => { reset(); onClose(); };
 
+  const selectedProfile = profiles.find(p => p.id === profileId) ?? profiles[0];
+
   const submit = () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !selectedProfile) return;
     usersStore.addUser({
       id: `u_${Date.now().toString(36)}`,
       name: name.trim(),
       email: email.trim() || `${name.trim().split(/\s+/)[0]?.toLowerCase()}@gruposorrisos.com.br`,
-      role,
+      role: selectedProfile.name,
       department,
       initials: initialsOf(name),
       color,
-    });
+      profileId: selectedProfile.id,
+    }, { ...selectedProfile.access });
     close();
   };
 
   const canNext = step === 0 ? name.trim().length > 0 : true;
-  const roleMeta = ROLES.find(r => r.id === role);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
