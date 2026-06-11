@@ -213,7 +213,7 @@ function ProfileEditor({ profile, onSaved, onCancel }: {
           <div>
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Cargo</Label>
             <Select value={role} onValueChange={setRole}>
-              <SelectTrigger className="mt-1.5 h-10"><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectTrigger className="mt-1.5 h-10"><SelectValue placeholder="Selecione">{role}</SelectValue></SelectTrigger>
               <SelectContent>
                 {roleOptions.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
               </SelectContent>
@@ -222,7 +222,7 @@ function ProfileEditor({ profile, onSaved, onCancel }: {
           <div>
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Departamento</Label>
             <Select value={department} onValueChange={setDepartment}>
-              <SelectTrigger className="mt-1.5 h-10"><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectTrigger className="mt-1.5 h-10"><SelectValue placeholder="Selecione">{department}</SelectValue></SelectTrigger>
               <SelectContent>
                 {departmentOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
               </SelectContent>
