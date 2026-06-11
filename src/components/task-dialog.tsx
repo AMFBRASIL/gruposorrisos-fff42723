@@ -212,17 +212,17 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
         </div>
 
         {/* Body */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] overflow-hidden mt-4" style={{ maxHeight: "calc(94vh - 260px)" }}>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_300px_320px] overflow-hidden mt-4" style={{ maxHeight: "calc(94vh - 260px)" }}>
           {/* Main */}
           <div className="overflow-y-auto">
             <Tabs value={tab} onValueChange={setTab} className="w-full">
               <div className="px-6 pt-2 border-b border-border sticky top-0 bg-background z-10">
-                <TabsList className="bg-transparent p-0 h-auto gap-1">
+                <TabsList className="bg-transparent p-0 h-auto gap-1 flex-wrap">
                   <TabsTrigger value="descricao" className="data-[state=active]:bg-muted rounded-md text-xs"><FileText className="h-3.5 w-3.5 mr-1.5" />Descrição</TabsTrigger>
                   <TabsTrigger value="subtarefas" className="data-[state=active]:bg-muted rounded-md text-xs"><CheckSquare2 className="h-3.5 w-3.5 mr-1.5" />Subtarefas <span className="ml-1.5 text-[10px] bg-muted px-1.5 rounded-full">{done}/{task.checklist.length}</span></TabsTrigger>
                   <TabsTrigger value="comentarios" className="data-[state=active]:bg-muted rounded-md text-xs"><MessageSquare className="h-3.5 w-3.5 mr-1.5" />Comentários <span className="ml-1.5 text-[10px] bg-muted px-1.5 rounded-full">{task.comments.length}</span></TabsTrigger>
                   <TabsTrigger value="anexos" className="data-[state=active]:bg-muted rounded-md text-xs"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Anexos <span className="ml-1.5 text-[10px] bg-muted px-1.5 rounded-full">{task.attachments.length}</span></TabsTrigger>
-                  <TabsTrigger value="timeline" className="data-[state=active]:bg-muted rounded-md text-xs"><ActivityIcon className="h-3.5 w-3.5 mr-1.5" />Histórico <span className="ml-1.5 text-[10px] bg-muted px-1.5 rounded-full">{timeline.length}</span></TabsTrigger>
+                  <TabsTrigger value="timeline" className="data-[state=active]:bg-muted rounded-md text-xs md:hidden"><ActivityIcon className="h-3.5 w-3.5 mr-1.5" />Histórico <span className="ml-1.5 text-[10px] bg-muted px-1.5 rounded-full">{timeline.length}</span></TabsTrigger>
                 </TabsList>
               </div>
 
