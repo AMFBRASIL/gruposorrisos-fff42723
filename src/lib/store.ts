@@ -1,5 +1,36 @@
 import { useSyncExternalStore } from "react";
-import { tasks as initialTasks, projects as initialProjects, type Task, type TaskStatus, type Project } from "./mock-data";
+import { tasks as initialTasks, projects as initialProjects, users as initialUsers, type Task, type TaskStatus, type Project, type User } from "./mock-data";
+
+// User profiles store (with page access)
+export const ACCESS_PAGES = ["/", "/projetos", "/kanban", "/minhas-tarefas", "/calendario", "/equipe", "/relatorios", "/configuracoes", "/perfis"] as const;
+export interface UserProfile extends User { access: Record<string, boolean>; }
+
+const fullAccess = (): Record<string, boolean> => Object.fromEntries(ACCESS_PAGES.map(p => [p, true]));
+
+let profilesState: UserProfile[] = initialUsers.map(u => ({ ...u, access: fullAccess() }));
+const profileListeners = new Set<() => void>();
+const notifyProfiles = () => profileListeners.forEach(l => l());
+
+export const usersStore = {
+  getSnapshot: () => profilesState,
+  subscribe: (l: () => void) => { profileListeners.add(l); return () => profileListeners.delete(l); },
+  addUser(u: User, access?: Record<string, boolean>) {
+    profilesState = [...profilesState, { ...u, access: access ?? fullAccess() }];
+    notifyProfiles();
+  },
+  updateUser(id: string, patch: Partial<UserProfile>) {
+    profilesState = profilesState.map(u => u.id === id ? { ...u, ...patch } : u);
+    notifyProfiles();
+  },
+  setAccess(id: string, page: string, value: boolean) {
+    profilesState = profilesState.map(u => u.id === id ? { ...u, access: { ...u.access, [page]: value } } : u);
+    notifyProfiles();
+  },
+};
+
+export function useUserProfiles() {
+  return useSyncExternalStore(usersStore.subscribe, usersStore.getSnapshot, usersStore.getSnapshot);
+}
 
 let state: Task[] = [...initialTasks];
 const listeners = new Set<() => void>();
