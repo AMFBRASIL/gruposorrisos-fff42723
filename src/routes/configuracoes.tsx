@@ -59,7 +59,7 @@ function SettingsPage() {
   const [active, setActive] = useState<SectionId | null>(null);
 
   return (
-    <AppShell title="Configurações" subtitle="Personalize toda a plataforma">
+    <AppShell title="Configurações" subtitle="Personalize toda a plataforma" primaryAction={null}>
       <div className="p-4 md:p-8 max-w-7xl">
         {!active ? (
           <>
