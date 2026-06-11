@@ -197,7 +197,7 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
 
                 {current.kind === "review" && (
                   <div className="rounded-xl border bg-card/40 p-5 space-y-4">
-                    {config.steps.map((s, i) => (
+                    {visibleSteps.map((s, i) => (
                       <div key={s.id} className={i > 0 ? "pt-4 border-t border-border" : ""}>
                         <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">{s.nav}</div>
                         {s.kind === "cards" && (() => {
