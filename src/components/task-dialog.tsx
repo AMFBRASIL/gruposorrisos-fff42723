@@ -601,14 +601,20 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
                 Finalize as subtarefas para concluir ({done}/{task.checklist.length})
               </span>
             )}
+            {task.completedAt && (
+              <span className="text-[11px] text-success font-medium hidden sm:inline-flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" /> Concluída em {fmtDateTime(task.completedAt)}
+              </span>
+            )}
             <Button variant="ghost" size="sm" onClick={onClose}>Fechar</Button>
             {task.status !== "concluido" ? (
               <Button
                 size="sm"
                 disabled={task.checklist.length > 0 && done < task.checklist.length}
-                onClick={() => { tasksStore.moveTask(task.id, "concluido"); onClose(); }}
+                className={allDone ? "bg-success text-success-foreground hover:bg-success/90 animate-in fade-in zoom-in-95 duration-300" : ""}
+                onClick={completeTask}
               >
-                <CheckCircle2 className="h-3.5 w-3.5" /> Concluir tarefa
+                <CheckCircle2 className="h-3.5 w-3.5" /> Concluir Tarefa
               </Button>
             ) : (
               <Button size="sm" variant="outline" onClick={() => tasksStore.moveTask(task.id, "dev")}>
