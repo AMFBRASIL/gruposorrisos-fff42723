@@ -607,6 +607,15 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
               </span>
             )}
             <Button variant="ghost" size="sm" onClick={onClose}>Fechar</Button>
+            {["backlog", "todo", "analise"].includes(task.status) && (
+              <Button
+                size="sm"
+                className="bg-info text-info-foreground hover:bg-info/90"
+                onClick={() => tasksStore.moveTask(task.id, "dev")}
+              >
+                <PlayCircle className="h-3.5 w-3.5" /> Iniciar Tarefa
+              </Button>
+            )}
             {task.status !== "concluido" ? (
               <Button
                 size="sm"
