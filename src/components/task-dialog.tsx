@@ -45,7 +45,7 @@ function buildTimeline(task: Task): TLEvent[] {
     events.push({ id: "ev-log", kind: "log", at: task.startDate, user: assignee?.name || "—", title: `${task.loggedHours}h registradas`, detail: `Estimado: ${task.estimatedHours}h` });
   }
   task.checklist.filter(c => c.done).forEach((c) =>
-    events.push({ id: `ev-cl-${c.id}`, kind: "checklist", at: task.startDate, user: assignee?.name || "—", title: `Concluído: ${c.text}` })
+    events.push({ id: `ev-cl-${c.id}`, kind: "checklist", at: c.doneAt || task.startDate, user: assignee?.name || "—", title: `Concluído: ${c.text}`, detail: c.doneAt ? `Marcada em ${fmtDateTime(c.doneAt)}` : undefined })
   );
   task.comments.forEach(c => {
     const u = getUser(c.userId);
@@ -55,14 +55,24 @@ function buildTimeline(task: Task): TLEvent[] {
     events.push({ id: `ev-at-${a.id}`, kind: "attachment", at: task.startDate, user: assignee?.name || "—", title: `Anexo: ${a.name}`, detail: a.size })
   );
   if (task.completedAt) {
-    events.push({ id: "ev-done", kind: "completed", at: task.completedAt, user: assignee?.name || "—", title: "Tarefa concluída", detail: "Movida para Concluído" });
+    events.push({ id: "ev-done", kind: "completed", at: task.completedAt, user: assignee?.name || "—", title: "Tarefa concluída", detail: `Finalizada em ${fmtDateTime(task.completedAt)}` });
   }
   return events.sort((a, b) => a.at.localeCompare(b.at)).reverse();
 }
 
 function fmtDate(d: string) {
-  try { return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }); }
-  catch { return d; }
+  try {
+    const dt = new Date(d);
+    if (d.includes("T")) return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) + " " + dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  } catch { return d; }
+}
+function fmtDateTime(d: string) {
+  try {
+    const dt = new Date(d);
+    if (!d.includes("T")) return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+    return dt.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" }) + " às " + dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  } catch { return d; }
 }
 function fmtLong(d: string) {
   try { return new Date(d).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "long" }); }
@@ -122,6 +132,13 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
     });
     setNewComment("");
   };
+  const toggleChecklist = (cid: string, v: boolean) => {
+    tasksStore.updateTask(task.id, {
+      checklist: task.checklist.map(x => x.id === cid ? { ...x, done: v, doneAt: v ? new Date().toISOString() : undefined } : x),
+    });
+  };
+  const completeTask = () => tasksStore.moveTask(task.id, "concluido");
+  const allDone = task.checklist.length > 0 && done === task.checklist.length;
 
   return (
     <Dialog open={!!task} onOpenChange={(o) => !o && onClose()}>
@@ -206,6 +223,19 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
                     <span key={t} className="text-xs rounded-full bg-muted/70 px-2 py-1 font-medium text-muted-foreground">#{t}</span>
                   ))}
                 </div>
+                {task.checklist.length > 0 && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <Progress value={pct} className="h-1.5 flex-1" />
+                    <span className="text-[11px] font-semibold tabular-nums text-muted-foreground whitespace-nowrap">
+                      {done}/{task.checklist.length} subtarefas · {pct}%
+                    </span>
+                  </div>
+                )}
+                {task.completedAt && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-success bg-success/10 border border-success/30 rounded-full px-2.5 py-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Concluída em {fmtDateTime(task.completedAt)}
+                  </div>
+                )}
               </div>
             </div>
           </div>
