@@ -324,7 +324,11 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
     title: "E-mail",
     heading: "Conecte o envio\nde e-mails.",
     steps: [
-      { kind: "cards", id: "provedor", nav: "Provedor", navDesc: "Serviço de envio", icon: Mail, title: "Qual provedor de e-mail?", subtitle: "Selecione o serviço que será usado para enviar os e-mails da plataforma.", options: [
+      { kind: "cards", id: "metodo", nav: "Método", navDesc: "API ou SMTP", icon: Mail, title: "Como você quer enviar?", subtitle: "Escolha entre conectar um serviço por API ou usar seu próprio servidor SMTP.", options: [
+        { id: "api", label: "API", desc: "Conecte um serviço de envio (Resend, SendGrid, etc.) usando uma chave de API", icon: Zap },
+        { id: "smtp", label: "SMTP", desc: "Use seu próprio servidor de e-mail com host, porta e credenciais", icon: Server },
+      ]},
+      { kind: "cards", id: "provedor", compact: true, when: (sel) => sel["metodo"] === "api", nav: "Provedor", navDesc: "Serviço de envio", icon: Cloud, title: "Qual provedor de API?", subtitle: "Selecione o serviço que será usado para enviar os e-mails da plataforma.", options: [
         { id: "resend", label: "Resend", desc: "API moderna para devs, ótima entregabilidade", icon: Zap },
         { id: "sendgrid", label: "SendGrid", desc: "Plataforma robusta da Twilio para alto volume", icon: Cloud },
         { id: "mailgun", label: "Mailgun", desc: "API flexível com validação e rotas de e-mail", icon: Globe },
@@ -332,11 +336,11 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
         { id: "postmark", label: "Postmark", desc: "Focado em e-mails transacionais ultrarrápidos", icon: FileText },
         { id: "brevo", label: "Brevo", desc: "E-mail, SMS e automação em uma só plataforma", icon: MessageSquare },
         { id: "mailjet", label: "Mailjet", desc: "Envio colaborativo com editor de templates", icon: Plug },
-        { id: "smtp", label: "SMTP Próprio", desc: "Use seu próprio servidor com host, porta e credenciais", icon: Server },
+        { id: "sparkpost", label: "SparkPost", desc: "Análises avançadas e alta performance", icon: Activity },
+        { id: "elastic", label: "Elastic Email", desc: "Custo acessível para grandes volumes", icon: Sparkles },
       ]},
-      { kind: "fields", id: "dados", nav: "Credenciais", navDesc: "Dados de conexão", icon: KeyRound, title: "Dados de conexão", subtitle: "Preencha as credenciais do provedor escolhido.", fields: (sel) => {
-        const p = sel["provedor"];
-        if (p === "smtp") return [
+      { kind: "fields", id: "dados", nav: "Credenciais", navDesc: "Dados de acesso", icon: KeyRound, title: "Dados de acesso", subtitle: "Preencha as credenciais de conexão.", fields: (sel) => {
+        if (sel["metodo"] === "smtp") return [
           { id: "host", label: "Host SMTP", placeholder: "smtp.gruposorrisos.com", defaultValue: "smtp.gruposorrisos.com" },
           { id: "porta", label: "Porta", placeholder: "587", defaultValue: "587" },
           { id: "usuario", label: "Usuário", placeholder: "noreply@gruposorrisos.com", defaultValue: "noreply@gruposorrisos.com" },
@@ -344,6 +348,7 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
           { id: "seguranca", label: "Segurança (TLS/SSL)", placeholder: "TLS", defaultValue: "TLS" },
           { id: "remetente", label: "E-mail remetente", placeholder: "noreply@gruposorrisos.com" },
         ];
+        const p = sel["provedor"];
         if (p === "ses") return [
           { id: "accesskey", label: "Access Key ID", placeholder: "AKIAXXXXXXXXXXXXXXXX" },
           { id: "secretkey", label: "Secret Access Key", type: "password", placeholder: "••••••••" },
@@ -357,6 +362,8 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
           postmark: "xxxxxxxx-xxxx-xxxx",
           brevo: "xkeysib-xxxxxxxx",
           mailjet: "xxxxxxxxxxxxxxxx",
+          sparkpost: "xxxxxxxxxxxxxxxx",
+          elastic: "xxxxxxxxxxxxxxxx",
         };
         const fields: WizardField[] = [
           { id: "apikey", label: "Chave de API", type: "password", placeholder: keyPlaceholder[p] ?? "Cole a chave aqui", full: true },
