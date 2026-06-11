@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { type Task, type ChecklistItem, getUser, getProject, priorityMeta, COLUMNS, users } from "@/lib/mock-data";
-import { tasksStore } from "@/lib/store";
+import { tasksStore, useTasks } from "@/lib/store";
 import { UserAvatar, PriorityBadge } from "@/components/task-card";
 import {
   Calendar, Clock, MessageSquare, Paperclip, CheckSquare2, Tag,
