@@ -7,18 +7,19 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   CalendarDays, FileText, Users as UsersIcon, Layers, Flag, CheckCircle2,
-  Sparkles, ArrowRight, ArrowLeft, X,
+  Sparkles, ArrowRight, ArrowLeft, X, ListChecks, Plus, Trash2,
 } from "lucide-react";
-import { projects, users, COLUMNS, priorityMeta, type Priority } from "@/lib/mock-data";
+import { projects, users, COLUMNS, priorityMeta, type Priority, type ChecklistItem } from "@/lib/mock-data";
 import { tasksStore } from "@/lib/store";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
   { id: 0, title: "Identidade", desc: "Dê um nome claro à tarefa", icon: FileText },
   { id: 1, title: "Contexto", desc: "Projeto e descrição", icon: Layers },
-  { id: 2, title: "Pessoas", desc: "Quem vai executar", icon: UsersIcon },
-  { id: 3, title: "Prioridade", desc: "Urgência e coluna", icon: Flag },
-  { id: 4, title: "Revisão", desc: "Confirme e crie", icon: CheckCircle2 },
+  { id: 2, title: "Checklist", desc: "Subtarefas internas", icon: ListChecks },
+  { id: 3, title: "Pessoas", desc: "Quem vai executar", icon: UsersIcon },
+  { id: 4, title: "Prioridade", desc: "Urgência e coluna", icon: Flag },
+  { id: 5, title: "Revisão", desc: "Confirme e crie", icon: CheckCircle2 },
 ];
 
 export type CreateTaskWizardProps = {
@@ -40,6 +41,15 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
   const [priority, setPriority] = useState<Priority>("normal");
   const [status, setStatus] = useState(defaultStatus ?? COLUMNS[1].id);
   const [estimatedHours, setEstimatedHours] = useState("4");
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [newItem, setNewItem] = useState("");
+
+  const addChecklistItem = () => {
+    const text = newItem.trim();
+    if (!text) return;
+    setChecklist(list => [...list, { id: `c_${Date.now().toString(36)}_${list.length}`, text, done: false }]);
+    setNewItem("");
+  };
 
   const prettyDate = new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
@@ -50,6 +60,7 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
     setTitle(""); setDescription(""); setProjectId(projects[0].id);
     setAssigneeId(users[0].id); setPriority("normal");
     setStatus(defaultStatus ?? COLUMNS[1].id); setEstimatedHours("4");
+    setChecklist([]); setNewItem("");
   };
 
   const close = () => { reset(); onClose(); };
@@ -63,7 +74,7 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
       department: users.find(u => u.id === assigneeId)?.department ?? "",
       tags: [], priority, status,
       createdAt: "2026-06-10", startDate: "2026-06-10", dueDate: iso,
-      checklist: [], comments: [], attachments: [],
+      checklist, comments: [], attachments: [],
       estimatedHours: Number(estimatedHours) || 0, loggedHours: 0,
     });
     close();
@@ -202,6 +213,53 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
                 {step === 2 && (
                   <div className="space-y-5">
                     <div>
+                      <h3 className="text-xl font-semibold">Divida em subtarefas</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Crie um checklist de passos menores. A tarefa só poderá ser concluída quando todas as subtarefas forem finalizadas.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={newItem}
+                        onChange={(e) => setNewItem(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addChecklistItem(); } }}
+                        placeholder="Ex.: Levantar documentos necessários"
+                        className="h-11"
+                      />
+                      <Button type="button" onClick={addChecklistItem} disabled={!newItem.trim()} className="h-11 shrink-0">
+                        <Plus className="h-4 w-4" /> Adicionar
+                      </Button>
+                    </div>
+                    {checklist.length === 0 ? (
+                      <div className="rounded-xl border border-dashed p-8 text-center">
+                        <ListChecks className="h-8 w-8 mx-auto text-muted-foreground/50" />
+                        <p className="mt-3 text-sm text-muted-foreground">Nenhuma subtarefa ainda.</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">Este passo é opcional — você também pode adicionar depois.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {checklist.map((item, i) => (
+                          <div key={item.id} className="group flex items-center gap-3 rounded-lg border bg-card/40 p-3">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary text-[11px] font-semibold">{i + 1}</span>
+                            <span className="text-sm flex-1 min-w-0 truncate">{item.text}</span>
+                            <Button
+                              variant="ghost" size="icon" type="button"
+                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                              onClick={() => setChecklist(list => list.filter(x => x.id !== item.id))}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ))}
+                        <p className="text-[11px] text-muted-foreground pt-1">{checklist.length} subtarefa{checklist.length > 1 ? "s" : ""} adicionada{checklist.length > 1 ? "s" : ""}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {step === 3 && (
+                  <div className="space-y-5">
+                    <div>
                       <h3 className="text-xl font-semibold">Quem vai executar?</h3>
                       <p className="text-sm text-muted-foreground mt-1">Selecione o responsável principal pela tarefa.</p>
                     </div>
@@ -226,7 +284,7 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
                   </div>
                 )}
 
-                {step === 3 && (
+                {step === 4 && (
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-xl font-semibold">Qual a urgência?</h3>
@@ -265,7 +323,7 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
                   </div>
                 )}
 
-                {step === 4 && (
+                {step === 5 && (
                   <div className="space-y-5">
                     <div>
                       <h3 className="text-xl font-semibold">Tudo certo?</h3>
@@ -292,7 +350,26 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
                         <Field label="Prioridade"><span className={`text-xs font-semibold uppercase rounded px-1.5 py-0.5 ${priorityMeta[priority].className}`}>{priorityMeta[priority].label}</span></Field>
                         <Field label="Prazo"><span className="capitalize">{prettyDate}</span></Field>
                         <Field label="Estimativa">{estimatedHours}h</Field>
+                        <Field label="Checklist">
+                          <span className="inline-flex items-center gap-1.5 text-sm">
+                            <ListChecks className="h-3.5 w-3.5 text-muted-foreground" />
+                            {checklist.length > 0 ? `${checklist.length} subtarefa${checklist.length > 1 ? "s" : ""}` : "Sem subtarefas"}
+                          </span>
+                        </Field>
                       </div>
+                      {checklist.length > 0 && (
+                        <>
+                          <div className="h-px bg-border" />
+                          <ul className="space-y-1.5">
+                            {checklist.map((item, i) => (
+                              <li key={item.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10 text-primary text-[10px] font-semibold">{i + 1}</span>
+                                <span className="truncate">{item.text}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
