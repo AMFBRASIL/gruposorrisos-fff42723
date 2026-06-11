@@ -20,7 +20,7 @@ const nav = [
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 
-export function AppShell({ children, title, subtitle, actions }: { children: ReactNode; title: string; subtitle?: string; actions?: ReactNode }) {
+export function AppShell({ children, title, subtitle, actions, primaryAction }: { children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; primaryAction?: ReactNode }) {
   const pathname = useRouterState({ select: s => s.location.pathname });
   const theme = useTheme();
   const me = users[0];
@@ -77,7 +77,7 @@ export function AppShell({ children, title, subtitle, actions }: { children: Rea
             <Bell className="h-4 w-4" />
             <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-destructive" />
           </Button>
-          <Button size="sm" className="hidden sm:inline-flex" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>
+          {primaryAction ?? <Button size="sm" className="hidden sm:inline-flex" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>}
         </header>
         <div className="flex-1 min-w-0">{children}</div>
       </main>
