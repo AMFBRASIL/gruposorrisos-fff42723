@@ -633,15 +633,6 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
               </span>
             )}
             <Button variant="ghost" size="sm" onClick={onClose}>Fechar</Button>
-            {["backlog", "todo", "analise"].includes(task.status) && (
-              <Button
-                size="sm"
-                className="bg-info text-info-foreground hover:bg-info/90"
-                onClick={() => tasksStore.moveTask(task.id, "dev")}
-              >
-                <PlayCircle className="h-3.5 w-3.5" /> Iniciar Tarefa
-              </Button>
-            )}
             {task.status !== "concluido" ? (
               <Button
                 size="sm"
@@ -658,6 +649,62 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
             )}
           </div>
         </div>
+
+        {/* Quick confirm subtask modal */}
+        <Dialog open={!!confirmItem} onOpenChange={(o) => { if (!o) { setConfirmItem(null); setConfirmNote(""); } }}>
+          <DialogContent className="max-w-md gap-4">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-success/15 text-success flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <DialogTitle className="text-base">Confirmar execução</DialogTitle>
+                  <DialogDescription className="text-xs mt-0.5">Registre o que foi feito nesta subtarefa</DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm font-medium">
+              {confirmItem?.text}
+            </div>
+
+            <div className="rounded-lg border border-border divide-y divide-border text-xs">
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-muted-foreground">Executada por</span>
+                <span className="inline-flex items-center gap-2 font-medium">
+                  <UserAvatar id={currentUser.id} size={20} /> {currentUser.name} <span className="text-muted-foreground font-normal">· {currentUser.role}</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-muted-foreground inline-flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Data</span>
+                <span className="font-medium capitalize">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-muted-foreground inline-flex items-center gap-1.5"><Clock className="h-3 w-3" /> Horário</span>
+                <span className="font-medium tabular-nums">{new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">O que foi feito?</label>
+              <Textarea
+                autoFocus
+                value={confirmNote}
+                onChange={(e) => setConfirmNote(e.target.value)}
+                placeholder="Descreva brevemente o que foi executado..."
+                className="min-h-24 resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setConfirmItem(null); setConfirmNote(""); }}>Cancelar</Button>
+              <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={confirmChecklistDone}>
+                <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar execução
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
