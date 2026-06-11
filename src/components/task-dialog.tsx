@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { type Task, type ChecklistItem, getUser, getProject, priorityMeta, COLUMNS, users } from "@/lib/mock-data";
-import { tasksStore } from "@/lib/store";
+import { tasksStore, useTasks } from "@/lib/store";
 import { UserAvatar, PriorityBadge } from "@/components/task-card";
 import {
   Calendar, Clock, MessageSquare, Paperclip, CheckSquare2, Tag,
@@ -84,7 +84,9 @@ function fmtLong(d: string) {
   catch { return d; }
 }
 
-export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () => void }) {
+export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onClose: () => void }) {
+  const allTasks = useTasks();
+  const task = taskProp ? (allTasks.find(t => t.id === taskProp.id) ?? taskProp) : null;
   const [tab, setTab] = useState("descricao");
   const [newComment, setNewComment] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
