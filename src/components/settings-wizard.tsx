@@ -17,10 +17,12 @@ export interface WizardOption { id: string; label: string; desc?: string; icon?:
 export interface WizardField { id: string; label: string; placeholder?: string; type?: string; defaultValue?: string; full?: boolean }
 export interface WizardToggle { id: string; label: string; desc?: string; defaultChecked?: boolean }
 
+type StepBase = { id: string; nav: string; navDesc: string; icon: LucideIcon; title: string; subtitle: string; when?: (sel: Record<string, string>) => boolean };
+
 export type WizardStep =
-  | { kind: "cards"; id: string; nav: string; navDesc: string; icon: LucideIcon; title: string; subtitle: string; options: WizardOption[] }
-  | { kind: "fields"; id: string; nav: string; navDesc: string; icon: LucideIcon; title: string; subtitle: string; fields: WizardField[] | ((sel: Record<string, string>) => WizardField[]) }
-  | { kind: "toggles"; id: string; nav: string; navDesc: string; icon: LucideIcon; title: string; subtitle: string; toggles: WizardToggle[] };
+  | (StepBase & { kind: "cards"; options: WizardOption[]; compact?: boolean })
+  | (StepBase & { kind: "fields"; fields: WizardField[] | ((sel: Record<string, string>) => WizardField[]) })
+  | (StepBase & { kind: "toggles"; toggles: WizardToggle[] });
 
 export interface WizardConfig {
   title: string;
@@ -34,8 +36,16 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
   const [values, setValues] = useState<Record<string, string>>({});
   const [toggles, setToggles] = useState<Record<string, boolean>>({});
 
+  const selectedOf = (s: WizardStep & { kind: "cards" }) => selections[s.id] ?? s.options[0]?.id;
+  const selMap = () => {
+    const sel: Record<string, string> = {};
+    config.steps.forEach(st => { if (st.kind === "cards") sel[st.id] = selectedOf(st); });
+    return sel;
+  };
+
+  const visibleSteps = config.steps.filter(s => !s.when || s.when(selMap()));
   const allSteps = [
-    ...config.steps,
+    ...visibleSteps,
     { kind: "review" as const, id: "__review", nav: "Revisão", navDesc: "Confirme e salve", icon: CheckCircle2, title: "Tudo certo?", subtitle: "Revise as configurações antes de salvar." },
   ];
 
@@ -43,12 +53,8 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
   });
 
-  const selectedOf = (s: WizardStep & { kind: "cards" }) => selections[s.id] ?? s.options[0]?.id;
-  const fieldsOf = (s: WizardStep & { kind: "fields" }) => {
-    const sel: Record<string, string> = {};
-    config.steps.forEach(st => { if (st.kind === "cards") sel[st.id] = selectedOf(st); });
-    return typeof s.fields === "function" ? s.fields(sel) : s.fields;
-  };
+  const fieldsOf = (s: WizardStep & { kind: "fields" }) =>
+    typeof s.fields === "function" ? s.fields(selMap()) : s.fields;
   const valueOf = (f: WizardField) => values[f.id] ?? f.defaultValue ?? "";
   const toggleOf = (t: WizardToggle) => toggles[t.id] ?? t.defaultChecked ?? false;
 
@@ -129,7 +135,10 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
                 </div>
 
                 {current.kind === "cards" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className={current.compact
+                    ? "grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[360px] overflow-y-auto pr-1"
+                    : "grid grid-cols-1 sm:grid-cols-2 gap-3"
+                  }>
                     {current.options.map(o => {
                       const Icon = o.icon ?? Sparkles;
                       const selected = selectedOf(current) === o.id;
@@ -137,15 +146,15 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
                         <button
                           key={o.id} type="button"
                           onClick={() => setSelections(s => ({ ...s, [current.id]: o.id }))}
-                          className={`rounded-xl border p-5 text-left transition-all ${
+                          className={`rounded-xl border text-left transition-all ${current.compact ? "p-3.5" : "p-5"} ${
                             selected ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" : "border-border hover:border-primary/50"
                           }`}
                         >
-                          <span className={`flex h-11 w-11 items-center justify-center rounded-lg ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                            <Icon className="h-5 w-5" />
+                          <span className={`flex items-center justify-center rounded-lg ${current.compact ? "h-9 w-9" : "h-11 w-11"} ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            <Icon className={current.compact ? "h-4 w-4" : "h-5 w-5"} />
                           </span>
-                          <div className="mt-3 text-base font-semibold">{o.label}</div>
-                          {o.desc && <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{o.desc}</div>}
+                          <div className={current.compact ? "mt-2 text-sm font-semibold" : "mt-3 text-base font-semibold"}>{o.label}</div>
+                          {o.desc && <div className={`text-muted-foreground leading-relaxed ${current.compact ? "text-[11px] mt-0.5 line-clamp-2" : "text-xs mt-1"}`}>{o.desc}</div>}
                         </button>
                       );
                     })}
@@ -188,7 +197,7 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
 
                 {current.kind === "review" && (
                   <div className="rounded-xl border bg-card/40 p-5 space-y-4">
-                    {config.steps.map((s, i) => (
+                    {visibleSteps.map((s, i) => (
                       <div key={s.id} className={i > 0 ? "pt-4 border-t border-border" : ""}>
                         <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">{s.nav}</div>
                         {s.kind === "cards" && (() => {
@@ -315,7 +324,11 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
     title: "E-mail",
     heading: "Conecte o envio\nde e-mails.",
     steps: [
-      { kind: "cards", id: "provedor", nav: "Provedor", navDesc: "Serviço de envio", icon: Mail, title: "Qual provedor de e-mail?", subtitle: "Selecione o serviço que será usado para enviar os e-mails da plataforma.", options: [
+      { kind: "cards", id: "metodo", nav: "Método", navDesc: "API ou SMTP", icon: Mail, title: "Como você quer enviar?", subtitle: "Escolha entre conectar um serviço por API ou usar seu próprio servidor SMTP.", options: [
+        { id: "api", label: "API", desc: "Conecte um serviço de envio (Resend, SendGrid, etc.) usando uma chave de API", icon: Zap },
+        { id: "smtp", label: "SMTP", desc: "Use seu próprio servidor de e-mail com host, porta e credenciais", icon: Server },
+      ]},
+      { kind: "cards", id: "provedor", compact: true, when: (sel) => sel["metodo"] === "api", nav: "Provedor", navDesc: "Serviço de envio", icon: Cloud, title: "Qual provedor de API?", subtitle: "Selecione o serviço que será usado para enviar os e-mails da plataforma.", options: [
         { id: "resend", label: "Resend", desc: "API moderna para devs, ótima entregabilidade", icon: Zap },
         { id: "sendgrid", label: "SendGrid", desc: "Plataforma robusta da Twilio para alto volume", icon: Cloud },
         { id: "mailgun", label: "Mailgun", desc: "API flexível com validação e rotas de e-mail", icon: Globe },
@@ -323,11 +336,11 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
         { id: "postmark", label: "Postmark", desc: "Focado em e-mails transacionais ultrarrápidos", icon: FileText },
         { id: "brevo", label: "Brevo", desc: "E-mail, SMS e automação em uma só plataforma", icon: MessageSquare },
         { id: "mailjet", label: "Mailjet", desc: "Envio colaborativo com editor de templates", icon: Plug },
-        { id: "smtp", label: "SMTP Próprio", desc: "Use seu próprio servidor com host, porta e credenciais", icon: Server },
+        { id: "sparkpost", label: "SparkPost", desc: "Análises avançadas e alta performance", icon: Activity },
+        { id: "elastic", label: "Elastic Email", desc: "Custo acessível para grandes volumes", icon: Sparkles },
       ]},
-      { kind: "fields", id: "dados", nav: "Credenciais", navDesc: "Dados de conexão", icon: KeyRound, title: "Dados de conexão", subtitle: "Preencha as credenciais do provedor escolhido.", fields: (sel) => {
-        const p = sel["provedor"];
-        if (p === "smtp") return [
+      { kind: "fields", id: "dados", nav: "Credenciais", navDesc: "Dados de acesso", icon: KeyRound, title: "Dados de acesso", subtitle: "Preencha as credenciais de conexão.", fields: (sel) => {
+        if (sel["metodo"] === "smtp") return [
           { id: "host", label: "Host SMTP", placeholder: "smtp.gruposorrisos.com", defaultValue: "smtp.gruposorrisos.com" },
           { id: "porta", label: "Porta", placeholder: "587", defaultValue: "587" },
           { id: "usuario", label: "Usuário", placeholder: "noreply@gruposorrisos.com", defaultValue: "noreply@gruposorrisos.com" },
@@ -335,6 +348,7 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
           { id: "seguranca", label: "Segurança (TLS/SSL)", placeholder: "TLS", defaultValue: "TLS" },
           { id: "remetente", label: "E-mail remetente", placeholder: "noreply@gruposorrisos.com" },
         ];
+        const p = sel["provedor"];
         if (p === "ses") return [
           { id: "accesskey", label: "Access Key ID", placeholder: "AKIAXXXXXXXXXXXXXXXX" },
           { id: "secretkey", label: "Secret Access Key", type: "password", placeholder: "••••••••" },
@@ -348,6 +362,8 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
           postmark: "xxxxxxxx-xxxx-xxxx",
           brevo: "xkeysib-xxxxxxxx",
           mailjet: "xxxxxxxxxxxxxxxx",
+          sparkpost: "xxxxxxxxxxxxxxxx",
+          elastic: "xxxxxxxxxxxxxxxx",
         };
         const fields: WizardField[] = [
           { id: "apikey", label: "Chave de API", type: "password", placeholder: keyPlaceholder[p] ?? "Cole a chave aqui", full: true },
