@@ -351,11 +351,19 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
                 )}
                 <ul className="space-y-1">
                   {task.checklist.map(c => (
-                    <li key={c.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group border border-transparent hover:border-border">
-                      <Checkbox checked={c.done} onCheckedChange={(v) => toggleChecklist(c.id, !!v)} />
-                      <span className={`text-sm flex-1 ${c.done ? "line-through text-muted-foreground" : ""}`}>{c.text}</span>
+                    <li key={c.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group border border-transparent hover:border-border">
+                      <Checkbox className="mt-0.5" checked={c.done} onCheckedChange={(v) => { if (v) { setConfirmNote(""); setConfirmItem(c); } else { uncheckItem(c.id); } }} />
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-sm ${c.done ? "line-through text-muted-foreground" : ""}`}>{c.text}</span>
+                        {c.done && (c.doneBy || c.doneNote) && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                            {c.doneBy && <span className="font-medium text-foreground/70">{c.doneBy}</span>}
+                            {c.doneNote && <span className="italic"> — “{c.doneNote}”</span>}
+                          </div>
+                        )}
+                      </div>
                       {c.done && c.doneAt && (
-                        <span className="text-[10px] text-success font-medium whitespace-nowrap inline-flex items-center gap-1">
+                        <span className="text-[10px] text-success font-medium whitespace-nowrap inline-flex items-center gap-1 mt-1">
                           <CheckCircle2 className="h-3 w-3" /> {fmtDate(c.doneAt)}
                         </span>
                       )}
