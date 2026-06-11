@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as ProjetosRouteImport } from './routes/projetos'
+import { Route as PerfisRouteImport } from './routes/perfis'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KanbanRouteImport } from './routes/kanban'
@@ -27,6 +28,11 @@ const RelatoriosRoute = RelatoriosRouteImport.update({
 const ProjetosRoute = ProjetosRouteImport.update({
   id: '/projetos',
   path: '/projetos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfisRoute = PerfisRouteImport.update({
+  id: '/perfis',
+  path: '/perfis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/perfis': typeof PerfisRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/perfis': typeof PerfisRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/perfis': typeof PerfisRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/login'
     | '/minhas-tarefas'
+    | '/perfis'
     | '/projetos'
     | '/relatorios'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/login'
     | '/minhas-tarefas'
+    | '/perfis'
     | '/projetos'
     | '/relatorios'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/login'
     | '/minhas-tarefas'
+    | '/perfis'
     | '/projetos'
     | '/relatorios'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   KanbanRoute: typeof KanbanRoute
   LoginRoute: typeof LoginRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
+  PerfisRoute: typeof PerfisRoute
   ProjetosRoute: typeof ProjetosRoute
   RelatoriosRoute: typeof RelatoriosRoute
 }
@@ -161,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/projetos'
       fullPath: '/projetos'
       preLoaderRoute: typeof ProjetosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfis': {
+      id: '/perfis'
+      path: '/perfis'
+      fullPath: '/perfis'
+      preLoaderRoute: typeof PerfisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/minhas-tarefas': {
@@ -223,6 +243,7 @@ const rootRouteChildren: RootRouteChildren = {
   KanbanRoute: KanbanRoute,
   LoginRoute: LoginRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
+  PerfisRoute: PerfisRoute,
   ProjetosRoute: ProjetosRoute,
   RelatoriosRoute: RelatoriosRoute,
 }

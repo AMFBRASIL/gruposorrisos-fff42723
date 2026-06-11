@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog } from "lucide-react";
 import { useTheme, themeStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ const nav = [
   { to: "/calendario", label: "Calendário", icon: Calendar },
   { to: "/equipe", label: "Equipe", icon: Users },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
+  { to: "/perfis", label: "Perfil de Usuários", icon: UserCog },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 
