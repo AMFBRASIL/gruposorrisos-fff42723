@@ -310,13 +310,37 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
                   <span className="text-xs font-medium text-muted-foreground">{done}/{task.checklist.length} concluídas · {pct}%</span>
                 </div>
                 <Progress value={pct} className="h-1.5" />
+                {allDone && task.status !== "concluido" && (
+                  <div className="rounded-lg border border-success/40 bg-success/10 p-3 flex flex-wrap items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+                    <div className="flex-1 min-w-40 text-sm">
+                      <span className="font-semibold">Todas as subtarefas concluídas!</span>{" "}
+                      <span className="text-muted-foreground">Você já pode finalizar esta tarefa.</span>
+                    </div>
+                    <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={completeTask}>
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Concluir Tarefa
+                    </Button>
+                  </div>
+                )}
+                {task.completedAt && (
+                  <div className="rounded-lg border border-success/40 bg-success/10 p-3 flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+                    <div className="text-sm">
+                      <span className="font-semibold">Tarefa concluída</span>{" "}
+                      <span className="text-muted-foreground">em {fmtDateTime(task.completedAt)}</span>
+                    </div>
+                  </div>
+                )}
                 <ul className="space-y-1">
                   {task.checklist.map(c => (
                     <li key={c.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group border border-transparent hover:border-border">
-                      <Checkbox checked={c.done} onCheckedChange={(v) => {
-                        tasksStore.updateTask(task.id, { checklist: task.checklist.map(x => x.id === c.id ? { ...x, done: !!v } : x) });
-                      }} />
+                      <Checkbox checked={c.done} onCheckedChange={(v) => toggleChecklist(c.id, !!v)} />
                       <span className={`text-sm flex-1 ${c.done ? "line-through text-muted-foreground" : ""}`}>{c.text}</span>
+                      {c.done && c.doneAt && (
+                        <span className="text-[10px] text-success font-medium whitespace-nowrap inline-flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> {fmtDate(c.doneAt)}
+                        </span>
+                      )}
                       <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100"
                         onClick={() => tasksStore.updateTask(task.id, { checklist: task.checklist.filter(x => x.id !== c.id) })}>
                         <Trash2 className="h-3 w-3" />
