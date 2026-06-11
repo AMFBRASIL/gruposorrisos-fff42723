@@ -135,7 +135,10 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
                 </div>
 
                 {current.kind === "cards" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className={current.compact
+                    ? "grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[360px] overflow-y-auto pr-1"
+                    : "grid grid-cols-1 sm:grid-cols-2 gap-3"
+                  }>
                     {current.options.map(o => {
                       const Icon = o.icon ?? Sparkles;
                       const selected = selectedOf(current) === o.id;
@@ -143,15 +146,15 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
                         <button
                           key={o.id} type="button"
                           onClick={() => setSelections(s => ({ ...s, [current.id]: o.id }))}
-                          className={`rounded-xl border p-5 text-left transition-all ${
+                          className={`rounded-xl border text-left transition-all ${current.compact ? "p-3.5" : "p-5"} ${
                             selected ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" : "border-border hover:border-primary/50"
                           }`}
                         >
-                          <span className={`flex h-11 w-11 items-center justify-center rounded-lg ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                            <Icon className="h-5 w-5" />
+                          <span className={`flex items-center justify-center rounded-lg ${current.compact ? "h-9 w-9" : "h-11 w-11"} ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            <Icon className={current.compact ? "h-4 w-4" : "h-5 w-5"} />
                           </span>
-                          <div className="mt-3 text-base font-semibold">{o.label}</div>
-                          {o.desc && <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{o.desc}</div>}
+                          <div className={current.compact ? "mt-2 text-sm font-semibold" : "mt-3 text-base font-semibold"}>{o.label}</div>
+                          {o.desc && <div className={`text-muted-foreground leading-relaxed ${current.compact ? "text-[11px] mt-0.5 line-clamp-2" : "text-xs mt-1"}`}>{o.desc}</div>}
                         </button>
                       );
                     })}
