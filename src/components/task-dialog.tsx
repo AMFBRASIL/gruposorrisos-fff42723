@@ -397,8 +397,53 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
             </Tabs>
           </div>
 
+          {/* Timeline column (always visible on md+) */}
+          <div className="hidden md:flex flex-col border-l border-border bg-gradient-to-b from-muted/10 to-muted/30 overflow-hidden">
+            <div className="px-4 pt-4 pb-2 flex items-center justify-between border-b border-border/60 bg-background/40 backdrop-blur sticky top-0 z-10">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md bg-primary/15 text-primary flex items-center justify-center">
+                  <ActivityIcon className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold leading-none">Timeline</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{timeline.length} eventos</div>
+                </div>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Ao vivo</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="relative">
+                <div className="absolute left-[15px] top-2 bottom-2 w-px bg-gradient-to-b from-primary/40 via-border to-transparent" />
+                <ul className="space-y-2.5">
+                  {timeline.map((e) => {
+                    const m = kindMeta[e.kind]; const Icon = m.icon;
+                    return (
+                      <li key={e.id} className="relative pl-10">
+                        <span className={`absolute left-0 top-0.5 h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-background ${m.bg}`}>
+                          <Icon className={`h-3.5 w-3.5 ${m.fg}`} />
+                        </span>
+                        <div className="rounded-lg border border-border/60 bg-card/70 backdrop-blur p-2.5 hover:bg-card hover:border-border transition-all">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="text-xs font-semibold leading-tight">{e.title}</div>
+                            <div className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap">{fmtDate(e.at)}</div>
+                          </div>
+                          {e.detail && <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2 leading-snug">{e.detail}</div>}
+                          <div className="mt-1.5 text-[10px] text-muted-foreground flex items-center gap-1">
+                            <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
+                            <span className="font-medium text-foreground/70">{e.user}</span>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          </div>
+
           {/* Sidebar */}
           <aside className="border-l border-border bg-muted/20 p-5 space-y-4 overflow-y-auto">
+
             <div>
               <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Responsável</label>
               <Popover>
