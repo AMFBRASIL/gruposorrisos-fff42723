@@ -93,6 +93,8 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
   const [editingDesc, setEditingDesc] = useState(false);
   const [newChecklist, setNewChecklist] = useState("");
   const [starred, setStarred] = useState(false);
+  const [confirmItem, setConfirmItem] = useState<ChecklistItem | null>(null);
+  const [confirmNote, setConfirmNote] = useState("");
 
   useEffect(() => {
     if (task) {
