@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { users } from "@/lib/mock-data";
-import { useTasks } from "@/lib/store";
+import { useTasks, useUserProfiles } from "@/lib/store";
 import { Card } from "@/components/ui/card";
-import { UserAvatar } from "@/components/task-card";
-import { Mail, Briefcase } from "lucide-react";
+import { Mail, Briefcase, UserPlus } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { CreateMemberWizard } from "@/components/create-member-wizard";
 
 export const Route = createFileRoute("/equipe")({
   head: () => ({ meta: [
@@ -17,17 +18,30 @@ export const Route = createFileRoute("/equipe")({
 
 function TeamPage() {
   const tasks = useTasks();
+  const members = useUserProfiles();
+  const [memberOpen, setMemberOpen] = useState(false);
+
   return (
-    <AppShell title="Equipe" subtitle={`${users.length} colaboradores`}>
+    <AppShell
+      title="Equipe"
+      subtitle={`${members.length} colaboradores`}
+      primaryAction={
+        <Button size="sm" className="hidden sm:inline-flex" onClick={() => setMemberOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-1" /> Novo Membro
+        </Button>
+      }
+    >
       <div className="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {users.map(u => {
+        {members.map(u => {
           const my = tasks.filter(t => t.assigneeId === u.id);
           const done = my.filter(t => t.status === "concluido").length;
           const pct = my.length ? Math.round((done / my.length) * 100) : 0;
           return (
             <Card key={u.id} className="p-5 border-border/60 hover:shadow-md transition-shadow">
               <div className="flex items-center gap-3">
-                <UserAvatar id={u.id} size={52} />
+                <span className="h-[52px] w-[52px] rounded-full flex items-center justify-center text-white font-semibold shrink-0" style={{ backgroundColor: u.color }}>
+                  {u.initials}
+                </span>
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold truncate">{u.name}</h3>
                   <p className="text-xs text-muted-foreground flex items-center gap-1"><Briefcase className="h-3 w-3" /> {u.role} • {u.department}</p>
@@ -47,6 +61,7 @@ function TeamPage() {
           );
         })}
       </div>
+      <CreateMemberWizard open={memberOpen} onClose={() => setMemberOpen(false)} />
     </AppShell>
   );
 }
