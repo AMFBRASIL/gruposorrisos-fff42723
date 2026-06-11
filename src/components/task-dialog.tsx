@@ -139,10 +139,21 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
     });
     setNewComment("");
   };
-  const toggleChecklist = (cid: string, v: boolean) => {
+  const currentUser = users[0];
+  const uncheckItem = (cid: string) => {
     tasksStore.updateTask(task.id, {
-      checklist: task.checklist.map(x => x.id === cid ? { ...x, done: v, doneAt: v ? new Date().toISOString() : undefined } : x),
+      checklist: task.checklist.map(x => x.id === cid ? { ...x, done: false, doneAt: undefined, doneBy: undefined, doneNote: undefined } : x),
     });
+  };
+  const confirmChecklistDone = () => {
+    if (!confirmItem) return;
+    tasksStore.updateTask(task.id, {
+      checklist: task.checklist.map(x => x.id === confirmItem.id
+        ? { ...x, done: true, doneAt: new Date().toISOString(), doneBy: currentUser.name, doneNote: confirmNote.trim() || undefined }
+        : x),
+    });
+    setConfirmItem(null);
+    setConfirmNote("");
   };
   const completeTask = () => tasksStore.moveTask(task.id, "concluido");
   const allDone = task.checklist.length > 0 && done === task.checklist.length;
