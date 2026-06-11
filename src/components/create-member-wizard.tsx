@@ -264,8 +264,10 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <Field label="Perfil">
                           <div className="flex items-center gap-2">
-                            {roleMeta && <roleMeta.icon className="h-4 w-4 text-primary" />}
-                            <span className="font-medium">{roleMeta?.label}</span>
+                            <span className="flex h-5 w-5 items-center justify-center rounded text-white" style={{ backgroundColor: selectedProfile?.color }}>
+                              <ShieldCheck className="h-3 w-3" />
+                            </span>
+                            <span className="font-medium">{selectedProfile?.name}</span>
                           </div>
                         </Field>
                         <Field label="Departamento">
@@ -277,7 +279,7 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      O membro receberá acesso completo às páginas. Você pode ajustar os acessos depois em <span className="font-medium text-foreground">Perfil de Usuários</span>.
+                      O membro herdará as permissões do perfil <span className="font-medium text-foreground">{selectedProfile?.name}</span>. Ajuste as permissões em <span className="font-medium text-foreground">Perfis de Acesso</span>.
                     </p>
                   </div>
                 )}

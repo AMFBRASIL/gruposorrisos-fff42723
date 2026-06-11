@@ -16,7 +16,7 @@ const nav = [
   { to: "/calendario", label: "Calendário", icon: Calendar },
   { to: "/equipe", label: "Equipe", icon: Users },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
-  { to: "/perfis", label: "Perfil de Usuários", icon: UserCog },
+  { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
 
