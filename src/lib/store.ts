@@ -9,7 +9,7 @@ export const tasksStore = {
   getSnapshot: () => state,
   subscribe: (l: () => void) => { listeners.add(l); return () => listeners.delete(l); },
   moveTask(id: string, newStatus: TaskStatus) {
-    state = state.map(t => t.id === id ? { ...t, status: newStatus, completedAt: newStatus === "concluido" ? new Date().toISOString().slice(0,10) : undefined } : t);
+    state = state.map(t => t.id === id ? { ...t, status: newStatus, completedAt: newStatus === "concluido" ? new Date().toISOString() : undefined } : t);
     notify();
   },
   updateTask(id: string, patch: Partial<Task>) {
