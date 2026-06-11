@@ -17,10 +17,12 @@ export interface WizardOption { id: string; label: string; desc?: string; icon?:
 export interface WizardField { id: string; label: string; placeholder?: string; type?: string; defaultValue?: string; full?: boolean }
 export interface WizardToggle { id: string; label: string; desc?: string; defaultChecked?: boolean }
 
+type StepBase = { id: string; nav: string; navDesc: string; icon: LucideIcon; title: string; subtitle: string; when?: (sel: Record<string, string>) => boolean };
+
 export type WizardStep =
-  | { kind: "cards"; id: string; nav: string; navDesc: string; icon: LucideIcon; title: string; subtitle: string; options: WizardOption[] }
-  | { kind: "fields"; id: string; nav: string; navDesc: string; icon: LucideIcon; title: string; subtitle: string; fields: WizardField[] | ((sel: Record<string, string>) => WizardField[]) }
-  | { kind: "toggles"; id: string; nav: string; navDesc: string; icon: LucideIcon; title: string; subtitle: string; toggles: WizardToggle[] };
+  | (StepBase & { kind: "cards"; options: WizardOption[]; compact?: boolean })
+  | (StepBase & { kind: "fields"; fields: WizardField[] | ((sel: Record<string, string>) => WizardField[]) })
+  | (StepBase & { kind: "toggles"; toggles: WizardToggle[] });
 
 export interface WizardConfig {
   title: string;
@@ -34,8 +36,16 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
   const [values, setValues] = useState<Record<string, string>>({});
   const [toggles, setToggles] = useState<Record<string, boolean>>({});
 
+  const selectedOf = (s: WizardStep & { kind: "cards" }) => selections[s.id] ?? s.options[0]?.id;
+  const selMap = () => {
+    const sel: Record<string, string> = {};
+    config.steps.forEach(st => { if (st.kind === "cards") sel[st.id] = selectedOf(st); });
+    return sel;
+  };
+
+  const visibleSteps = config.steps.filter(s => !s.when || s.when(selMap()));
   const allSteps = [
-    ...config.steps,
+    ...visibleSteps,
     { kind: "review" as const, id: "__review", nav: "Revisão", navDesc: "Confirme e salve", icon: CheckCircle2, title: "Tudo certo?", subtitle: "Revise as configurações antes de salvar." },
   ];
 
@@ -43,12 +53,8 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
   });
 
-  const selectedOf = (s: WizardStep & { kind: "cards" }) => selections[s.id] ?? s.options[0]?.id;
-  const fieldsOf = (s: WizardStep & { kind: "fields" }) => {
-    const sel: Record<string, string> = {};
-    config.steps.forEach(st => { if (st.kind === "cards") sel[st.id] = selectedOf(st); });
-    return typeof s.fields === "function" ? s.fields(sel) : s.fields;
-  };
+  const fieldsOf = (s: WizardStep & { kind: "fields" }) =>
+    typeof s.fields === "function" ? s.fields(selMap()) : s.fields;
   const valueOf = (f: WizardField) => values[f.id] ?? f.defaultValue ?? "";
   const toggleOf = (t: WizardToggle) => toggles[t.id] ?? t.defaultChecked ?? false;
 
