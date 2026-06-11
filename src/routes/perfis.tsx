@@ -160,6 +160,9 @@ function ProfileEditor({ profile, onSaved, onCancel }: {
   const [color, setColor] = useState(profile?.color ?? COLORS[0]);
   const [saved, setSaved] = useState(false);
 
+  const roleOptions = Array.from(new Set([...(profile ? [profile.role] : []), ...ROLES]));
+  const departmentOptions = Array.from(new Set([...(profile ? [profile.department] : []), ...DEPARTMENTS]));
+
   const save = () => {
     if (!name.trim()) return;
     const data = {
