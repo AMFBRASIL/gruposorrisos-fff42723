@@ -315,21 +315,48 @@ export const SETTINGS_WIZARDS: Record<string, WizardConfig> = {
     title: "E-mail",
     heading: "Conecte o envio\nde e-mails.",
     steps: [
-      { kind: "cards", id: "metodo", nav: "Método de envio", navDesc: "API ou SMTP", icon: Mail, title: "Como enviar os e-mails?", subtitle: "Escolha entre uma API de e-mail ou seu próprio servidor SMTP.", options: [
-        { id: "api", label: "API de E-mail", desc: "Conecte com chave de API (Resend, SendGrid, Mailgun...)", icon: Cloud },
-        { id: "smtp", label: "Servidor SMTP", desc: "Use seu próprio servidor com host, porta e credenciais", icon: Server },
+      { kind: "cards", id: "provedor", nav: "Provedor", navDesc: "Serviço de envio", icon: Mail, title: "Qual provedor de e-mail?", subtitle: "Selecione o serviço que será usado para enviar os e-mails da plataforma.", options: [
+        { id: "resend", label: "Resend", desc: "API moderna para devs, ótima entregabilidade", icon: Zap },
+        { id: "sendgrid", label: "SendGrid", desc: "Plataforma robusta da Twilio para alto volume", icon: Cloud },
+        { id: "mailgun", label: "Mailgun", desc: "API flexível com validação e rotas de e-mail", icon: Globe },
+        { id: "ses", label: "Amazon SES", desc: "Baixo custo e escala com infraestrutura AWS", icon: Database },
+        { id: "postmark", label: "Postmark", desc: "Focado em e-mails transacionais ultrarrápidos", icon: FileText },
+        { id: "brevo", label: "Brevo", desc: "E-mail, SMS e automação em uma só plataforma", icon: MessageSquare },
+        { id: "mailjet", label: "Mailjet", desc: "Envio colaborativo com editor de templates", icon: Plug },
+        { id: "smtp", label: "SMTP Próprio", desc: "Use seu próprio servidor com host, porta e credenciais", icon: Server },
       ]},
-      { kind: "fields", id: "dados", nav: "Credenciais", navDesc: "Dados de conexão", icon: KeyRound, title: "Dados de conexão", subtitle: "Preencha as credenciais do método escolhido.", fields: (sel) => sel["metodo"] === "smtp" ? [
-        { id: "host", label: "Host SMTP", placeholder: "smtp.gruposorrisos.com", defaultValue: "smtp.gruposorrisos.com" },
-        { id: "porta", label: "Porta", placeholder: "587", defaultValue: "587" },
-        { id: "usuario", label: "Usuário", placeholder: "noreply@gruposorrisos.com", defaultValue: "noreply@gruposorrisos.com" },
-        { id: "senha", label: "Senha", type: "password", placeholder: "••••••••" },
-        { id: "remetente", label: "E-mail remetente", placeholder: "noreply@gruposorrisos.com", full: true },
-      ] : [
-        { id: "provedor", label: "Provedor", placeholder: "Resend, SendGrid, Mailgun..." },
-        { id: "remetente", label: "E-mail remetente", placeholder: "noreply@gruposorrisos.com" },
-        { id: "apikey", label: "Chave de API", type: "password", placeholder: "re_xxxxxxxxxxxx", full: true },
-      ]},
+      { kind: "fields", id: "dados", nav: "Credenciais", navDesc: "Dados de conexão", icon: KeyRound, title: "Dados de conexão", subtitle: "Preencha as credenciais do provedor escolhido.", fields: (sel) => {
+        const p = sel["provedor"];
+        if (p === "smtp") return [
+          { id: "host", label: "Host SMTP", placeholder: "smtp.gruposorrisos.com", defaultValue: "smtp.gruposorrisos.com" },
+          { id: "porta", label: "Porta", placeholder: "587", defaultValue: "587" },
+          { id: "usuario", label: "Usuário", placeholder: "noreply@gruposorrisos.com", defaultValue: "noreply@gruposorrisos.com" },
+          { id: "senha", label: "Senha", type: "password", placeholder: "••••••••" },
+          { id: "seguranca", label: "Segurança (TLS/SSL)", placeholder: "TLS", defaultValue: "TLS" },
+          { id: "remetente", label: "E-mail remetente", placeholder: "noreply@gruposorrisos.com" },
+        ];
+        if (p === "ses") return [
+          { id: "accesskey", label: "Access Key ID", placeholder: "AKIAXXXXXXXXXXXXXXXX" },
+          { id: "secretkey", label: "Secret Access Key", type: "password", placeholder: "••••••••" },
+          { id: "regiao", label: "Região AWS", placeholder: "us-east-1", defaultValue: "us-east-1" },
+          { id: "remetente", label: "E-mail remetente", placeholder: "noreply@gruposorrisos.com" },
+        ];
+        const keyPlaceholder: Record<string, string> = {
+          resend: "re_xxxxxxxxxxxx",
+          sendgrid: "SG.xxxxxxxxxxxx",
+          mailgun: "key-xxxxxxxxxxxx",
+          postmark: "xxxxxxxx-xxxx-xxxx",
+          brevo: "xkeysib-xxxxxxxx",
+          mailjet: "xxxxxxxxxxxxxxxx",
+        };
+        const fields: WizardField[] = [
+          { id: "apikey", label: "Chave de API", type: "password", placeholder: keyPlaceholder[p] ?? "Cole a chave aqui", full: true },
+          { id: "remetente", label: "E-mail remetente", placeholder: "noreply@gruposorrisos.com" },
+          { id: "nome", label: "Nome do remetente", placeholder: "Grupo Sorrisos", defaultValue: "Grupo Sorrisos" },
+        ];
+        if (p === "mailgun") fields.push({ id: "dominio", label: "Domínio de envio", placeholder: "mg.gruposorrisos.com", full: true });
+        return fields;
+      }},
       { kind: "toggles", id: "envios", nav: "Envios automáticos", navDesc: "Resumos e assinatura", icon: FileText, title: "Envios automáticos", subtitle: "Configure os e-mails recorrentes da plataforma.", toggles: [
         { id: "resumo", label: "Resumo semanal", desc: "Toda segunda-feira às 08h", defaultChecked: true },
         { id: "executivo", label: "Relatório executivo", desc: "Enviado à diretoria sexta-feira", defaultChecked: true },
