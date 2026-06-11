@@ -1,5 +1,5 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { type Task, getUser, getProject, priorityMeta, COLUMNS, users } from "@/lib/mock-data";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { type Task, type ChecklistItem, getUser, getProject, priorityMeta, COLUMNS, users } from "@/lib/mock-data";
 import { tasksStore } from "@/lib/store";
 import { UserAvatar, PriorityBadge } from "@/components/task-card";
 import {
@@ -45,7 +45,12 @@ function buildTimeline(task: Task): TLEvent[] {
     events.push({ id: "ev-log", kind: "log", at: task.startDate, user: assignee?.name || "—", title: `${task.loggedHours}h registradas`, detail: `Estimado: ${task.estimatedHours}h` });
   }
   task.checklist.filter(c => c.done).forEach((c) =>
-    events.push({ id: `ev-cl-${c.id}`, kind: "checklist", at: c.doneAt || task.startDate, user: assignee?.name || "—", title: `Concluído: ${c.text}`, detail: c.doneAt ? `Marcada em ${fmtDateTime(c.doneAt)}` : undefined })
+    events.push({
+      id: `ev-cl-${c.id}`, kind: "checklist", at: c.doneAt || task.startDate,
+      user: c.doneBy || assignee?.name || "—",
+      title: `Concluído: ${c.text}`,
+      detail: [c.doneNote, c.doneAt ? `Marcada em ${fmtDateTime(c.doneAt)}` : null].filter(Boolean).join(" · ") || undefined,
+    })
   );
   task.comments.forEach(c => {
     const u = getUser(c.userId);
@@ -88,6 +93,8 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
   const [editingDesc, setEditingDesc] = useState(false);
   const [newChecklist, setNewChecklist] = useState("");
   const [starred, setStarred] = useState(false);
+  const [confirmItem, setConfirmItem] = useState<ChecklistItem | null>(null);
+  const [confirmNote, setConfirmNote] = useState("");
 
   useEffect(() => {
     if (task) {
@@ -132,10 +139,21 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
     });
     setNewComment("");
   };
-  const toggleChecklist = (cid: string, v: boolean) => {
+  const currentUser = users[0];
+  const uncheckItem = (cid: string) => {
     tasksStore.updateTask(task.id, {
-      checklist: task.checklist.map(x => x.id === cid ? { ...x, done: v, doneAt: v ? new Date().toISOString() : undefined } : x),
+      checklist: task.checklist.map(x => x.id === cid ? { ...x, done: false, doneAt: undefined, doneBy: undefined, doneNote: undefined } : x),
     });
+  };
+  const confirmChecklistDone = () => {
+    if (!confirmItem) return;
+    tasksStore.updateTask(task.id, {
+      checklist: task.checklist.map(x => x.id === confirmItem.id
+        ? { ...x, done: true, doneAt: new Date().toISOString(), doneBy: currentUser.name, doneNote: confirmNote.trim() || undefined }
+        : x),
+    });
+    setConfirmItem(null);
+    setConfirmNote("");
   };
   const completeTask = () => tasksStore.moveTask(task.id, "concluido");
   const allDone = task.checklist.length > 0 && done === task.checklist.length;
@@ -333,11 +351,19 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
                 )}
                 <ul className="space-y-1">
                   {task.checklist.map(c => (
-                    <li key={c.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group border border-transparent hover:border-border">
-                      <Checkbox checked={c.done} onCheckedChange={(v) => toggleChecklist(c.id, !!v)} />
-                      <span className={`text-sm flex-1 ${c.done ? "line-through text-muted-foreground" : ""}`}>{c.text}</span>
+                    <li key={c.id} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group border border-transparent hover:border-border">
+                      <Checkbox className="mt-0.5" checked={c.done} onCheckedChange={(v) => { if (v) { setConfirmNote(""); setConfirmItem(c); } else { uncheckItem(c.id); } }} />
+                      <div className="flex-1 min-w-0">
+                        <span className={`text-sm ${c.done ? "line-through text-muted-foreground" : ""}`}>{c.text}</span>
+                        {c.done && (c.doneBy || c.doneNote) && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                            {c.doneBy && <span className="font-medium text-foreground/70">{c.doneBy}</span>}
+                            {c.doneNote && <span className="italic"> — “{c.doneNote}”</span>}
+                          </div>
+                        )}
+                      </div>
                       {c.done && c.doneAt && (
-                        <span className="text-[10px] text-success font-medium whitespace-nowrap inline-flex items-center gap-1">
+                        <span className="text-[10px] text-success font-medium whitespace-nowrap inline-flex items-center gap-1 mt-1">
                           <CheckCircle2 className="h-3 w-3" /> {fmtDate(c.doneAt)}
                         </span>
                       )}
@@ -607,15 +633,6 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
               </span>
             )}
             <Button variant="ghost" size="sm" onClick={onClose}>Fechar</Button>
-            {["backlog", "todo", "analise"].includes(task.status) && (
-              <Button
-                size="sm"
-                className="bg-info text-info-foreground hover:bg-info/90"
-                onClick={() => tasksStore.moveTask(task.id, "dev")}
-              >
-                <PlayCircle className="h-3.5 w-3.5" /> Iniciar Tarefa
-              </Button>
-            )}
             {task.status !== "concluido" ? (
               <Button
                 size="sm"
@@ -632,6 +649,62 @@ export function TaskDialog({ task, onClose }: { task: Task | null; onClose: () =
             )}
           </div>
         </div>
+
+        {/* Quick confirm subtask modal */}
+        <Dialog open={!!confirmItem} onOpenChange={(o) => { if (!o) { setConfirmItem(null); setConfirmNote(""); } }}>
+          <DialogContent className="max-w-md gap-4">
+            <DialogHeader>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-success/15 text-success flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <DialogTitle className="text-base">Confirmar execução</DialogTitle>
+                  <DialogDescription className="text-xs mt-0.5">Registre o que foi feito nesta subtarefa</DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
+
+            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm font-medium">
+              {confirmItem?.text}
+            </div>
+
+            <div className="rounded-lg border border-border divide-y divide-border text-xs">
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-muted-foreground">Executada por</span>
+                <span className="inline-flex items-center gap-2 font-medium">
+                  <UserAvatar id={currentUser.id} size={20} /> {currentUser.name} <span className="text-muted-foreground font-normal">· {currentUser.role}</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-muted-foreground inline-flex items-center gap-1.5"><Calendar className="h-3 w-3" /> Data</span>
+                <span className="font-medium capitalize">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}</span>
+              </div>
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-muted-foreground inline-flex items-center gap-1.5"><Clock className="h-3 w-3" /> Horário</span>
+                <span className="font-medium tabular-nums">{new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">O que foi feito?</label>
+              <Textarea
+                autoFocus
+                value={confirmNote}
+                onChange={(e) => setConfirmNote(e.target.value)}
+                placeholder="Descreva brevemente o que foi executado..."
+                className="min-h-24 resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => { setConfirmItem(null); setConfirmNote(""); }}>Cancelar</Button>
+              <Button size="sm" className="bg-success text-success-foreground hover:bg-success/90" onClick={confirmChecklistDone}>
+                <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar execução
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );

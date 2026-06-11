@@ -26,7 +26,7 @@ export interface Project {
   health: number;
 }
 
-export interface ChecklistItem { id: string; text: string; done: boolean; doneAt?: string; }
+export interface ChecklistItem { id: string; text: string; done: boolean; doneAt?: string; doneBy?: string; doneNote?: string; }
 export interface Comment { id: string; userId: string; text: string; at: string; }
 
 export interface Task {
