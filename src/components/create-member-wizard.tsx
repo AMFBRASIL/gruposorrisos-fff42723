@@ -5,15 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   CalendarDays, UserPlus, IdCard, Building2, CheckCircle2,
-  Sparkles, ArrowRight, ArrowLeft, X, Palette, Mail,
-  User as UserIcon, ShieldCheck, Briefcase, Crown,
+  Sparkles, ArrowRight, ArrowLeft, X, Palette, Mail, ShieldCheck,
 } from "lucide-react";
-import { usersStore } from "@/lib/store";
+import { usersStore, useAccessProfiles, ACCESS_PAGES } from "@/lib/store";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
   { id: 0, title: "Identidade", desc: "Nome, e-mail e cor", icon: IdCard },
-  { id: 1, title: "Perfil", desc: "Função na equipe", icon: ShieldCheck },
+  { id: 1, title: "Perfil", desc: "Perfil de acesso", icon: ShieldCheck },
   { id: 2, title: "Departamento", desc: "Área de atuação", icon: Building2 },
   { id: 3, title: "Revisão", desc: "Confirme e cadastre", icon: CheckCircle2 },
 ];
@@ -24,24 +23,18 @@ const COLORS = [
   "oklch(0.6 0.2 295)", "oklch(0.65 0.15 190)",
 ];
 
-const ROLES = [
-  { id: "Colaborador(a)", label: "Colaborador(a)", desc: "Executa tarefas e atualiza o progresso do dia a dia", icon: UserIcon },
-  { id: "Supervisor(a)", label: "Supervisor(a)", desc: "Acompanha a equipe e garante a qualidade das entregas", icon: ShieldCheck },
-  { id: "Gerente", label: "Gerente", desc: "Gerencia projetos, prazos e distribui as demandas", icon: Briefcase },
-  { id: "Diretor(a)", label: "Diretor(a)", desc: "Visão estratégica e decisões de alto nível", icon: Crown },
-];
-
 const DEPARTMENTS = ["Operações", "Diretoria", "Financeiro", "TI", "Marketing", "RH", "Comercial", "Jurídico"];
 
 const initialsOf = (name: string) =>
   name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("") || "?";
 
 export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const profiles = useAccessProfiles();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [color, setColor] = useState(COLORS[0]);
-  const [role, setRole] = useState(ROLES[0].id);
+  const [profileId, setProfileId] = useState<string>(profiles[0]?.id ?? "");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
 
   const prettyDate = new Date().toLocaleDateString("pt-BR", {
@@ -50,27 +43,29 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
 
   const reset = () => {
     setStep(0); setName(""); setEmail(""); setColor(COLORS[0]);
-    setRole(ROLES[0].id); setDepartment(DEPARTMENTS[0]);
+    setProfileId(profiles[0]?.id ?? ""); setDepartment(DEPARTMENTS[0]);
   };
 
   const close = () => { reset(); onClose(); };
 
+  const selectedProfile = profiles.find(p => p.id === profileId) ?? profiles[0];
+
   const submit = () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !selectedProfile) return;
     usersStore.addUser({
       id: `u_${Date.now().toString(36)}`,
       name: name.trim(),
       email: email.trim() || `${name.trim().split(/\s+/)[0]?.toLowerCase()}@gruposorrisos.com.br`,
-      role,
+      role: selectedProfile.name,
       department,
       initials: initialsOf(name),
       color,
-    });
+      profileId: selectedProfile.id,
+    }, { ...selectedProfile.access });
     close();
   };
 
   const canNext = step === 0 ? name.trim().length > 0 : true;
-  const roleMeta = ROLES.find(r => r.id === role);
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
@@ -196,24 +191,25 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                   <div className="space-y-5">
                     <div>
                       <h3 className="text-xl font-semibold">Qual é o perfil?</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Selecione a função que esse membro terá na equipe.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Selecione o perfil de acesso desse membro. Os perfis são gerenciados em Perfis de Acesso.</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {ROLES.map(r => {
-                        const Icon = r.icon;
-                        const selected = role === r.id;
+                      {profiles.map(p => {
+                        const selected = profileId === p.id;
+                        const liberadas = ACCESS_PAGES.filter(pg => p.access[pg]).length;
                         return (
                           <button
-                            key={r.id} type="button" onClick={() => setRole(r.id)}
+                            key={p.id} type="button" onClick={() => setProfileId(p.id)}
                             className={`rounded-xl border p-5 text-left transition-all ${
                               selected ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" : "border-border hover:border-primary/50"
                             }`}
                           >
-                            <span className={`flex h-11 w-11 items-center justify-center rounded-lg ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                              <Icon className="h-5 w-5" />
+                            <span className="flex h-11 w-11 items-center justify-center rounded-lg text-white" style={{ backgroundColor: p.color }}>
+                              <ShieldCheck className="h-5 w-5" />
                             </span>
-                            <div className="mt-3 text-base font-semibold">{r.label}</div>
-                            <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{r.desc}</div>
+                            <div className="mt-3 text-base font-semibold">{p.name}</div>
+                            <div className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{p.description}</div>
+                            <div className="mt-2 text-[11px] font-medium text-primary">{liberadas} de {ACCESS_PAGES.length} páginas liberadas</div>
                           </button>
                         );
                       })}
@@ -268,8 +264,10 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <Field label="Perfil">
                           <div className="flex items-center gap-2">
-                            {roleMeta && <roleMeta.icon className="h-4 w-4 text-primary" />}
-                            <span className="font-medium">{roleMeta?.label}</span>
+                            <span className="flex h-5 w-5 items-center justify-center rounded text-white" style={{ backgroundColor: selectedProfile?.color }}>
+                              <ShieldCheck className="h-3 w-3" />
+                            </span>
+                            <span className="font-medium">{selectedProfile?.name}</span>
                           </div>
                         </Field>
                         <Field label="Departamento">
@@ -281,7 +279,7 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      O membro receberá acesso completo às páginas. Você pode ajustar os acessos depois em <span className="font-medium text-foreground">Perfil de Usuários</span>.
+                      O membro herdará as permissões do perfil <span className="font-medium text-foreground">{selectedProfile?.name}</span>. Ajuste as permissões em <span className="font-medium text-foreground">Perfis de Acesso</span>.
                     </p>
                   </div>
                 )}
