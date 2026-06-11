@@ -1,5 +1,5 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { type Task, getUser, getProject, priorityMeta, COLUMNS, users } from "@/lib/mock-data";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { type Task, type ChecklistItem, getUser, getProject, priorityMeta, COLUMNS, users } from "@/lib/mock-data";
 import { tasksStore } from "@/lib/store";
 import { UserAvatar, PriorityBadge } from "@/components/task-card";
 import {
@@ -45,7 +45,12 @@ function buildTimeline(task: Task): TLEvent[] {
     events.push({ id: "ev-log", kind: "log", at: task.startDate, user: assignee?.name || "—", title: `${task.loggedHours}h registradas`, detail: `Estimado: ${task.estimatedHours}h` });
   }
   task.checklist.filter(c => c.done).forEach((c) =>
-    events.push({ id: `ev-cl-${c.id}`, kind: "checklist", at: c.doneAt || task.startDate, user: assignee?.name || "—", title: `Concluído: ${c.text}`, detail: c.doneAt ? `Marcada em ${fmtDateTime(c.doneAt)}` : undefined })
+    events.push({
+      id: `ev-cl-${c.id}`, kind: "checklist", at: c.doneAt || task.startDate,
+      user: c.doneBy || assignee?.name || "—",
+      title: `Concluído: ${c.text}`,
+      detail: [c.doneNote, c.doneAt ? `Marcada em ${fmtDateTime(c.doneAt)}` : null].filter(Boolean).join(" · ") || undefined,
+    })
   );
   task.comments.forEach(c => {
     const u = getUser(c.userId);
