@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { projects, getUser, priorityMeta, type Project } from "@/lib/mock-data";
-import { useTasks } from "@/lib/store";
+import { getUser, priorityMeta, type Project } from "@/lib/mock-data";
+import { useTasks, useProjects } from "@/lib/store";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { UserAvatar } from "@/components/task-card";
 import { Plus, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CreateProjectWizard } from "@/components/create-project-wizard";
+import { useState } from "react";
 
 export const Route = createFileRoute("/projetos")({
   head: () => ({ meta: [
@@ -25,9 +27,11 @@ function statusColor(s: Project["status"]) {
 
 function ProjectsPage() {
   const tasks = useTasks();
+  const projects = useProjects();
+  const [createOpen, setCreateOpen] = useState(false);
   return (
     <AppShell title="Projetos" subtitle={`${projects.length} projetos ativos`} actions={
-      <Button size="sm" className="hidden md:inline-flex"><Plus className="h-4 w-4 mr-1" /> Novo Projeto</Button>
+      <Button size="sm" className="hidden md:inline-flex" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-1" /> Novo Projeto</Button>
     }>
       <div className="p-4 md:p-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {projects.map(p => {
@@ -73,6 +77,7 @@ function ProjectsPage() {
           );
         })}
       </div>
+      <CreateProjectWizard open={createOpen} onClose={() => setCreateOpen(false)} />
     </AppShell>
   );
 }

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { tasks as initialTasks, type Task, type TaskStatus } from "./mock-data";
+import { tasks as initialTasks, projects as initialProjects, type Task, type TaskStatus, type Project } from "./mock-data";
 
 let state: Task[] = [...initialTasks];
 const listeners = new Set<() => void>();
@@ -21,6 +21,25 @@ export const tasksStore = {
 
 export function useTasks() {
   return useSyncExternalStore(tasksStore.subscribe, tasksStore.getSnapshot, tasksStore.getSnapshot);
+}
+
+// Projects store
+let projectsState: Project[] = [...initialProjects];
+const projectListeners = new Set<() => void>();
+const notifyProjects = () => projectListeners.forEach(l => l());
+
+export const projectsStore = {
+  getSnapshot: () => projectsState,
+  subscribe: (l: () => void) => { projectListeners.add(l); return () => projectListeners.delete(l); },
+  addProject(p: Project) { projectsState = [p, ...projectsState]; notifyProjects(); },
+  updateProject(id: string, patch: Partial<Project>) {
+    projectsState = projectsState.map(p => p.id === id ? { ...p, ...patch } : p);
+    notifyProjects();
+  },
+};
+
+export function useProjects() {
+  return useSyncExternalStore(projectsStore.subscribe, projectsStore.getSnapshot, projectsStore.getSnapshot);
 }
 
 // Theme store
