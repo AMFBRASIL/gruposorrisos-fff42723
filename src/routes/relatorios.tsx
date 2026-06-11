@@ -36,7 +36,7 @@ function ReportsPage() {
   }).sort((a,b) => b.score - a.score);
 
   return (
-    <AppShell title="Relatórios" subtitle="Produtividade e SLA">
+    <AppShell title="Relatórios" subtitle="Produtividade e SLA" primaryAction={null}>
       <div className="p-4 md:p-8 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card className="p-5 lg:col-span-2">

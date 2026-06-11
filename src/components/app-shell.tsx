@@ -77,7 +77,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
             <Bell className="h-4 w-4" />
             <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-destructive" />
           </Button>
-          {primaryAction ?? <Button size="sm" className="hidden sm:inline-flex" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>}
+          {primaryAction !== undefined ? primaryAction : <Button size="sm" className="hidden sm:inline-flex" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>}
         </header>
         <div className="flex-1 min-w-0">{children}</div>
       </main>
