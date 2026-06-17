@@ -29,6 +29,8 @@ export interface Project {
 export interface ChecklistItem { id: string; text: string; done: boolean; doneAt?: string; doneBy?: string; doneNote?: string; }
 export interface Comment { id: string; userId: string; text: string; at: string; }
 
+export interface TimeEntry { id: string; userId: string; start: string; end?: string; minutes: number; note?: string; }
+
 export interface Task {
   id: string;
   title: string;
@@ -49,6 +51,52 @@ export interface Task {
   attachments: { id: string; name: string; size: string; type: string }[];
   estimatedHours: number;
   loggedHours: number;
+  dependsOn?: string[];
+  timeEntries?: TimeEntry[];
+}
+
+// ===== Project Templates =====
+export interface TemplateTask {
+  title: string;
+  department?: string;
+  priority?: Priority;
+  estimatedHours?: number;
+  offsetStartDays?: number; // dias após o início do projeto
+  offsetDueDays?: number;
+  status?: TaskStatus;
+  dependsOnIndex?: number[]; // referência por índice dentro do template
+}
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: string; // emoji
+  color: string;
+  category: "Operações" | "Marketing" | "TI" | "RH" | "Financeiro" | "Geral";
+  defaultDurationDays: number;
+  tasks: TemplateTask[];
+}
+
+// ===== Automações =====
+export type TriggerType = "status_change" | "task_created" | "due_soon" | "overdue" | "assigned";
+export type ActionType = "notify" | "create_task" | "move_status" | "set_priority" | "send_email" | "comment";
+
+export interface AutomationCondition { field: string; op: "eq" | "neq" | "contains"; value: string; }
+export interface AutomationAction { type: ActionType; payload: Record<string, string>; }
+
+export interface AutomationRule {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  trigger: TriggerType;
+  triggerConfig: Record<string, string>;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
+  runs: number;
+  lastRun?: string;
+  createdAt: string;
+  color: string;
 }
 
 export const COLUMNS: { id: string; title: string }[] = [
