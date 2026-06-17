@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { tasks as initialTasks, projects as initialProjects, users as initialUsers, type Task, type TaskStatus, type Project, type User } from "./mock-data";
+import { tasks as initialTasks, projects as initialProjects, users as initialUsers, projectTemplates as initialTemplates, automationRules as initialAutomations, seedTimeEntries, type Task, type TaskStatus, type Project, type User, type ProjectTemplate, type AutomationRule, type TimeEntry } from "./mock-data";
 
 // User profiles store (with page access)
 export const ACCESS_PAGES = ["/", "/projetos", "/kanban", "/minhas-tarefas", "/calendario", "/equipe", "/relatorios", "/configuracoes", "/perfis"] as const;
