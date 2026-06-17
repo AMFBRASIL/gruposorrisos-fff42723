@@ -490,3 +490,163 @@ export const costEntries: CostEntry[] = [
 export const getClient = (id?: string) => clients.find(c => c.id === id);
 export const invoiceTotal = (inv: Invoice) => inv.items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
 export const formatBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
+// ============================================================
+// ===== Wave 4 — Documentos, Aprovações & Portal do Cliente
+// ============================================================
+
+export type DocumentType = "contrato" | "proposta" | "nf" | "relatorio" | "termo" | "outro";
+export type DocumentStatus = "rascunho" | "revisao" | "aguardando_assinatura" | "assinado" | "expirado" | "arquivado";
+
+export interface DocumentVersion {
+  id: string; version: number; createdAt: string; createdBy: string; note?: string; size: string;
+}
+export interface DocumentSignatory {
+  id: string; name: string; email: string; role: string;
+  status: "pendente" | "assinado" | "recusado"; signedAt?: string;
+}
+export interface Document {
+  id: string; title: string; type: DocumentType; status: DocumentStatus;
+  clientId?: string; projectId?: string; ownerId: string;
+  createdAt: string; updatedAt: string; expiresAt?: string;
+  tags: string[]; versions: DocumentVersion[]; signatories: DocumentSignatory[];
+  value?: number; templateOf?: boolean;
+}
+
+export const documentTypeMeta: Record<DocumentType, { label: string; icon: string; color: string }> = {
+  contrato:  { label: "Contrato",    icon: "📄", color: "oklch(0.6 0.18 260)" },
+  proposta:  { label: "Proposta",    icon: "💼", color: "oklch(0.7 0.15 70)" },
+  nf:        { label: "Nota Fiscal", icon: "🧾", color: "oklch(0.62 0.16 155)" },
+  relatorio: { label: "Relatório",   icon: "📊", color: "oklch(0.65 0.14 230)" },
+  termo:     { label: "Termo",       icon: "📜", color: "oklch(0.7 0.18 340)" },
+  outro:     { label: "Outro",       icon: "📁", color: "oklch(0.55 0.04 260)" },
+};
+export const documentStatusMeta: Record<DocumentStatus, { label: string; className: string }> = {
+  rascunho:              { label: "Rascunho",              className: "bg-muted text-muted-foreground" },
+  revisao:               { label: "Em revisão",            className: "bg-warning/15 text-warning" },
+  aguardando_assinatura: { label: "Aguardando assinatura", className: "bg-info/15 text-info" },
+  assinado:              { label: "Assinado",              className: "bg-success/15 text-success" },
+  expirado:              { label: "Expirado",              className: "bg-destructive/15 text-destructive" },
+  arquivado:             { label: "Arquivado",             className: "bg-muted text-muted-foreground line-through" },
+};
+
+export const documents: Document[] = [
+  { id: "doc1", title: "Contrato de Prestação — Hospital Vida Plena (Renovação 2026)", type: "contrato", status: "assinado", clientId: "cli4", projectId: "p5", ownerId: "u2", createdAt: "2026-04-15", updatedAt: "2026-05-12", expiresAt: "2027-06-01", tags: ["renovação","anual"], value: 320000,
+    versions: [
+      { id: "v1", version: 1, createdAt: "2026-04-15", createdBy: "u2", note: "Versão inicial", size: "412 KB" },
+      { id: "v2", version: 2, createdAt: "2026-04-22", createdBy: "u4", note: "Ajustes jurídicos", size: "428 KB" },
+      { id: "v3", version: 3, createdAt: "2026-05-12", createdBy: "u2", note: "Versão final assinada", size: "446 KB" },
+    ],
+    signatories: [
+      { id: "s1", name: "Eduardo Lins", email: "eduardo@vidaplena.com", role: "Cliente", status: "assinado", signedAt: "2026-05-12" },
+      { id: "s2", name: "Sofia Almeida", email: "sofia@gruposorrisos.com", role: "Diretora", status: "assinado", signedAt: "2026-05-12" },
+    ],
+  },
+  { id: "doc2", title: "Proposta Comercial — Implantação ERP Bem Estar", type: "proposta", status: "aguardando_assinatura", clientId: "cli1", ownerId: "u7", createdAt: "2026-05-30", updatedAt: "2026-06-08", expiresAt: "2026-07-15", tags: ["proposta","erp"], value: 180000,
+    versions: [
+      { id: "v1", version: 1, createdAt: "2026-05-30", createdBy: "u7", size: "318 KB" },
+      { id: "v2", version: 2, createdAt: "2026-06-08", createdBy: "u7", note: "Revisão escopo + cronograma", size: "342 KB" },
+    ],
+    signatories: [
+      { id: "s1", name: "Dra. Helena Rocha", email: "helena@bemestar.com", role: "CEO Cliente", status: "pendente" },
+      { id: "s2", name: "Sofia Almeida", email: "sofia@gruposorrisos.com", role: "Diretora Comercial", status: "assinado", signedAt: "2026-06-08" },
+    ],
+  },
+  { id: "doc3", title: "Termo de Confidencialidade — Rede Saúde+", type: "termo", status: "revisao", clientId: "cli3", ownerId: "u4", createdAt: "2026-06-02", updatedAt: "2026-06-10", tags: ["nda","jurídico"],
+    versions: [{ id: "v1", version: 1, createdAt: "2026-06-02", createdBy: "u4", size: "98 KB" }],
+    signatories: [{ id: "s1", name: "Camila Duarte", email: "camila@saudemais.com", role: "Diretora TI", status: "pendente" }],
+  },
+  { id: "doc4", title: "Relatório Mensal de Performance — Maio/26", type: "relatorio", status: "assinado", clientId: "cli1", projectId: "p2", ownerId: "u5", createdAt: "2026-06-01", updatedAt: "2026-06-03", tags: ["marketing","mensal"],
+    versions: [{ id: "v1", version: 1, createdAt: "2026-06-03", createdBy: "u5", size: "1.2 MB" }],
+    signatories: [],
+  },
+  { id: "doc5", title: "Contrato Piloto — Smile Express (3 unidades)", type: "contrato", status: "rascunho", clientId: "cli6", ownerId: "u7", createdAt: "2026-06-10", updatedAt: "2026-06-14", tags: ["piloto","franquia"], value: 120000,
+    versions: [{ id: "v1", version: 1, createdAt: "2026-06-10", createdBy: "u7", size: "286 KB" }],
+    signatories: [],
+  },
+  { id: "doc6", title: "Aditivo Contratual — Sorocaba Fase 2", type: "contrato", status: "aguardando_assinatura", clientId: "cli2", projectId: "p1", ownerId: "u2", createdAt: "2026-06-05", updatedAt: "2026-06-12", expiresAt: "2026-06-30", tags: ["aditivo"], value: 60000,
+    versions: [
+      { id: "v1", version: 1, createdAt: "2026-06-05", createdBy: "u2", size: "204 KB" },
+      { id: "v2", version: 2, createdAt: "2026-06-12", createdBy: "u4", note: "Cláusula 4.2 revisada", size: "211 KB" },
+    ],
+    signatories: [{ id: "s1", name: "Dr. Marcos Vinhas", email: "marcos@odontosorrir.com", role: "Sócio", status: "pendente" }],
+  },
+  { id: "doc7", title: "Contrato Modelo — Prestação de Serviços PJ", type: "contrato", status: "arquivado", ownerId: "u4", createdAt: "2025-09-10", updatedAt: "2026-01-15", tags: ["template","modelo"], templateOf: true,
+    versions: [{ id: "v1", version: 1, createdAt: "2025-09-10", createdBy: "u4", size: "180 KB" }],
+    signatories: [],
+  },
+  { id: "doc8", title: "Termo de Aceite — Treinamento Alegria", type: "termo", status: "expirado", clientId: "cli5", projectId: "p4", ownerId: "u5", createdAt: "2026-04-01", updatedAt: "2026-05-30", expiresAt: "2026-05-30", tags: ["treinamento"],
+    versions: [{ id: "v1", version: 1, createdAt: "2026-04-01", createdBy: "u5", size: "76 KB" }],
+    signatories: [{ id: "s1", name: "Renata Prado", email: "renata@alegria.com", role: "Gerente", status: "pendente" }],
+  },
+];
+
+// ===== Aprovações & Workflows =====
+export type ApprovalType = "despesa" | "contrato" | "ferias" | "compra" | "horas_extras" | "viagem";
+export type ApprovalStatus = "pendente" | "aprovado" | "rejeitado" | "cancelado";
+
+export interface ApprovalStep {
+  id: string; order: number; approverId: string;
+  status: ApprovalStatus; decidedAt?: string; note?: string;
+}
+export interface ApprovalRequest {
+  id: string; title: string; type: ApprovalType;
+  requesterId: string; amount?: number; description: string;
+  createdAt: string; dueDate?: string; status: ApprovalStatus;
+  steps: ApprovalStep[];
+  attachments?: { id: string; name: string; size: string }[];
+  relatedProjectId?: string; relatedClientId?: string;
+}
+
+export const approvalTypeMeta: Record<ApprovalType, { label: string; icon: string; color: string }> = {
+  despesa:      { label: "Despesa",       icon: "💰", color: "oklch(0.7 0.15 70)" },
+  contrato:     { label: "Contrato",      icon: "📄", color: "oklch(0.6 0.18 260)" },
+  ferias:       { label: "Férias",        icon: "🏖️", color: "oklch(0.65 0.14 230)" },
+  compra:       { label: "Compra",        icon: "🛒", color: "oklch(0.62 0.16 155)" },
+  horas_extras: { label: "Horas extras",  icon: "⏰", color: "oklch(0.7 0.18 340)" },
+  viagem:       { label: "Viagem",        icon: "✈️", color: "oklch(0.65 0.18 25)" },
+};
+export const approvalStatusMeta: Record<ApprovalStatus, { label: string; className: string }> = {
+  pendente:  { label: "Pendente",  className: "bg-warning/15 text-warning" },
+  aprovado:  { label: "Aprovado",  className: "bg-success/15 text-success" },
+  rejeitado: { label: "Rejeitado", className: "bg-destructive/15 text-destructive" },
+  cancelado: { label: "Cancelado", className: "bg-muted text-muted-foreground" },
+};
+
+export const approvals: ApprovalRequest[] = [
+  { id: "ap1", title: "Compra de licenças Figma (10 usuários)", type: "compra", requesterId: "u5", amount: 9800, description: "Renovação anual + 4 novas licenças para o time de design.", createdAt: "2026-06-10", dueDate: "2026-06-20", status: "pendente",
+    steps: [
+      { id: "st1", order: 1, approverId: "u3", status: "aprovado", decidedAt: "2026-06-11", note: "Justificativa OK" },
+      { id: "st2", order: 2, approverId: "u2", status: "pendente" },
+    ],
+    attachments: [{ id: "a1", name: "cotacao-figma.pdf", size: "84 KB" }],
+  },
+  { id: "ap2", title: "Aditivo contratual — Sorocaba Fase 2", type: "contrato", requesterId: "u7", amount: 60000, description: "Aditivo para iniciar fase 2 conforme proposta aprovada.", createdAt: "2026-06-12", status: "pendente", relatedClientId: "cli2", relatedProjectId: "p1",
+    steps: [
+      { id: "st1", order: 1, approverId: "u4", status: "aprovado", decidedAt: "2026-06-13" },
+      { id: "st2", order: 2, approverId: "u2", status: "pendente" },
+    ],
+  },
+  { id: "ap3", title: "Férias — 15 dias (Carlos Mendes)", type: "ferias", requesterId: "u5", description: "Período: 22/jul a 05/ago. Substituto: Ana Souza.", createdAt: "2026-06-08", dueDate: "2026-07-10", status: "aprovado",
+    steps: [
+      { id: "st1", order: 1, approverId: "u3", status: "aprovado", decidedAt: "2026-06-09" },
+      { id: "st2", order: 2, approverId: "u2", status: "aprovado", decidedAt: "2026-06-10", note: "Aprovado, boa viagem!" },
+    ],
+  },
+  { id: "ap4", title: "Reembolso — Viagem cliente Vida Plena", type: "despesa", requesterId: "u2", amount: 3450, description: "Passagens + hospedagem reunião presencial RJ.", createdAt: "2026-06-05", status: "aprovado",
+    steps: [{ id: "st1", order: 1, approverId: "u4", status: "aprovado", decidedAt: "2026-06-06" }],
+    attachments: [{ id: "a1", name: "nfs-hotel.pdf", size: "120 KB" }, { id: "a2", name: "boarding-pass.pdf", size: "42 KB" }],
+  },
+  { id: "ap5", title: "Horas extras — Time operações (junho)", type: "horas_extras", requesterId: "u3", amount: 4200, description: "32h extras distribuídas em 4 colaboradores para entrega Sorocaba.", createdAt: "2026-06-14", status: "pendente",
+    steps: [{ id: "st1", order: 1, approverId: "u2", status: "pendente" }],
+  },
+  { id: "ap6", title: "Compra de equipamentos audiovisuais", type: "compra", requesterId: "u5", amount: 18500, description: "Câmera + microfone para conteúdo de marketing in-house.", createdAt: "2026-05-28", status: "rejeitado",
+    steps: [
+      { id: "st1", order: 1, approverId: "u3", status: "aprovado", decidedAt: "2026-05-29" },
+      { id: "st2", order: 2, approverId: "u2", status: "rejeitado", decidedAt: "2026-05-30", note: "Adiar para Q3 — orçamento atual já comprometido." },
+    ],
+  },
+  { id: "ap7", title: "Viagem — Visita Smile Express (Curitiba)", type: "viagem", requesterId: "u7", amount: 2800, description: "Apresentação do piloto, 2 dias.", createdAt: "2026-06-13", dueDate: "2026-06-25", status: "pendente", relatedClientId: "cli6",
+    steps: [{ id: "st1", order: 1, approverId: "u2", status: "pendente" }],
+  },
+];
