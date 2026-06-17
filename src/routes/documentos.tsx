@@ -11,6 +11,7 @@ import { useDocuments, documentsStore } from "@/lib/store";
 import { documentTypeMeta, documentStatusMeta, getUser, getClient, formatBRL, type DocumentStatus, type DocumentType, type Document } from "@/lib/mock-data";
 import { FileText, Plus, Search, Clock, CheckCircle2, AlertTriangle, History, PenTool, Download, Archive, FileSignature, Calendar } from "lucide-react";
 import { useMemo, useState } from "react";
+import { CreateDocumentWizard } from "@/components/create-document-wizard";
 
 export const Route = createFileRoute("/documentos")({ component: DocumentosPage });
 
