@@ -2,10 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { getUser, priorityMeta, type Project } from "@/lib/mock-data";
 import { useTasks, useProjects } from "@/lib/store";
+import { analyzeProject, RISK_META } from "@/lib/ai-mock";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { UserAvatar } from "@/components/task-card";
-import { Plus, MoreHorizontal } from "lucide-react";
+import { Plus, MoreHorizontal, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreateProjectWizard } from "@/components/create-project-wizard";
 import { useState } from "react";
@@ -38,6 +39,8 @@ function ProjectsPage() {
           const pTasks = tasks.filter(t => t.projectId === p.id);
           const completed = pTasks.filter(t => t.status === "concluido").length;
           const owner = getUser(p.ownerId);
+          const insight = analyzeProject(p, tasks);
+          const riskMeta = RISK_META[insight.riskLevel];
           return (
             <Card key={p.id} className="overflow-hidden border-border/60 hover:shadow-md transition-shadow p-0">
               <div className="h-2" style={{ backgroundColor: p.color }} />
@@ -52,6 +55,9 @@ function ProjectsPage() {
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   <span className={`text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 ${statusColor(p.status)}`}>{statusLabel(p.status)}</span>
                   <span className={`text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 ${priorityMeta[p.priority].className}`}>{priorityMeta[p.priority].label}</span>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 border ${riskMeta.className}`} title={`Risco IA: ${insight.riskScore}/100`}>
+                    <Sparkles className="h-2.5 w-2.5" /> {riskMeta.label}
+                  </span>
                 </div>
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">

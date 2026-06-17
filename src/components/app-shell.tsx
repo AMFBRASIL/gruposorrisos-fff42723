@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain } from "lucide-react";
+import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ const nav = [
   { to: "/calendario", label: "Calendário", icon: Calendar },
   { to: "/timesheet", label: "Timesheet", icon: Clock },
   { to: "/automacoes", label: "Automações", icon: Zap },
+  { to: "/insights", label: "IA Insights", icon: Brain },
   { to: "/equipe", label: "Equipe", icon: Users },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
@@ -117,6 +119,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
         <div className="flex-1 min-w-0">{children}</div>
       </main>
       <CreateTaskWizard open={createOpen} onClose={() => setCreateOpen(false)} />
+      <AIAssistant />
     </div>
   );
 }
