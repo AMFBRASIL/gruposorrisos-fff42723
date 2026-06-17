@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TimesheetRouteImport } from './routes/timesheet'
+import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as ProjetosRouteImport } from './routes/projetos'
 import { Route as PerfisRouteImport } from './routes/perfis'
@@ -18,8 +20,19 @@ import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as EquipeRouteImport } from './routes/equipe'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as CalendarioRouteImport } from './routes/calendario'
+import { Route as AutomacoesRouteImport } from './routes/automacoes'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TimesheetRoute = TimesheetRouteImport.update({
+  id: '/timesheet',
+  path: '/timesheet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemplatesRoute = TemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -65,6 +78,11 @@ const CalendarioRoute = CalendarioRouteImport.update({
   path: '/calendario',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AutomacoesRoute = AutomacoesRouteImport.update({
+  id: '/automacoes',
+  path: '/automacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -73,6 +91,7 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
@@ -82,9 +101,12 @@ export interface FileRoutesByFullPath {
   '/perfis': typeof PerfisRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
+  '/templates': typeof TemplatesRoute
+  '/timesheet': typeof TimesheetRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
@@ -94,10 +116,13 @@ export interface FileRoutesByTo {
   '/perfis': typeof PerfisRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
+  '/templates': typeof TemplatesRoute
+  '/timesheet': typeof TimesheetRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
@@ -107,11 +132,14 @@ export interface FileRoutesById {
   '/perfis': typeof PerfisRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
+  '/templates': typeof TemplatesRoute
+  '/timesheet': typeof TimesheetRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/automacoes'
     | '/calendario'
     | '/configuracoes'
     | '/equipe'
@@ -121,9 +149,12 @@ export interface FileRouteTypes {
     | '/perfis'
     | '/projetos'
     | '/relatorios'
+    | '/templates'
+    | '/timesheet'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/automacoes'
     | '/calendario'
     | '/configuracoes'
     | '/equipe'
@@ -133,9 +164,12 @@ export interface FileRouteTypes {
     | '/perfis'
     | '/projetos'
     | '/relatorios'
+    | '/templates'
+    | '/timesheet'
   id:
     | '__root__'
     | '/'
+    | '/automacoes'
     | '/calendario'
     | '/configuracoes'
     | '/equipe'
@@ -145,10 +179,13 @@ export interface FileRouteTypes {
     | '/perfis'
     | '/projetos'
     | '/relatorios'
+    | '/templates'
+    | '/timesheet'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AutomacoesRoute: typeof AutomacoesRoute
   CalendarioRoute: typeof CalendarioRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   EquipeRoute: typeof EquipeRoute
@@ -158,10 +195,26 @@ export interface RootRouteChildren {
   PerfisRoute: typeof PerfisRoute
   ProjetosRoute: typeof ProjetosRoute
   RelatoriosRoute: typeof RelatoriosRoute
+  TemplatesRoute: typeof TemplatesRoute
+  TimesheetRoute: typeof TimesheetRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/timesheet': {
+      id: '/timesheet'
+      path: '/timesheet'
+      fullPath: '/timesheet'
+      preLoaderRoute: typeof TimesheetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates': {
+      id: '/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/relatorios': {
       id: '/relatorios'
       path: '/relatorios'
@@ -225,6 +278,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/automacoes': {
+      id: '/automacoes'
+      path: '/automacoes'
+      fullPath: '/automacoes'
+      preLoaderRoute: typeof AutomacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -237,6 +297,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AutomacoesRoute: AutomacoesRoute,
   CalendarioRoute: CalendarioRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   EquipeRoute: EquipeRoute,
@@ -246,6 +307,8 @@ const rootRouteChildren: RootRouteChildren = {
   PerfisRoute: PerfisRoute,
   ProjetosRoute: ProjetosRoute,
   RelatoriosRoute: RelatoriosRoute,
+  TemplatesRoute: TemplatesRoute,
+  TimesheetRoute: TimesheetRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -9,8 +9,8 @@ import {
   CalendarDays, FolderKanban, Users as UsersIcon, FileText, Flag, CheckCircle2,
   Sparkles, ArrowRight, ArrowLeft, X, Palette, Crown,
 } from "lucide-react";
-import { users, priorityMeta, type Priority, type Project } from "@/lib/mock-data";
-import { projectsStore } from "@/lib/store";
+import { users, priorityMeta, projectTemplates, type Priority, type Project, type ProjectTemplate } from "@/lib/mock-data";
+import { projectsStore, applyTemplateToProject } from "@/lib/store";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
@@ -35,6 +35,7 @@ const STATUS_OPTIONS: { id: Project["status"]; label: string; desc: string }[] =
 
 export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [step, setStep] = useState(0);
+  const [template, setTemplate] = useState<ProjectTemplate | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(COLORS[0]);
@@ -44,6 +45,18 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
   const [priority, setPriority] = useState<Priority>("normal");
   const [startDate, setStartDate] = useState("2026-06-11");
   const [endDate, setEndDate] = useState("2026-07-11");
+
+  const applyTemplate = (tpl: ProjectTemplate | null) => {
+    setTemplate(tpl);
+    if (tpl) {
+      if (!name) setName(tpl.name);
+      setColor(tpl.color);
+      if (!description) setDescription(tpl.description);
+      const end = new Date(startDate + "T00:00:00");
+      end.setDate(end.getDate() + tpl.defaultDurationDays);
+      setEndDate(end.toISOString().slice(0, 10));
+    }
+  };
 
   const prettyDate = new Date().toLocaleDateString("pt-BR", {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
@@ -59,7 +72,7 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
   };
 
   const reset = () => {
-    setStep(0); setName(""); setDescription(""); setColor(COLORS[0]);
+    setStep(0); setTemplate(null); setName(""); setDescription(""); setColor(COLORS[0]);
     setStatus("planejamento"); setOwnerId(users[0].id); setTeamIds([users[0].id]);
     setPriority("normal"); setStartDate("2026-06-11"); setEndDate("2026-07-11");
   };
@@ -68,8 +81,9 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
 
   const submit = () => {
     if (!name.trim()) return;
+    const id = `p_${Date.now().toString(36)}`;
     projectsStore.addProject({
-      id: `p_${Date.now().toString(36)}`,
+      id,
       name: name.trim(),
       description: description.trim(),
       ownerId,
@@ -77,6 +91,7 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
       startDate, endDate, status, color, priority,
       progress: 0, health: 100,
     });
+    if (template) applyTemplateToProject(template, id, startDate, ownerId);
     close();
   };
 
