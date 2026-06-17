@@ -103,6 +103,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
             <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar tarefas, projetos..." className="pl-9 w-72 h-9 bg-muted/50 border-transparent focus-visible:bg-card" />
           </div>
+          <TimerChip />
           {actions}
           <Button size="icon" variant="ghost" onClick={() => themeStore.toggle()} aria-label="Alternar tema">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
