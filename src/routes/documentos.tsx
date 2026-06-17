@@ -11,6 +11,7 @@ import { useDocuments, documentsStore } from "@/lib/store";
 import { documentTypeMeta, documentStatusMeta, getUser, getClient, formatBRL, type DocumentStatus, type DocumentType, type Document } from "@/lib/mock-data";
 import { FileText, Plus, Search, Clock, CheckCircle2, AlertTriangle, History, PenTool, Download, Archive, FileSignature, Calendar } from "lucide-react";
 import { useMemo, useState } from "react";
+import { CreateDocumentWizard } from "@/components/create-document-wizard";
 
 export const Route = createFileRoute("/documentos")({ component: DocumentosPage });
 
@@ -36,6 +37,7 @@ function DocumentosPage() {
   const [type, setType] = useState<"all" | DocumentType>("all");
   const [status, setStatus] = useState<"all" | DocumentStatus>("all");
   const [openDoc, setOpenDoc] = useState<Document | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return docs.filter(d => {
@@ -59,7 +61,7 @@ function DocumentosPage() {
   }, [docs]);
 
   return (
-    <AppShell title="Documentos" subtitle="Contratos, propostas e termos" primaryAction={<Button size="sm"><Plus className="h-4 w-4 mr-1" /> Novo Documento</Button>}>
+    <AppShell title="Documentos" subtitle="Contratos, propostas e termos" primaryAction={<Button size="sm" onClick={() => setWizardOpen(true)}><Plus className="h-4 w-4 mr-1" /> Novo Documento</Button>}>
       <div className="p-4 md:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <KPI icon={FileText}  label="Total"                 value={String(kpis.total)}            tone="primary" />
@@ -97,6 +99,7 @@ function DocumentosPage() {
       </div>
 
       <DocumentDrawer doc={openDoc} onClose={() => setOpenDoc(null)} />
+      <CreateDocumentWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
     </AppShell>
   );
 }
