@@ -1,24 +1,58 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog } from "lucide-react";
-import { useTheme, themeStore } from "@/lib/store";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause } from "lucide-react";
+import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { users } from "@/lib/mock-data";
 import { CreateTaskWizard } from "@/components/create-task-wizard";
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/projetos", label: "Projetos", icon: FolderKanban },
+  { to: "/templates", label: "Templates", icon: FileStack },
   { to: "/kanban", label: "Kanban", icon: Columns3 },
   { to: "/minhas-tarefas", label: "Minhas Tarefas", icon: CheckSquare },
   { to: "/calendario", label: "Calendário", icon: Calendar },
+  { to: "/timesheet", label: "Timesheet", icon: Clock },
+  { to: "/automacoes", label: "Automações", icon: Zap },
   { to: "/equipe", label: "Equipe", icon: Users },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const;
+
+function TimerChip() {
+  const active = useActiveTimer();
+  const allTasks = useTasks();
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => force(x => x + 1), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  if (!active) return null;
+  const task = allTasks.find(t => t.id === active.taskId);
+  const elapsed = Math.floor((Date.now() - new Date(active.startedAt).getTime()) / 1000);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const ss = String(elapsed % 60).padStart(2, "0");
+  return (
+    <button
+      onClick={() => timerStore.stop()}
+      className="hidden md:inline-flex items-center gap-2 rounded-full bg-success/10 text-success border border-success/30 px-3 h-9 text-xs font-medium hover:bg-success/15 transition-colors"
+      title="Parar cronômetro"
+    >
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+      </span>
+      <span className="font-mono tabular-nums">{mm}:{ss}</span>
+      <span className="max-w-[140px] truncate hidden lg:inline">{task?.title}</span>
+      <Pause className="h-3 w-3" />
+    </button>
+  );
+}
 
 export function AppShell({ children, title, subtitle, actions, primaryAction }: { children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; primaryAction?: ReactNode }) {
   const pathname = useRouterState({ select: s => s.location.pathname });
