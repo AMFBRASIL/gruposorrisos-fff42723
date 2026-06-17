@@ -212,3 +212,126 @@ export const recentActivity: Activity[] = [
   { id: "a4", user: "Ana Costa", action: "criou a tarefa", target: "Migrar plano de contas", at: "ontem" },
   { id: "a5", user: "Beatriz Souza", action: "anexou arquivo em", target: "Produzir vídeos institucionais", at: "ontem" },
 ];
+
+// ===== Seed: Templates de projeto =====
+export const projectTemplates: ProjectTemplate[] = [
+  {
+    id: "tpl_unit", name: "Abertura de Nova Unidade", category: "Operações",
+    description: "Fluxo completo para abrir uma nova unidade do Grupo Sorrisos.",
+    icon: "🏥", color: "oklch(0.6 0.18 260)", defaultDurationDays: 120,
+    tasks: [
+      { title: "Pesquisar pontos comerciais", department: "Operações", priority: "alta", estimatedHours: 16, offsetStartDays: 0, offsetDueDays: 10 },
+      { title: "Negociar contrato de locação", department: "Operações", priority: "alta", estimatedHours: 12, offsetStartDays: 10, offsetDueDays: 25, dependsOnIndex: [0] },
+      { title: "Projeto arquitetônico", department: "Operações", priority: "normal", estimatedHours: 40, offsetStartDays: 25, offsetDueDays: 55, dependsOnIndex: [1] },
+      { title: "Obra e adequação", department: "Operações", priority: "alta", estimatedHours: 200, offsetStartDays: 30, offsetDueDays: 90, dependsOnIndex: [2] },
+      { title: "Compra de mobiliário e equipamentos", department: "Compras", priority: "alta", estimatedHours: 24, offsetStartDays: 60, offsetDueDays: 100 },
+      { title: "Contratar equipe clínica", department: "RH", priority: "alta", estimatedHours: 30, offsetStartDays: 70, offsetDueDays: 110 },
+      { title: "Vistoria final e alvarás", department: "Diretoria", priority: "urgente", estimatedHours: 8, offsetStartDays: 110, offsetDueDays: 120, dependsOnIndex: [3,4,5] },
+    ],
+  },
+  {
+    id: "tpl_campaign", name: "Campanha de Marketing", category: "Marketing",
+    description: "Planejamento e execução de uma campanha sazonal.",
+    icon: "📣", color: "oklch(0.7 0.18 340)", defaultDurationDays: 45,
+    tasks: [
+      { title: "Briefing da campanha", department: "Marketing", priority: "normal", estimatedHours: 8, offsetStartDays: 0, offsetDueDays: 5 },
+      { title: "Definição de pauta criativa", department: "Marketing", priority: "alta", estimatedHours: 12, offsetStartDays: 5, offsetDueDays: 12, dependsOnIndex: [0] },
+      { title: "Produção de criativos", department: "Marketing", priority: "alta", estimatedHours: 40, offsetStartDays: 12, offsetDueDays: 30, dependsOnIndex: [1] },
+      { title: "Aprovação interna", department: "Marketing", priority: "urgente", estimatedHours: 4, offsetStartDays: 28, offsetDueDays: 32, dependsOnIndex: [2] },
+      { title: "Programar anúncios", department: "Marketing", priority: "normal", estimatedHours: 8, offsetStartDays: 32, offsetDueDays: 38, dependsOnIndex: [3] },
+      { title: "Acompanhamento e relatório", department: "Marketing", priority: "normal", estimatedHours: 12, offsetStartDays: 38, offsetDueDays: 45 },
+    ],
+  },
+  {
+    id: "tpl_onboarding", name: "Onboarding de Colaborador", category: "RH",
+    description: "Integração de novo membro da equipe.",
+    icon: "👋", color: "oklch(0.65 0.14 230)", defaultDurationDays: 30,
+    tasks: [
+      { title: "Coletar documentos e contratos", department: "RH", priority: "alta", estimatedHours: 4, offsetStartDays: 0, offsetDueDays: 3 },
+      { title: "Configurar e-mail e acessos", department: "TI", priority: "alta", estimatedHours: 2, offsetStartDays: 0, offsetDueDays: 2 },
+      { title: "Tour pela unidade", department: "RH", priority: "normal", estimatedHours: 2, offsetStartDays: 2, offsetDueDays: 4 },
+      { title: "Treinamentos obrigatórios", department: "RH", priority: "alta", estimatedHours: 16, offsetStartDays: 4, offsetDueDays: 14, dependsOnIndex: [2] },
+      { title: "Acompanhamento 30 dias", department: "RH", priority: "normal", estimatedHours: 2, offsetStartDays: 28, offsetDueDays: 30 },
+    ],
+  },
+  {
+    id: "tpl_sprint", name: "Sprint de TI (2 semanas)", category: "TI",
+    description: "Ciclo padrão de desenvolvimento da equipe de TI.",
+    icon: "💻", color: "oklch(0.62 0.16 155)", defaultDurationDays: 14,
+    tasks: [
+      { title: "Planning da sprint", department: "TI", priority: "alta", estimatedHours: 4, offsetStartDays: 0, offsetDueDays: 1 },
+      { title: "Desenvolvimento das features", department: "TI", priority: "alta", estimatedHours: 50, offsetStartDays: 1, offsetDueDays: 11, dependsOnIndex: [0] },
+      { title: "Code review", department: "TI", priority: "normal", estimatedHours: 8, offsetStartDays: 9, offsetDueDays: 12, dependsOnIndex: [1] },
+      { title: "QA e testes", department: "TI", priority: "alta", estimatedHours: 12, offsetStartDays: 10, offsetDueDays: 13, dependsOnIndex: [2] },
+      { title: "Deploy em produção", department: "TI", priority: "urgente", estimatedHours: 4, offsetStartDays: 13, offsetDueDays: 14, dependsOnIndex: [3] },
+      { title: "Retrospectiva", department: "TI", priority: "normal", estimatedHours: 2, offsetStartDays: 14, offsetDueDays: 14, dependsOnIndex: [4] },
+    ],
+  },
+  {
+    id: "tpl_audit", name: "Auditoria & Conformidade", category: "Financeiro",
+    description: "Processo padrão de auditoria interna.",
+    icon: "🛡️", color: "oklch(0.65 0.14 230)", defaultDurationDays: 60,
+    tasks: [
+      { title: "Definir escopo da auditoria", department: "Financeiro", priority: "alta", estimatedHours: 8, offsetStartDays: 0, offsetDueDays: 5 },
+      { title: "Coletar evidências e documentos", department: "Financeiro", priority: "alta", estimatedHours: 30, offsetStartDays: 5, offsetDueDays: 25, dependsOnIndex: [0] },
+      { title: "Análise e identificação de gaps", department: "Financeiro", priority: "urgente", estimatedHours: 24, offsetStartDays: 25, offsetDueDays: 45, dependsOnIndex: [1] },
+      { title: "Relatório final", department: "Financeiro", priority: "alta", estimatedHours: 12, offsetStartDays: 45, offsetDueDays: 55, dependsOnIndex: [2] },
+      { title: "Apresentação à diretoria", department: "Diretoria", priority: "urgente", estimatedHours: 4, offsetStartDays: 55, offsetDueDays: 60, dependsOnIndex: [3] },
+    ],
+  },
+  {
+    id: "tpl_event", name: "Evento Corporativo", category: "Geral",
+    description: "Organização completa de um evento interno.",
+    icon: "🎉", color: "oklch(0.7 0.15 70)", defaultDurationDays: 60,
+    tasks: [
+      { title: "Definir conceito e público", department: "Marketing", priority: "alta", estimatedHours: 6, offsetStartDays: 0, offsetDueDays: 5 },
+      { title: "Orçar fornecedores", department: "Compras", priority: "alta", estimatedHours: 12, offsetStartDays: 5, offsetDueDays: 15 },
+      { title: "Reservar local", department: "Operações", priority: "urgente", estimatedHours: 4, offsetStartDays: 15, offsetDueDays: 20, dependsOnIndex: [1] },
+      { title: "Divulgação interna", department: "Marketing", priority: "normal", estimatedHours: 8, offsetStartDays: 20, offsetDueDays: 50 },
+      { title: "Logística e checklist final", department: "Operações", priority: "alta", estimatedHours: 12, offsetStartDays: 50, offsetDueDays: 58 },
+      { title: "Realização do evento", department: "Operações", priority: "critica", estimatedHours: 12, offsetStartDays: 58, offsetDueDays: 60, dependsOnIndex: [4] },
+    ],
+  },
+];
+
+// ===== Seed: Automações =====
+export const automationRules: AutomationRule[] = [
+  {
+    id: "auto1", name: "Notificar gestor quando tarefa atrasar",
+    description: "Quando uma tarefa estoura o prazo, envia notificação ao responsável e ao gestor do projeto.",
+    enabled: true, trigger: "overdue", triggerConfig: { days: "0" },
+    conditions: [], actions: [{ type: "notify", payload: { to: "gestor", channel: "in_app" } }],
+    runs: 12, lastRun: "2026-06-09", createdAt: "2026-05-01", color: "oklch(0.65 0.18 25)",
+  },
+  {
+    id: "auto2", name: "Mover para Análise quando concluir todas as subtarefas",
+    description: "Ao marcar a última subtarefa como concluída, move a tarefa para a coluna Em Análise.",
+    enabled: true, trigger: "status_change", triggerConfig: { from: "checklist_complete" },
+    conditions: [], actions: [{ type: "move_status", payload: { to: "aprovacao" } }],
+    runs: 34, lastRun: "2026-06-10", createdAt: "2026-04-15", color: "oklch(0.62 0.16 155)",
+  },
+  {
+    id: "auto3", name: "Lembrete 2 dias antes do prazo",
+    description: "Envia lembrete ao responsável 2 dias antes do vencimento.",
+    enabled: true, trigger: "due_soon", triggerConfig: { days: "2" },
+    conditions: [], actions: [{ type: "notify", payload: { to: "assignee", channel: "in_app" } }],
+    runs: 47, lastRun: "2026-06-10", createdAt: "2026-03-20", color: "oklch(0.7 0.15 70)",
+  },
+  {
+    id: "auto4", name: "Escalar tarefas críticas atrasadas",
+    description: "Tarefas com prioridade crítica que ficam atrasadas mudam o responsável para o diretor.",
+    enabled: false, trigger: "overdue", triggerConfig: { days: "1" },
+    conditions: [{ field: "priority", op: "eq", value: "critica" }],
+    actions: [{ type: "notify", payload: { to: "diretor", channel: "email" } }, { type: "set_priority", payload: { value: "critica" } }],
+    runs: 3, lastRun: "2026-05-28", createdAt: "2026-04-02", color: "oklch(0.6 0.2 295)",
+  },
+];
+
+// ===== Seed: Time entries =====
+export const seedTimeEntries: TimeEntry[] = [
+  { id: "te1", userId: "u1", start: "2026-06-09T09:00:00", end: "2026-06-09T11:30:00", minutes: 150, note: "Revisão do contrato" },
+  { id: "te2", userId: "u1", start: "2026-06-09T14:00:00", end: "2026-06-09T17:00:00", minutes: 180, note: "Reunião jurídico" },
+  { id: "te3", userId: "u3", start: "2026-06-09T08:30:00", end: "2026-06-09T12:00:00", minutes: 210, note: "Migração plano de contas" },
+  { id: "te4", userId: "u4", start: "2026-06-09T09:00:00", end: "2026-06-09T13:00:00", minutes: 240, note: "Configurar integrações" },
+  { id: "te5", userId: "u5", start: "2026-06-10T10:00:00", end: "2026-06-10T13:00:00", minutes: 180, note: "Produção de vídeo" },
+];
