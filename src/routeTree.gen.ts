@@ -20,7 +20,6 @@ import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EquipeRouteImport } from './routes/equipe'
-import { Route as CountoasRouteImport } from './routes/configuracoes'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ComercialRouteImport } from './routes/comercial'
 import { Route as ClientesRouteImport } from './routes/clientes'
@@ -28,23 +27,91 @@ import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as AutomacoesRouteImport } from './routes/automacoes'
 import { Route as IndexRouteImport } from './routes/index'
 
-const TimesheetRoute = TimesheetRouteImport.update({ id: '/timesheet', path: '/timesheet', getParentRoute: () => rootRouteImport } as any)
-const TemplatesRoute = TemplatesRouteImport.update({ id: '/templates', path: '/templates', getParentRoute: () => rootRouteImport } as any)
-const RelatoriosRoute = RelatoriosRouteImport.update({ id: '/relatorios', path: '/relatorios', getParentRoute: () => rootRouteImport } as any)
-const ProjetosRoute = ProjetosRouteImport.update({ id: '/projetos', path: '/projetos', getParentRoute: () => rootRouteImport } as any)
-const PerfisRoute = PerfisRouteImport.update({ id: '/perfis', path: '/perfis', getParentRoute: () => rootRouteImport } as any)
-const MinhasTarefasRoute = MinhasTarefasRouteImport.update({ id: '/minhas-tarefas', path: '/minhas-tarefas', getParentRoute: () => rootRouteImport } as any)
-const LoginRoute = LoginRouteImport.update({ id: '/login', path: '/login', getParentRoute: () => rootRouteImport } as any)
-const KanbanRoute = KanbanRouteImport.update({ id: '/kanban', path: '/kanban', getParentRoute: () => rootRouteImport } as any)
-const InsightsRoute = InsightsRouteImport.update({ id: '/insights', path: '/insights', getParentRoute: () => rootRouteImport } as any)
-const FinanceiroRoute = FinanceiroRouteImport.update({ id: '/financeiro', path: '/financeiro', getParentRoute: () => rootRouteImport } as any)
-const EquipeRoute = EquipeRouteImport.update({ id: '/equipe', path: '/equipe', getParentRoute: () => rootRouteImport } as any)
-const ConfiguracoesRoute = ConfiguracoesRouteImport.update({ id: '/configuracoes', path: '/configuracoes', getParentRoute: () => rootRouteImport } as any)
-const ComercialRoute = ComercialRouteImport.update({ id: '/comercial', path: '/comercial', getParentRoute: () => rootRouteImport } as any)
-const ClientesRoute = ClientesRouteImport.update({ id: '/clientes', path: '/clientes', getParentRoute: () => rootRouteImport } as any)
-const CalendarioRoute = CalendarioRouteImport.update({ id: '/calendario', path: '/calendario', getParentRoute: () => rootRouteImport } as any)
-const AutomacoesRoute = AutomacoesRouteImport.update({ id: '/automacoes', path: '/automacoes', getParentRoute: () => rootRouteImport } as any)
-const IndexRoute = IndexRouteImport.update({ id: '/', path: '/', getParentRoute: () => rootRouteImport } as any)
+const TimesheetRoute = TimesheetRouteImport.update({
+  id: '/timesheet',
+  path: '/timesheet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemplatesRoute = TemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjetosRoute = ProjetosRouteImport.update({
+  id: '/projetos',
+  path: '/projetos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfisRoute = PerfisRouteImport.update({
+  id: '/perfis',
+  path: '/perfis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
+  id: '/minhas-tarefas',
+  path: '/minhas-tarefas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KanbanRoute = KanbanRouteImport.update({
+  id: '/kanban',
+  path: '/kanban',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InsightsRoute = InsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquipeRoute = EquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComercialRoute = ComercialRouteImport.update({
+  id: '/comercial',
+  path: '/comercial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientesRoute = ClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarioRoute = CalendarioRouteImport.update({
+  id: '/calendario',
+  path: '/calendario',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AutomacoesRoute = AutomacoesRouteImport.update({
+  id: '/automacoes',
+  path: '/automacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -186,44 +253,146 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/timesheet': { id: '/timesheet'; path: '/timesheet'; fullPath: '/timesheet'; preLoaderRoute: typeof TimesheetRouteImport; parentRoute: typeof rootRouteImport }
-    '/templates': { id: '/templates'; path: '/templates'; fullPath: '/templates'; preLoaderRoute: typeof TemplatesRouteImport; parentRoute: typeof rootRouteImport }
-    '/relatorios': { id: '/relatorios'; path: '/relatorios'; fullPath: '/relatorios'; preLoaderRoute: typeof RelatoriosRouteImport; parentRoute: typeof rootRouteImport }
-    '/projetos': { id: '/projetos'; path: '/projetos'; fullPath: '/projetos'; preLoaderRoute: typeof ProjetosRouteImport; parentRoute: typeof rootRouteImport }
-    '/perfis': { id: '/perfis'; path: '/perfis'; fullPath: '/perfis'; preLoaderRoute: typeof PerfisRouteImport; parentRoute: typeof rootRouteImport }
-    '/minhas-tarefas': { id: '/minhas-tarefas'; path: '/minhas-tarefas'; fullPath: '/minhas-tarefas'; preLoaderRoute: typeof MinhasTarefasRouteImport; parentRoute: typeof rootRouteImport }
-    '/login': { id: '/login'; path: '/login'; fullPath: '/login'; preLoaderRoute: typeof LoginRouteImport; parentRoute: typeof rootRouteImport }
-    '/kanban': { id: '/kanban'; path: '/kanban'; fullPath: '/kanban'; preLoaderRoute: typeof KanbanRouteImport; parentRoute: typeof rootRouteImport }
-    '/insights': { id: '/insights'; path: '/insights'; fullPath: '/insights'; preLoaderRoute: typeof InsightsRouteImport; parentRoute: typeof rootRouteImport }
-    '/financeiro': { id: '/financeiro'; path: '/financeiro'; fullPath: '/financeiro'; preLoaderRoute: typeof FinanceiroRouteImport; parentRoute: typeof rootRouteImport }
-    '/equipe': { id: '/equipe'; path: '/equipe'; fullPath: '/equipe'; preLoaderRoute: typeof EquipeRouteImport; parentRoute: typeof rootRouteImport }
-    '/configuracoes': { id: '/configuracoes'; path: '/configuracoes'; fullPath: '/configuracoes'; preLoaderRoute: typeof ConfiguracoesRouteImport; parentRoute: typeof rootRouteImport }
-    '/comercial': { id: '/comercial'; path: '/comercial'; fullPath: '/comercial'; preLoaderRoute: typeof ComercialRouteImport; parentRoute: typeof rootRouteImport }
-    '/clientes': { id: '/clientes'; path: '/clientes'; fullPath: '/clientes'; preLoaderRoute: typeof ClientesRouteImport; parentRoute: typeof rootRouteImport }
-    '/calendario': { id: '/calendario'; path: '/calendario'; fullPath: '/calendario'; preLoaderRoute: typeof CalendarioRouteImport; parentRoute: typeof rootRouteImport }
-    '/automacoes': { id: '/automacoes'; path: '/automacoes'; fullPath: '/automacoes'; preLoaderRoute: typeof AutomacoesRouteImport; parentRoute: typeof rootRouteImport }
-    '/': { id: '/'; path: '/'; fullPath: '/'; preLoaderRoute: typeof IndexRouteImport; parentRoute: typeof rootRouteImport }
+    '/timesheet': {
+      id: '/timesheet'
+      path: '/timesheet'
+      fullPath: '/timesheet'
+      preLoaderRoute: typeof TimesheetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates': {
+      id: '/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof TemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projetos': {
+      id: '/projetos'
+      path: '/projetos'
+      fullPath: '/projetos'
+      preLoaderRoute: typeof ProjetosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfis': {
+      id: '/perfis'
+      path: '/perfis'
+      fullPath: '/perfis'
+      preLoaderRoute: typeof PerfisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/minhas-tarefas': {
+      id: '/minhas-tarefas'
+      path: '/minhas-tarefas'
+      fullPath: '/minhas-tarefas'
+      preLoaderRoute: typeof MinhasTarefasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kanban': {
+      id: '/kanban'
+      path: '/kanban'
+      fullPath: '/kanban'
+      preLoaderRoute: typeof KanbanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/insights': {
+      id: '/insights'
+      path: '/insights'
+      fullPath: '/insights'
+      preLoaderRoute: typeof InsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipe': {
+      id: '/equipe'
+      path: '/equipe'
+      fullPath: '/equipe'
+      preLoaderRoute: typeof EquipeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/configuracoes': {
+      id: '/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/comercial': {
+      id: '/comercial'
+      path: '/comercial'
+      fullPath: '/comercial'
+      preLoaderRoute: typeof ComercialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes': {
+      id: '/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof ClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendario': {
+      id: '/calendario'
+      path: '/calendario'
+      fullPath: '/calendario'
+      preLoaderRoute: typeof CalendarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/automacoes': {
+      id: '/automacoes'
+      path: '/automacoes'
+      fullPath: '/automacoes'
+      preLoaderRoute: typeof AutomacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute,
-  AutomacoesRoute,
-  CalendarioRoute,
-  ClientesRoute,
-  ComercialRoute,
-  ConfiguracoesRoute,
-  EquipeRoute,
-  FinanceiroRoute,
-  InsightsRoute,
-  KanbanRoute,
-  LoginRoute,
-  MinhasTarefasRoute,
-  PerfisRoute,
-  ProjetosRoute,
-  RelatoriosRoute,
-  TemplatesRoute,
-  TimesheetRoute,
+  IndexRoute: IndexRoute,
+  AutomacoesRoute: AutomacoesRoute,
+  CalendarioRoute: CalendarioRoute,
+  ClientesRoute: ClientesRoute,
+  ComercialRoute: ComercialRoute,
+  ConfiguracoesRoute: ConfiguracoesRoute,
+  EquipeRoute: EquipeRoute,
+  FinanceiroRoute: FinanceiroRoute,
+  InsightsRoute: InsightsRoute,
+  KanbanRoute: KanbanRoute,
+  LoginRoute: LoginRoute,
+  MinhasTarefasRoute: MinhasTarefasRoute,
+  PerfisRoute: PerfisRoute,
+  ProjetosRoute: ProjetosRoute,
+  RelatoriosRoute: RelatoriosRoute,
+  TemplatesRoute: TemplatesRoute,
+  TimesheetRoute: TimesheetRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
