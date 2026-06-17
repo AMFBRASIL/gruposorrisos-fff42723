@@ -18,6 +18,7 @@ const nav = [
   { to: "/calendario", label: "Calendário", icon: Calendar },
   { to: "/timesheet", label: "Timesheet", icon: Clock },
   { to: "/automacoes", label: "Automações", icon: Zap },
+  { to: "/insights", label: "IA Insights", icon: Brain },
   { to: "/equipe", label: "Equipe", icon: Users },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
