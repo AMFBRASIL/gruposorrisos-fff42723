@@ -315,3 +315,63 @@ export const invoicesStore = {
 export function useInvoices() {
   return useSyncExternalStore(invoicesStore.subscribe, invoicesStore.getSnapshot, invoicesStore.getSnapshot);
 }
+
+// ============== Wave 4 — Documents ==============
+let documentsState: Document[] = [...initialDocuments];
+const docListeners = new Set<() => void>();
+const notifyDocs = () => docListeners.forEach(l => l());
+export const documentsStore = {
+  getSnapshot: () => documentsState,
+  subscribe: (l: () => void) => { docListeners.add(l); return () => docListeners.delete(l); },
+  addDocument(d: Document) { documentsState = [d, ...documentsState]; notifyDocs(); },
+  updateDocument(id: string, patch: Partial<Document>) {
+    documentsState = documentsState.map(d => d.id === id ? { ...d, ...patch, updatedAt: new Date().toISOString().slice(0, 10) } : d);
+    notifyDocs();
+  },
+  setStatus(id: string, status: DocumentStatus) {
+    documentsState = documentsState.map(d => d.id === id ? { ...d, status, updatedAt: new Date().toISOString().slice(0, 10) } : d);
+    notifyDocs();
+  },
+  signBy(id: string, signatoryId: string) {
+    documentsState = documentsState.map(d => {
+      if (d.id !== id) return d;
+      const signatories = d.signatories.map(s => s.id === signatoryId ? { ...s, status: "assinado" as const, signedAt: new Date().toISOString().slice(0, 10) } : s);
+      const allSigned = signatories.length > 0 && signatories.every(s => s.status === "assinado");
+      return { ...d, signatories, status: allSigned ? "assinado" as DocumentStatus : d.status, updatedAt: new Date().toISOString().slice(0, 10) };
+    });
+    notifyDocs();
+  },
+};
+export function useDocuments() {
+  return useSyncExternalStore(documentsStore.subscribe, documentsStore.getSnapshot, documentsStore.getSnapshot);
+}
+
+// ============== Wave 4 — Approvals ==============
+let approvalsState: ApprovalRequest[] = [...initialApprovals];
+const apListeners = new Set<() => void>();
+const notifyAp = () => apListeners.forEach(l => l());
+export const approvalsStore = {
+  getSnapshot: () => approvalsState,
+  subscribe: (l: () => void) => { apListeners.add(l); return () => apListeners.delete(l); },
+  addRequest(r: ApprovalRequest) { approvalsState = [r, ...approvalsState]; notifyAp(); },
+  decideStep(reqId: string, stepId: string, decision: "aprovado" | "rejeitado", note?: string) {
+    approvalsState = approvalsState.map(r => {
+      if (r.id !== reqId) return r;
+      const now = new Date().toISOString().slice(0, 10);
+      const steps = r.steps.map(s => s.id === stepId ? { ...s, status: decision as ApprovalStatus, decidedAt: now, note } : s);
+      let status: ApprovalStatus = r.status;
+      if (decision === "rejeitado") status = "rejeitado";
+      else if (steps.every(s => s.status === "aprovado")) status = "aprovado";
+      else status = "pendente";
+      return { ...r, steps, status };
+    });
+    notifyAp();
+  },
+  cancel(id: string) {
+    approvalsState = approvalsState.map(r => r.id === id ? { ...r, status: "cancelado" as ApprovalStatus } : r);
+    notifyAp();
+  },
+};
+export function useApprovals() {
+  return useSyncExternalStore(approvalsStore.subscribe, approvalsStore.getSnapshot, approvalsStore.getSnapshot);
+}
