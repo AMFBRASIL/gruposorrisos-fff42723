@@ -178,7 +178,7 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
           </aside>
 
           {/* CONTENT */}
-          <div className="flex flex-col bg-background">
+          <div className="flex flex-col bg-background min-h-0 h-full">
             <div className="flex items-center justify-between px-8 pt-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarDays className="h-4 w-4" />
