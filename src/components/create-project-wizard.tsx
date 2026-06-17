@@ -173,7 +173,34 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
                   <div className="space-y-5">
                     <div>
                       <h3 className="text-xl font-semibold">Qual é o projeto?</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Dê um nome claro e escolha a cor de identificação.</p>
+                      <p className="text-sm text-muted-foreground mt-1">Comece de um template ou do zero.</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Template (opcional)</Label>
+                      <div className="mt-2 flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
+                        <button type="button" onClick={() => applyTemplate(null)}
+                          className={`shrink-0 flex flex-col items-center justify-center w-32 h-24 rounded-xl border-2 border-dashed transition-all ${!template ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
+                          <div className="text-2xl opacity-60">📄</div>
+                          <div className="text-[11px] font-medium mt-1">Em branco</div>
+                        </button>
+                        {projectTemplates.map(t => {
+                          const sel = template?.id === t.id;
+                          return (
+                            <button key={t.id} type="button" onClick={() => applyTemplate(t)}
+                              className={`shrink-0 w-40 h-24 rounded-xl border-2 p-2.5 text-left transition-all ${sel ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                              style={sel ? {} : { background: `linear-gradient(135deg, ${t.color}15, transparent)` }}>
+                              <div className="text-xl">{t.icon}</div>
+                              <div className="text-[11px] font-semibold mt-1 leading-tight line-clamp-2">{t.name}</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">{t.tasks.length} tarefas · {t.defaultDurationDays}d</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {template && (
+                        <div className="mt-2 text-[11px] text-primary inline-flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" /> {template.tasks.length} tarefas serão criadas automaticamente
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome do projeto</Label>
