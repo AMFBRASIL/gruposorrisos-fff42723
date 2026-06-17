@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useInvoices, useClients, useProjects, invoicesStore } from "@/lib/store";
-import { invoiceTotal, formatBRL, costEntries, projectBudgets, invoiceStatusMeta, type CostCategory } from "@/lib/mock-data";
+import { invoiceTotal, formatBRL, costEntries, projectBudgets, invoiceStatusMeta } from "@/lib/mock-data";
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, FileText, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useMemo } from "react";
 
