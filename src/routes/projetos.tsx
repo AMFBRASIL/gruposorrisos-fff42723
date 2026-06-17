@@ -55,6 +55,9 @@ function ProjectsPage() {
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   <span className={`text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 ${statusColor(p.status)}`}>{statusLabel(p.status)}</span>
                   <span className={`text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 ${priorityMeta[p.priority].className}`}>{priorityMeta[p.priority].label}</span>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 border ${riskMeta.className}`} title={`Risco IA: ${insight.riskScore}/100`}>
+                    <Sparkles className="h-2.5 w-2.5" /> {riskMeta.label}
+                  </span>
                 </div>
                 <div className="mt-4">
                   <div className="flex justify-between text-xs text-muted-foreground mb-1">
