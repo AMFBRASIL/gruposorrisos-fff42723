@@ -211,10 +211,30 @@ function ProjectInsightCard({ insight, projectName }: { insight: ProjectInsight;
   );
 }
 
+const TONE_BG: Record<string, string> = {
+  success: "bg-success/15 text-success",
+  destructive: "bg-destructive/15 text-destructive",
+  warning: "bg-warning/15 text-warning",
+  info: "bg-info/15 text-info",
+  primary: "bg-primary/15 text-primary",
+  muted: "bg-muted text-muted-foreground",
+};
+const TONE_STAT: Record<string, string> = {
+  success: "bg-success/10 text-success",
+  destructive: "bg-destructive/10 text-destructive",
+  info: "bg-info/10 text-info",
+};
+const TONE_PILL: Record<string, string> = {
+  success: "bg-success/15 text-success border-success/30",
+  destructive: "bg-destructive/15 text-destructive border-destructive/30",
+  info: "bg-info/15 text-info border-info/30",
+  muted: "bg-muted text-muted-foreground border-border",
+};
+
 function SectionHeader({ icon: Icon, title, subtitle, tone }: { icon: typeof Brain; title: string; subtitle: string; tone: string }) {
   return (
     <div className="flex items-center gap-3">
-      <div className={`h-10 w-10 rounded-xl flex items-center justify-center bg-${tone}/15 text-${tone}`}>
+      <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${TONE_BG[tone] || TONE_BG.primary}`}>
         <Icon className="h-5 w-5" />
       </div>
       <div>
@@ -227,8 +247,8 @@ function SectionHeader({ icon: Icon, title, subtitle, tone }: { icon: typeof Bra
 
 function Stat({ label, value, tone }: { label: string; value: number; tone: string }) {
   return (
-    <div className={`rounded-lg bg-${tone}/10 p-3 text-center`}>
-      <div className={`text-2xl font-bold text-${tone} tabular-nums`}>{value}</div>
+    <div className={`rounded-lg p-3 text-center ${TONE_STAT[tone] || TONE_STAT.info}`}>
+      <div className="text-2xl font-bold tabular-nums">{value}</div>
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">{label}</div>
     </div>
   );
@@ -236,7 +256,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone: stri
 
 function Metric({ icon: Icon, label, value, tone }: { icon: typeof Brain; label: string; value: number | string; tone: string }) {
   return (
-    <div className={`inline-flex items-center gap-2 rounded-full bg-${tone}/15 text-${tone} border border-${tone}/30 px-3 py-1.5 text-xs font-medium`}>
+    <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${TONE_PILL[tone] || TONE_PILL.muted}`}>
       <Icon className="h-3.5 w-3.5" />
       <span className="font-semibold">{value}</span>
       <span className="opacity-75">{label}</span>
