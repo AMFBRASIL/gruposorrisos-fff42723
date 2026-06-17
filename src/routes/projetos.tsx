@@ -39,6 +39,8 @@ function ProjectsPage() {
           const pTasks = tasks.filter(t => t.projectId === p.id);
           const completed = pTasks.filter(t => t.status === "concluido").length;
           const owner = getUser(p.ownerId);
+          const insight = analyzeProject(p, tasks);
+          const riskMeta = RISK_META[insight.riskLevel];
           return (
             <Card key={p.id} className="overflow-hidden border-border/60 hover:shadow-md transition-shadow p-0">
               <div className="h-2" style={{ backgroundColor: p.color }} />
