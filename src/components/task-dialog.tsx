@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { type Task, type ChecklistItem, getUser, getProject, priorityMeta, COLUMNS, users } from "@/lib/mock-data";
-import { tasksStore, useTasks } from "@/lib/store";
+import { tasksStore, useTasks, useActiveTimer, timerStore } from "@/lib/store";
 import { UserAvatar, PriorityBadge } from "@/components/task-card";
 import {
   Calendar, Clock, MessageSquare, Paperclip, CheckSquare2, Tag,
@@ -606,6 +606,11 @@ export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onC
             </div>
 
             <div>
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block flex items-center gap-1.5"><GitBranch className="h-3 w-3" /> Dependências</label>
+              <DependenciesPanel task={task} allTasks={allTasks} />
+            </div>
+
+            <div>
               <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">Linhagem</label>
               <div className="rounded-md border border-border bg-background divide-y divide-border text-xs">
                 <div className="flex justify-between items-center px-2.5 py-2"><span className="text-muted-foreground">Criada</span><span>{fmtDate(task.createdAt)}</span></div>
@@ -619,7 +624,7 @@ export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onC
         {/* Footer */}
         <div className="border-t border-border bg-background px-6 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm"><PlayCircle className="h-3.5 w-3.5" /> Iniciar timer</Button>
+            <TimerButton taskId={task.id} />
             <Button variant="outline" size="sm"><Link2 className="h-3.5 w-3.5" /> Copiar link</Button>
             <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /> Excluir</Button>
           </div>
