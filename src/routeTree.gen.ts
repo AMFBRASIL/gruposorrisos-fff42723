@@ -18,8 +18,11 @@ import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as InsightsRouteImport } from './routes/insights'
+import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EquipeRouteImport } from './routes/equipe'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as ComercialRouteImport } from './routes/comercial'
+import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as AutomacoesRouteImport } from './routes/automacoes'
 import { Route as IndexRouteImport } from './routes/index'
@@ -69,6 +72,11 @@ const InsightsRoute = InsightsRouteImport.update({
   path: '/insights',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FinanceiroRoute = FinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EquipeRoute = EquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -77,6 +85,16 @@ const EquipeRoute = EquipeRouteImport.update({
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComercialRoute = ComercialRouteImport.update({
+  id: '/comercial',
+  path: '/comercial',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientesRoute = ClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarioRoute = CalendarioRouteImport.update({
@@ -99,8 +117,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
+  '/clientes': typeof ClientesRoute
+  '/comercial': typeof ComercialRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
+  '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
@@ -115,8 +136,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
+  '/clientes': typeof ClientesRoute
+  '/comercial': typeof ComercialRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
+  '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
@@ -132,8 +156,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
+  '/clientes': typeof ClientesRoute
+  '/comercial': typeof ComercialRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/equipe': typeof EquipeRoute
+  '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
@@ -150,8 +177,11 @@ export interface FileRouteTypes {
     | '/'
     | '/automacoes'
     | '/calendario'
+    | '/clientes'
+    | '/comercial'
     | '/configuracoes'
     | '/equipe'
+    | '/financeiro'
     | '/insights'
     | '/kanban'
     | '/login'
@@ -166,8 +196,11 @@ export interface FileRouteTypes {
     | '/'
     | '/automacoes'
     | '/calendario'
+    | '/clientes'
+    | '/comercial'
     | '/configuracoes'
     | '/equipe'
+    | '/financeiro'
     | '/insights'
     | '/kanban'
     | '/login'
@@ -182,8 +215,11 @@ export interface FileRouteTypes {
     | '/'
     | '/automacoes'
     | '/calendario'
+    | '/clientes'
+    | '/comercial'
     | '/configuracoes'
     | '/equipe'
+    | '/financeiro'
     | '/insights'
     | '/kanban'
     | '/login'
@@ -199,8 +235,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AutomacoesRoute: typeof AutomacoesRoute
   CalendarioRoute: typeof CalendarioRoute
+  ClientesRoute: typeof ClientesRoute
+  ComercialRoute: typeof ComercialRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   EquipeRoute: typeof EquipeRoute
+  FinanceiroRoute: typeof FinanceiroRoute
   InsightsRoute: typeof InsightsRoute
   KanbanRoute: typeof KanbanRoute
   LoginRoute: typeof LoginRoute
@@ -277,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InsightsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/financeiro': {
+      id: '/financeiro'
+      path: '/financeiro'
+      fullPath: '/financeiro'
+      preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/equipe': {
       id: '/equipe'
       path: '/equipe'
@@ -289,6 +335,20 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/comercial': {
+      id: '/comercial'
+      path: '/comercial'
+      fullPath: '/comercial'
+      preLoaderRoute: typeof ComercialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes': {
+      id: '/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof ClientesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendario': {
@@ -319,8 +379,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AutomacoesRoute: AutomacoesRoute,
   CalendarioRoute: CalendarioRoute,
+  ClientesRoute: ClientesRoute,
+  ComercialRoute: ComercialRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
   EquipeRoute: EquipeRoute,
+  FinanceiroRoute: FinanceiroRoute,
   InsightsRoute: InsightsRoute,
   KanbanRoute: KanbanRoute,
   LoginRoute: LoginRoute,
