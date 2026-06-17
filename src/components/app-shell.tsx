@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain } from "lucide-react";
+import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
