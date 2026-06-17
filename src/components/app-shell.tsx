@@ -143,8 +143,8 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
     <div className="flex min-h-screen w-full bg-muted/40 text-foreground p-0 md:p-3 md:gap-3">
       {/* Desktop sidebar — detached card */}
       <aside
-        className={`hidden md:flex shrink-0 flex-col rounded-2xl border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm overflow-hidden sticky top-3 self-start transition-[width] duration-200 ease-out ${collapsed ? "w-[72px]" : "w-64"}`}
-        style={{ height: "calc(100vh - 1.5rem)" }}
+        className={`hidden md:flex shrink-0 flex-col rounded-2xl border border-sidebar-border text-sidebar-foreground shadow-xl shadow-primary/10 overflow-hidden sticky top-3 self-start transition-[width] duration-200 ease-out ${collapsed ? "w-[72px]" : "w-64"}`}
+        style={{ height: "calc(100vh - 1.5rem)", background: "linear-gradient(180deg, var(--sidebar) 0%, color-mix(in oklab, var(--sidebar) 80%, black) 100%)" }}
       >
         <SidebarBody collapsed={collapsed} pathname={pathname} />
       </aside>
