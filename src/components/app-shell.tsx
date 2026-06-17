@@ -119,6 +119,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
         <div className="flex-1 min-w-0">{children}</div>
       </main>
       <CreateTaskWizard open={createOpen} onClose={() => setCreateOpen(false)} />
+      <AIAssistant />
     </div>
   );
 }
