@@ -107,8 +107,8 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
-      <DialogContent className="max-w-6xl w-[96vw] p-0 overflow-hidden gap-0 border-0 [&>button]:hidden">
-        <div className="grid grid-cols-1 md:grid-cols-[400px_1fr] min-h-[760px]">
+      <DialogContent className="max-w-6xl w-[96vw] p-0 overflow-hidden gap-0 border-0 [&>button]:hidden h-[90vh] max-h-[860px]">
+        <div className="grid grid-cols-1 md:grid-cols-[400px_1fr] h-full min-h-0">
           {/* SIDEBAR */}
           <aside
             className="relative hidden md:flex flex-col justify-between p-8 text-white overflow-hidden"
@@ -178,7 +178,7 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
           </aside>
 
           {/* CONTENT */}
-          <div className="flex flex-col bg-background">
+          <div className="flex flex-col bg-background min-h-0 h-full">
             <div className="flex items-center justify-between px-8 pt-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarDays className="h-4 w-4" />
