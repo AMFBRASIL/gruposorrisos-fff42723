@@ -99,6 +99,7 @@ function DocumentosPage() {
       </div>
 
       <DocumentDrawer doc={openDoc} onClose={() => setOpenDoc(null)} />
+      <CreateDocumentWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
     </AppShell>
   );
 }
