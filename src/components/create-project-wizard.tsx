@@ -7,14 +7,15 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   CalendarDays, FolderKanban, Users as UsersIcon, FileText, Flag, CheckCircle2,
-  Sparkles, ArrowRight, ArrowLeft, X, Palette, Crown,
+  Sparkles, ArrowRight, ArrowLeft, X, Palette, Crown, Rocket, PauseCircle, Compass,
+  Zap, Flame, AlertTriangle, Circle, ChevronRight, LayoutTemplate, FileEdit,
 } from "lucide-react";
 import { users, priorityMeta, projectTemplates, type Priority, type Project, type ProjectTemplate } from "@/lib/mock-data";
 import { projectsStore, applyTemplateToProject } from "@/lib/store";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
-  { id: 0, title: "Identidade", desc: "Nome e cor do projeto", icon: FolderKanban },
+  { id: 0, title: "Identidade", desc: "Template, nome e cor", icon: FolderKanban },
   { id: 1, title: "Contexto", desc: "Descrição e status", icon: FileText },
   { id: 2, title: "Equipe", desc: "Responsável e membros", icon: UsersIcon },
   { id: 3, title: "Planejamento", desc: "Prazos e prioridade", icon: Flag },
@@ -27,11 +28,19 @@ const COLORS = [
   "oklch(0.6 0.2 295)", "oklch(0.65 0.15 190)",
 ];
 
-const STATUS_OPTIONS: { id: Project["status"]; label: string; desc: string }[] = [
-  { id: "planejamento", label: "Planejamento", desc: "Definindo escopo e equipe" },
-  { id: "andamento", label: "Em andamento", desc: "Execução já iniciada" },
-  { id: "pausado", label: "Pausado", desc: "Temporariamente parado" },
+const STATUS_OPTIONS: { id: Project["status"]; label: string; desc: string; icon: typeof Rocket; tone: string }[] = [
+  { id: "planejamento", label: "Planejamento", desc: "Definindo escopo, equipe e cronograma inicial.", icon: Compass, tone: "info" },
+  { id: "andamento", label: "Em andamento", desc: "Execução já iniciada com entregas em curso.", icon: Rocket, tone: "success" },
+  { id: "pausado", label: "Pausado", desc: "Temporariamente parado aguardando decisão.", icon: PauseCircle, tone: "warning" },
 ];
+
+const PRIORITY_META: Record<Priority, { icon: typeof Circle; desc: string }> = {
+  baixa: { icon: Circle, desc: "Pode aguardar" },
+  normal: { icon: Flag, desc: "Fluxo padrão" },
+  alta: { icon: Zap, desc: "Atenção da equipe" },
+  urgente: { icon: Flame, desc: "Resposta rápida" },
+  critica: { icon: AlertTriangle, desc: "Bloqueia o negócio" },
+};
 
 export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [step, setStep] = useState(0);
@@ -63,9 +72,8 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
   });
 
   const toggleMember = (id: string) => {
-    setTeamIds(list => list.includes(id) ? list.filter(x => x !== id && x !== "") : [...list, id]);
+    setTeamIds(list => list.includes(id) ? list.filter(x => x !== id) : [...list, id]);
   };
-
   const selectOwner = (id: string) => {
     setOwnerId(id);
     setTeamIds(list => list.includes(id) ? list : [...list, id]);
@@ -76,20 +84,15 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
     setStatus("planejamento"); setOwnerId(users[0].id); setTeamIds([users[0].id]);
     setPriority("normal"); setStartDate("2026-06-11"); setEndDate("2026-07-11");
   };
-
   const close = () => { reset(); onClose(); };
 
   const submit = () => {
     if (!name.trim()) return;
     const id = `p_${Date.now().toString(36)}`;
     projectsStore.addProject({
-      id,
-      name: name.trim(),
-      description: description.trim(),
-      ownerId,
-      teamIds: teamIds.includes(ownerId) ? teamIds : [ownerId, ...teamIds],
-      startDate, endDate, status, color, priority,
-      progress: 0, health: 100,
+      id, name: name.trim(), description: description.trim(),
+      ownerId, teamIds: teamIds.includes(ownerId) ? teamIds : [ownerId, ...teamIds],
+      startDate, endDate, status, color, priority, progress: 0, health: 100,
     });
     if (template) applyTemplateToProject(template, id, startDate, ownerId);
     close();
@@ -99,27 +102,36 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
   const owner = users.find(u => u.id === ownerId);
   const members = users.filter(u => teamIds.includes(u.id));
   const fmt = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+  const durationDays = Math.max(1, Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000));
+  const progressPct = ((step + 1) / STEPS.length) * 100;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0 border-0 [&>button]:hidden">
-        <div className="grid grid-cols-1 md:grid-cols-[340px_1fr] min-h-[600px]">
+      <DialogContent className="max-w-6xl w-[96vw] p-0 overflow-hidden gap-0 border-0 [&>button]:hidden">
+        <div className="grid grid-cols-1 md:grid-cols-[400px_1fr] min-h-[760px]">
+          {/* SIDEBAR */}
           <aside
-            className="relative hidden md:flex flex-col justify-between p-7 text-white overflow-hidden"
+            className="relative hidden md:flex flex-col justify-between p-8 text-white overflow-hidden"
             style={{ backgroundImage: `url(${wizardBg})`, backgroundSize: "cover", backgroundPosition: "center" }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-black/55 via-black/40 to-black/70" />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/55 to-black/85" />
+            <div
+              className="absolute -bottom-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-40 pointer-events-none"
+              style={{ background: `radial-gradient(circle, ${color}, transparent 70%)` }}
+            />
+
             <div className="relative">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-[11px] font-medium border border-white/20">
-                <Sparkles className="h-3 w-3" /> Novo projeto
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur px-3 py-1.5 text-[11px] font-medium border border-white/20">
+                <Sparkles className="h-3 w-3" /> Assistente de novo projeto
               </div>
-              <h2 className="mt-5 text-2xl font-semibold leading-tight">
-                Estruture iniciativas<br />do começo ao fim.
+              <h2 className="mt-6 text-3xl font-semibold leading-tight tracking-tight">
+                Estruture iniciativas<br />
+                <span className="text-white/70">do começo ao fim.</span>
               </h2>
-              <p className="mt-2 text-sm text-white/75 capitalize">{prettyDate}</p>
+              <p className="mt-3 text-sm text-white/70 capitalize">{prettyDate}</p>
             </div>
 
-            <ol className="relative space-y-1">
+            <ol className="relative space-y-1.5">
               {STEPS.map((s, i) => {
                 const Icon = s.icon;
                 const active = i === step;
@@ -129,20 +141,23 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
                     <button
                       type="button"
                       onClick={() => { if (i <= step) setStep(i); }}
-                      className={`relative w-full flex items-start gap-3 rounded-xl p-3 text-left transition-all ${
-                        active ? "bg-white/15 backdrop-blur border border-white/25" : "hover:bg-white/5 border border-transparent"
+                      className={`relative w-full flex items-start gap-3.5 rounded-2xl p-3.5 text-left transition-all ${
+                        active ? "bg-white/15 backdrop-blur border border-white/30 shadow-lg" : "hover:bg-white/5 border border-transparent"
                       }`}
                     >
-                      <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
-                        done ? "bg-emerald-400/90 border-emerald-300 text-emerald-950"
-                        : active ? "bg-white text-primary border-white"
+                      <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-all ${
+                        done ? "bg-emerald-400 border-emerald-300 text-emerald-950"
+                        : active ? "bg-white text-foreground border-white scale-110"
                         : "bg-white/10 border-white/20 text-white/70"
                       }`}>
-                        {done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                        {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                       </span>
-                      <div className="min-w-0">
-                        <div className={`text-sm font-medium ${active ? "text-white" : "text-white/85"}`}>{s.title}</div>
-                        <div className="text-[11px] text-white/60 leading-tight mt-0.5">{s.desc}</div>
+                      <div className="min-w-0 flex-1 pt-0.5">
+                        <div className={`text-sm font-semibold flex items-center gap-2 ${active ? "text-white" : "text-white/90"}`}>
+                          {s.title}
+                          {active && <ChevronRight className="h-3.5 w-3.5 text-white/70" />}
+                        </div>
+                        <div className="text-[11px] text-white/60 leading-snug mt-0.5">{s.desc}</div>
                       </div>
                     </button>
                   </li>
@@ -150,16 +165,21 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
               })}
             </ol>
 
-            <div className="relative text-[11px] text-white/60">
-              Passo {step + 1} de {STEPS.length}
-              <div className="mt-2 h-1 w-full rounded-full bg-white/15 overflow-hidden">
-                <div className="h-full bg-white transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+            <div className="relative space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-white/70">
+                <span>Progresso</span>
+                <span className="font-semibold text-white">{Math.round(progressPct)}%</span>
               </div>
+              <div className="h-1.5 w-full rounded-full bg-white/15 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-white to-white/80 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+              </div>
+              <div className="text-[11px] text-white/60">Passo {step + 1} de {STEPS.length}</div>
             </div>
           </aside>
 
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between px-7 pt-6">
+          {/* CONTENT */}
+          <div className="flex flex-col bg-background">
+            <div className="flex items-center justify-between px-8 pt-6">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarDays className="h-4 w-4" />
                 <span className="capitalize">{prettyDate}</span>
@@ -167,135 +187,188 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
               <Button variant="ghost" size="icon" onClick={close}><X className="h-4 w-4" /></Button>
             </div>
 
-            <div className="flex-1 px-7 py-6 overflow-y-auto">
+            <div className="md:hidden px-8 pt-2">
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div className="h-full bg-primary transition-all" style={{ width: `${progressPct}%` }} />
+              </div>
+            </div>
+
+            <div className="flex-1 px-8 py-7 overflow-y-auto">
               <div key={step} className="animate-fade-in">
                 {step === 0 && (
-                  <div className="space-y-5">
+                  <div className="space-y-7">
                     <div>
-                      <h3 className="text-xl font-semibold">Qual é o projeto?</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Comece de um template ou do zero.</p>
+                      <h3 className="text-2xl font-semibold tracking-tight">Como quer começar?</h3>
+                      <p className="text-sm text-muted-foreground mt-1.5">Use um template pronto para acelerar ou crie do zero.</p>
                     </div>
+
                     <div>
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Template (opcional)</Label>
-                      <div className="mt-2 flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">
-                        <button type="button" onClick={() => applyTemplate(null)}
-                          className={`shrink-0 flex flex-col items-center justify-center w-32 h-24 rounded-xl border-2 border-dashed transition-all ${!template ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
-                          <div className="text-2xl opacity-60">📄</div>
-                          <div className="text-[11px] font-medium mt-1">Em branco</div>
-                        </button>
+                      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Ponto de partida</Label>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <BigCard
+                          selected={!template}
+                          onClick={() => applyTemplate(null)}
+                          icon={<FileEdit className="h-6 w-6" />}
+                          title="Projeto em branco"
+                          desc="Comece do zero, sem tarefas pré-definidas."
+                          badge="Customizado"
+                        />
                         {projectTemplates.map(t => {
                           const sel = template?.id === t.id;
                           return (
-                            <button key={t.id} type="button" onClick={() => applyTemplate(t)}
-                              className={`shrink-0 w-40 h-24 rounded-xl border-2 p-2.5 text-left transition-all ${sel ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
-                              style={sel ? {} : { background: `linear-gradient(135deg, ${t.color}15, transparent)` }}>
-                              <div className="text-xl">{t.icon}</div>
-                              <div className="text-[11px] font-semibold mt-1 leading-tight line-clamp-2">{t.name}</div>
-                              <div className="text-[10px] text-muted-foreground mt-0.5">{t.tasks.length} tarefas · {t.defaultDurationDays}d</div>
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => applyTemplate(t)}
+                              className={`group text-left rounded-2xl border-2 p-4 transition-all relative overflow-hidden ${
+                                sel ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
+                                : "border-border hover:border-primary/40 hover:shadow-sm"
+                              }`}
+                              style={!sel ? { background: `linear-gradient(135deg, color-mix(in oklab, ${t.color} 10%, transparent), transparent)` } : {}}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <span
+                                  className="h-11 w-11 rounded-xl flex items-center justify-center text-2xl shrink-0"
+                                  style={{ backgroundColor: `color-mix(in oklab, ${t.color} 20%, transparent)` }}
+                                >
+                                  {t.icon}
+                                </span>
+                                {sel && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                              </div>
+                              <div className="mt-3 font-semibold text-sm leading-tight">{t.name}</div>
+                              <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{t.description}</div>
+                              <div className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground">
+                                <span className="rounded-full bg-muted px-2 py-0.5 font-medium">{t.tasks.length} tarefas</span>
+                                <span className="rounded-full bg-muted px-2 py-0.5 font-medium">{t.defaultDurationDays}d</span>
+                              </div>
                             </button>
                           );
                         })}
                       </div>
                       {template && (
-                        <div className="mt-2 text-[11px] text-primary inline-flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" /> {template.tasks.length} tarefas serão criadas automaticamente
+                        <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-primary bg-primary/10 rounded-full px-3 py-1.5">
+                          <Sparkles className="h-3.5 w-3.5" /> {template.tasks.length} tarefas serão criadas automaticamente
                         </div>
                       )}
                     </div>
-                    <div>
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome do projeto</Label>
-                      <Input
-                        autoFocus value={name} onChange={(e) => setName(e.target.value)}
-                        placeholder="Ex.: Expansão Unidade Campinas"
-                        className="mt-2 h-12 text-base"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                        <Palette className="h-3.5 w-3.5" /> Cor de identificação
-                      </Label>
-                      <div className="mt-3 flex flex-wrap gap-3">
-                        {COLORS.map(c => (
-                          <button
-                            key={c} type="button" onClick={() => setColor(c)}
-                            aria-label={`Cor ${c}`}
-                            className={`h-10 w-10 rounded-xl transition-all ${color === c ? "ring-2 ring-offset-2 ring-primary scale-110" : "hover:scale-105"}`}
-                            style={{ backgroundColor: c }}
-                          />
-                        ))}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-5 items-end">
+                      <div>
+                        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Nome do projeto</Label>
+                        <Input
+                          autoFocus value={name} onChange={(e) => setName(e.target.value)}
+                          placeholder="Ex.: Expansão Unidade Campinas"
+                          className="mt-2 h-14 text-lg font-medium"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
+                          <Palette className="h-3.5 w-3.5" /> Cor
+                        </Label>
+                        <div className="mt-2 grid grid-cols-8 lg:grid-cols-4 gap-2">
+                          {COLORS.map(c => (
+                            <button
+                              key={c} type="button" onClick={() => setColor(c)}
+                              className={`h-10 w-10 rounded-xl transition-all relative ${color === c ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105"}`}
+                              style={{ backgroundColor: c }}
+                            >
+                              {color === c && <CheckCircle2 className="absolute inset-0 m-auto h-4 w-4 text-white drop-shadow" />}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                    <div className="rounded-xl border bg-card/40 p-4 flex items-center gap-3">
-                      <span className="h-10 w-10 rounded-lg shrink-0" style={{ backgroundColor: color }} />
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold truncate">{name || "Nome do projeto"}</div>
-                        <div className="text-[11px] text-muted-foreground">Pré-visualização do cartão</div>
+
+                    <div className="rounded-2xl border bg-gradient-to-br from-muted/40 to-transparent p-4 flex items-center gap-4">
+                      <span className="h-14 w-14 rounded-xl shrink-0 shadow-lg" style={{ backgroundColor: color }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-base font-semibold truncate">{name || "Nome do projeto"}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">Pré-visualização do cartão do projeto</div>
                       </div>
+                      <LayoutTemplate className="h-5 w-5 text-muted-foreground" />
                     </div>
                   </div>
                 )}
 
                 {step === 1 && (
-                  <div className="space-y-5">
+                  <div className="space-y-7">
                     <div>
-                      <h3 className="text-xl font-semibold">Sobre o que se trata?</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Descreva o objetivo e defina o status inicial.</p>
+                      <h3 className="text-2xl font-semibold tracking-tight">Sobre o que se trata?</h3>
+                      <p className="text-sm text-muted-foreground mt-1.5">Descreva o objetivo e selecione o status inicial.</p>
                     </div>
                     <div>
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Descrição</Label>
-                      <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Objetivo, escopo, entregas esperadas..." className="mt-2 min-h-28" />
+                      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Descrição</Label>
+                      <Textarea
+                        value={description} onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Objetivo, escopo, entregas esperadas, contexto relevante..."
+                        className="mt-2 min-h-36 text-base resize-none"
+                      />
                     </div>
                     <div>
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Status inicial</Label>
-                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        {STATUS_OPTIONS.map(s => (
-                          <button
-                            key={s.id} type="button" onClick={() => setStatus(s.id)}
-                            className={`rounded-lg border p-3 text-left transition-all ${
-                              status === s.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            <div className="text-sm font-medium">{s.label}</div>
-                            <div className="text-[11px] text-muted-foreground mt-0.5">{s.desc}</div>
-                          </button>
-                        ))}
+                      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Status inicial</Label>
+                      <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {STATUS_OPTIONS.map(s => {
+                          const Icon = s.icon;
+                          const sel = status === s.id;
+                          return (
+                            <button
+                              key={s.id} type="button" onClick={() => setStatus(s.id)}
+                              className={`group text-left rounded-2xl border-2 p-5 transition-all relative ${
+                                sel ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20" : "border-border hover:border-primary/40 hover:shadow-sm"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className={`h-11 w-11 rounded-xl flex items-center justify-center bg-${s.tone}/15 text-${s.tone}`}>
+                                  <Icon className="h-5 w-5" />
+                                </span>
+                                {sel && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                              </div>
+                              <div className="mt-3 font-semibold">{s.label}</div>
+                              <div className="text-xs text-muted-foreground mt-1 leading-snug">{s.desc}</div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
                 )}
 
                 {step === 2 && (
-                  <div className="space-y-5">
+                  <div className="space-y-7">
                     <div>
-                      <h3 className="text-xl font-semibold">Quem participa?</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Escolha o responsável e monte a equipe do projeto.</p>
+                      <h3 className="text-2xl font-semibold tracking-tight">Quem participa?</h3>
+                      <p className="text-sm text-muted-foreground mt-1.5">Defina o responsável e monte a equipe do projeto.</p>
                     </div>
                     <div>
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                        <Crown className="h-3.5 w-3.5" /> Responsável
+                      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
+                        <Crown className="h-3.5 w-3.5" /> Responsável (Owner)
                       </Label>
-                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
-                        {users.map(u => (
-                          <button
-                            key={u.id} type="button" onClick={() => selectOwner(u.id)}
-                            className={`flex items-center gap-3 rounded-lg border p-2.5 text-left transition-all ${
-                              ownerId === u.id ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            <span className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold shrink-0" style={{ backgroundColor: u.color }}>
-                              {u.initials}
-                            </span>
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium truncate">{u.name}</div>
-                              <div className="text-[11px] text-muted-foreground truncate">{u.role} · {u.department}</div>
-                            </div>
-                          </button>
-                        ))}
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
+                        {users.map(u => {
+                          const sel = ownerId === u.id;
+                          return (
+                            <button
+                              key={u.id} type="button" onClick={() => selectOwner(u.id)}
+                              className={`flex items-center gap-3 rounded-xl border-2 p-3 text-left transition-all ${
+                                sel ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+                              }`}
+                            >
+                              <span className="h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-semibold shrink-0" style={{ backgroundColor: u.color }}>
+                                {u.initials}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-semibold truncate">{u.name}</div>
+                                <div className="text-[11px] text-muted-foreground truncate">{u.role} · {u.department}</div>
+                              </div>
+                              {sel && <Crown className="h-4 w-4 text-warning shrink-0" />}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Equipe ({teamIds.length})</Label>
-                      <div className="mt-2 flex flex-wrap gap-2">
+                      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Equipe ({teamIds.length} membros)</Label>
+                      <div className="mt-3 flex flex-wrap gap-2">
                         {users.map(u => {
                           const selected = teamIds.includes(u.id);
                           const isOwner = u.id === ownerId;
@@ -303,11 +376,11 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
                             <button
                               key={u.id} type="button" disabled={isOwner}
                               onClick={() => toggleMember(u.id)}
-                              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-all ${
-                                selected ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground hover:border-primary/50"
-                              } ${isOwner ? "opacity-100" : ""}`}
+                              className={`inline-flex items-center gap-2 rounded-full border-2 px-3 py-2 text-xs transition-all ${
+                                selected ? "border-primary bg-primary/10 text-foreground font-medium" : "border-border text-muted-foreground hover:border-primary/50"
+                              } ${isOwner ? "cursor-not-allowed" : ""}`}
                             >
-                              <span className="h-5 w-5 rounded-full flex items-center justify-center text-white text-[9px] font-semibold" style={{ backgroundColor: u.color }}>{u.initials}</span>
+                              <span className="h-6 w-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold" style={{ backgroundColor: u.color }}>{u.initials}</span>
                               {u.name.split(" ")[0]}
                               {isOwner && <Crown className="h-3 w-3 text-warning" />}
                             </button>
@@ -319,97 +392,136 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
                 )}
 
                 {step === 3 && (
-                  <div className="space-y-6">
+                  <div className="space-y-7">
                     <div>
-                      <h3 className="text-xl font-semibold">Prazos e urgência</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Defina o período de execução e a prioridade.</p>
+                      <h3 className="text-2xl font-semibold tracking-tight">Prazos e urgência</h3>
+                      <p className="text-sm text-muted-foreground mt-1.5">Defina o período de execução e o nível de prioridade.</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">Data de início</Label>
-                        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-2 h-11" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="rounded-2xl border-2 border-border p-5 bg-gradient-to-br from-muted/30 to-transparent">
+                        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Data de início</Label>
+                        <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-2 h-12 text-base" />
                       </div>
-                      <div>
-                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">Data de término</Label>
-                        <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className="mt-2 h-11" />
+                      <div className="rounded-2xl border-2 border-border p-5 bg-gradient-to-br from-muted/30 to-transparent">
+                        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Data de término</Label>
+                        <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className="mt-2 h-12 text-base" />
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CalendarDays className="h-4 w-4" />
+                      Duração estimada: <span className="font-semibold text-foreground">{durationDays} dias</span>
                     </div>
                     <div>
-                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Prioridade</Label>
-                      <div className="mt-2 grid grid-cols-5 gap-2">
-                        {(["baixa","normal","alta","urgente","critica"] as Priority[]).map(p => (
-                          <button
-                            key={p} type="button" onClick={() => setPriority(p)}
-                            className={`rounded-lg border p-3 text-center transition-all ${
-                              priority === p ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50"
-                            }`}
-                          >
-                            <span className={`inline-block text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 ${priorityMeta[p].className}`}>{priorityMeta[p].label}</span>
-                          </button>
-                        ))}
+                      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">Prioridade</Label>
+                      <div className="mt-3 grid grid-cols-2 md:grid-cols-5 gap-2.5">
+                        {(["baixa","normal","alta","urgente","critica"] as Priority[]).map(p => {
+                          const Icon = PRIORITY_META[p].icon;
+                          const sel = priority === p;
+                          return (
+                            <button
+                              key={p} type="button" onClick={() => setPriority(p)}
+                              className={`group rounded-2xl border-2 p-4 text-center transition-all ${
+                                sel ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20 scale-105" : "border-border hover:border-primary/40 hover:shadow-sm"
+                              }`}
+                            >
+                              <div className="flex justify-center">
+                                <span className={`h-10 w-10 rounded-xl flex items-center justify-center ${priorityMeta[p].className}`}>
+                                  <Icon className="h-5 w-5" />
+                                </span>
+                              </div>
+                              <div className="mt-2.5 text-sm font-semibold">{priorityMeta[p].label}</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">{PRIORITY_META[p].desc}</div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
                 )}
 
                 {step === 4 && (
-                  <div className="space-y-5">
+                  <div className="space-y-6">
                     <div>
-                      <h3 className="text-xl font-semibold">Tudo certo?</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Revise as informações antes de criar o projeto.</p>
+                      <h3 className="text-2xl font-semibold tracking-tight">Tudo certo?</h3>
+                      <p className="text-sm text-muted-foreground mt-1.5">Revise as informações antes de criar o projeto.</p>
                     </div>
-                    <div className="rounded-xl border bg-card/40 p-5 space-y-4">
-                      <div className="flex items-start gap-3">
-                        <span className="h-10 w-10 rounded-lg shrink-0" style={{ backgroundColor: color }} />
-                        <div className="min-w-0 flex-1">
-                          <div className="text-base font-semibold truncate">{name || "Sem nome"}</div>
-                          <div className="text-xs text-muted-foreground">{STATUS_OPTIONS.find(s => s.id === status)?.label}</div>
-                          {description && <p className="text-sm text-muted-foreground mt-2 line-clamp-3">{description}</p>}
+                    <div className="rounded-2xl border-2 bg-gradient-to-br from-muted/30 to-transparent overflow-hidden">
+                      <div className="h-2" style={{ backgroundColor: color }} />
+                      <div className="p-6 space-y-5">
+                        <div className="flex items-start gap-4">
+                          <span className="h-14 w-14 rounded-xl shrink-0 shadow-md" style={{ backgroundColor: color }} />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xl font-semibold truncate">{name || "Sem nome"}</div>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                              <Badge variant="secondary">{STATUS_OPTIONS.find(s => s.id === status)?.label}</Badge>
+                              <span className={`text-[10px] font-semibold uppercase rounded px-1.5 py-0.5 ${priorityMeta[priority].className}`}>{priorityMeta[priority].label}</span>
+                              {template && <Badge variant="outline" className="gap-1"><Sparkles className="h-3 w-3" /> {template.name}</Badge>}
+                            </div>
+                            {description && <p className="text-sm text-muted-foreground mt-3 line-clamp-3">{description}</p>}
+                          </div>
                         </div>
-                      </div>
-                      <div className="h-px bg-border" />
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <Field label="Responsável">
-                          <div className="flex items-center gap-2">
-                            <span className="h-6 w-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold" style={{ backgroundColor: owner?.color }}>{owner?.initials}</span>
-                            <span>{owner?.name}</span>
+                        <div className="h-px bg-border" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 text-sm">
+                          <Field label="Responsável">
+                            <div className="flex items-center gap-2">
+                              <span className="h-7 w-7 rounded-full flex items-center justify-center text-white text-[11px] font-semibold" style={{ backgroundColor: owner?.color }}>{owner?.initials}</span>
+                              <span className="font-medium">{owner?.name}</span>
+                            </div>
+                          </Field>
+                          <Field label="Período"><span className="font-medium">{fmt(startDate)} → {fmt(endDate)} <span className="text-muted-foreground">({durationDays}d)</span></span></Field>
+                        </div>
+                        <div className="h-px bg-border" />
+                        <Field label={`Equipe (${members.length} membros)`}>
+                          <div className="flex flex-wrap gap-2 mt-1.5">
+                            {members.map(u => (
+                              <span key={u.id} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1.5 text-xs">
+                                <span className="h-5 w-5 rounded-full flex items-center justify-center text-white text-[9px] font-semibold" style={{ backgroundColor: u.color }}>{u.initials}</span>
+                                {u.name.split(" ")[0]}
+                                {u.id === ownerId && <Crown className="h-3 w-3 text-warning" />}
+                              </span>
+                            ))}
                           </div>
                         </Field>
-                        <Field label="Status"><Badge variant="secondary">{STATUS_OPTIONS.find(s => s.id === status)?.label}</Badge></Field>
-                        <Field label="Prioridade"><span className={`text-xs font-semibold uppercase rounded px-1.5 py-0.5 ${priorityMeta[priority].className}`}>{priorityMeta[priority].label}</span></Field>
-                        <Field label="Período"><span>{fmt(startDate)} → {fmt(endDate)}</span></Field>
+                        {template && (
+                          <>
+                            <div className="h-px bg-border" />
+                            <div className="flex items-center gap-2 text-sm text-primary bg-primary/5 rounded-lg p-3">
+                              <Sparkles className="h-4 w-4" />
+                              <span>{template.tasks.length} tarefas serão criadas automaticamente a partir do template <strong>{template.name}</strong>.</span>
+                            </div>
+                          </>
+                        )}
                       </div>
-                      <div className="h-px bg-border" />
-                      <Field label={`Equipe (${members.length})`}>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {members.map(u => (
-                            <span key={u.id} className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs">
-                              <span className="h-4 w-4 rounded-full flex items-center justify-center text-white text-[8px] font-semibold" style={{ backgroundColor: u.color }}>{u.initials}</span>
-                              {u.name.split(" ")[0]}
-                              {u.id === ownerId && <Crown className="h-3 w-3 text-warning" />}
-                            </span>
-                          ))}
-                        </div>
-                      </Field>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t px-7 py-4 bg-muted/30">
-              <Button variant="ghost" onClick={step === 0 ? close : () => setStep(s => s - 1)}>
-                {step === 0 ? "Cancelar" : (<><ArrowLeft className="h-4 w-4" /> Voltar</>)}
+            {/* FOOTER */}
+            <div className="flex items-center justify-between border-t px-8 py-5 bg-muted/30">
+              <Button variant="ghost" size="lg" onClick={step === 0 ? close : () => setStep(s => s - 1)}>
+                {step === 0 ? "Cancelar" : (<><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</>)}
               </Button>
-              {step < STEPS.length - 1 ? (
-                <Button onClick={() => setStep(s => s + 1)} disabled={!canNext}>
-                  Continuar <ArrowRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button onClick={submit} disabled={!name.trim()}>
-                  <CheckCircle2 className="h-4 w-4" /> Criar projeto
-                </Button>
-              )}
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex items-center gap-1">
+                  {STEPS.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`h-1.5 rounded-full transition-all ${i === step ? "w-8 bg-primary" : i < step ? "w-4 bg-primary/50" : "w-4 bg-muted-foreground/20"}`}
+                    />
+                  ))}
+                </div>
+                {step < STEPS.length - 1 ? (
+                  <Button size="lg" onClick={() => setStep(s => s + 1)} disabled={!canNext}>
+                    Continuar <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                ) : (
+                  <Button size="lg" onClick={submit} disabled={!name.trim()}>
+                    <CheckCircle2 className="h-4 w-4 mr-1" /> Criar projeto
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -418,10 +530,29 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
   );
 }
 
+function BigCard({ selected, onClick, icon, title, desc, badge }: { selected: boolean; onClick: () => void; icon: ReactNode; title: string; desc: string; badge?: string }) {
+  return (
+    <button
+      type="button" onClick={onClick}
+      className={`text-left rounded-2xl border-2 border-dashed p-4 transition-all ${
+        selected ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <span className="h-11 w-11 rounded-xl flex items-center justify-center bg-muted text-muted-foreground">{icon}</span>
+        {selected && <CheckCircle2 className="h-5 w-5 text-primary" />}
+      </div>
+      <div className="mt-3 font-semibold text-sm">{title}</div>
+      <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{desc}</div>
+      {badge && <div className="mt-3 inline-block rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{badge}</div>}
+    </button>
+  );
+}
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</div>
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">{label}</div>
       <div>{children}</div>
     </div>
   );
