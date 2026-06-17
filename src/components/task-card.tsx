@@ -1,7 +1,8 @@
-import { priorityMeta, type Priority, type Task, getUser, getProject, daysUntil } from "@/lib/mock-data";
+import { priorityMeta, type Priority, type Task, getUser, getProject, daysUntil, users } from "@/lib/mock-data";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, MessageSquare, Paperclip, CheckSquare, Clock } from "lucide-react";
+import { Calendar, MessageSquare, Paperclip, CheckSquare, Clock, Play, Pause, Lock } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { useActiveTimer, timerStore, useTasks } from "@/lib/store";
 
 export function PriorityBadge({ p }: { p: Priority }) {
   const m = priorityMeta[p];
@@ -25,13 +26,33 @@ export function TaskCard({ task, onClick }: { task: Task; onClick?: () => void }
   const soon = dleft >= 0 && dleft <= 3 && task.status !== "concluido";
   const checkDone = task.checklist.filter(c => c.done).length;
   const pct = task.checklist.length ? Math.round((checkDone / task.checklist.length) * 100) : 0;
+  const active = useActiveTimer();
+  const allTasks = useTasks();
+  const running = active?.taskId === task.id;
+  const blockers = (task.dependsOn || [])
+    .map(id => allTasks.find(t => t.id === id))
+    .filter(t => t && t.status !== "concluido");
+  const blocked = blockers.length > 0;
+
+  const toggleTimer = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (running) timerStore.stop();
+    else timerStore.start(task.id, users[0].id);
+  };
 
   return (
     <div onClick={onClick} className="group cursor-pointer rounded-lg border border-border bg-card p-3 shadow-sm hover:shadow-md hover:border-primary/40 transition-all">
       <div className="flex items-center gap-2 mb-2">
         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: project?.color }} />
         <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium truncate">{project?.name}</span>
-        <div className="ml-auto"><PriorityBadge p={task.priority} /></div>
+        <div className="ml-auto flex items-center gap-1">
+          {blocked && (
+            <span title={`Bloqueada por ${blockers.length} tarefa(s)`} className="inline-flex items-center gap-0.5 rounded-md bg-warning/15 text-warning px-1.5 py-0.5 text-[9px] font-semibold">
+              <Lock className="h-2.5 w-2.5" />{blockers.length}
+            </span>
+          )}
+          <PriorityBadge p={task.priority} />
+        </div>
       </div>
       <h4 className="text-sm font-medium leading-snug mb-2 group-hover:text-primary transition-colors">{task.title}</h4>
       {task.tags.length > 0 && (
@@ -58,9 +79,22 @@ export function TaskCard({ task, onClick }: { task: Task; onClick?: () => void }
           {task.attachments.length > 0 && <span className="inline-flex items-center gap-0.5"><Paperclip className="h-3 w-3" />{task.attachments.length}</span>}
           {task.loggedHours > 0 && <span className="inline-flex items-center gap-0.5"><Clock className="h-3 w-3" />{task.loggedHours}h</span>}
         </div>
-        <div className="flex -space-x-1.5">
-          <UserAvatar id={task.assigneeId} size={22} />
-          {task.participantIds.slice(0, 2).map(id => <UserAvatar key={id} id={id} size={22} />)}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={toggleTimer}
+            title={running ? "Parar cronômetro" : "Iniciar cronômetro"}
+            className={`h-6 w-6 rounded-md flex items-center justify-center transition-all ${
+              running
+                ? "bg-success text-success-foreground hover:bg-success/90"
+                : "bg-muted text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-primary hover:text-primary-foreground"
+            }`}
+          >
+            {running ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+          </button>
+          <div className="flex -space-x-1.5">
+            <UserAvatar id={task.assigneeId} size={22} />
+            {task.participantIds.slice(0, 2).map(id => <UserAvatar key={id} id={id} size={22} />)}
+          </div>
         </div>
       </div>
     </div>

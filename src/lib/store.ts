@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { tasks as initialTasks, projects as initialProjects, users as initialUsers, type Task, type TaskStatus, type Project, type User } from "./mock-data";
+import { tasks as initialTasks, projects as initialProjects, users as initialUsers, projectTemplates as initialTemplates, automationRules as initialAutomations, seedTimeEntries, type Task, type TaskStatus, type Project, type User, type ProjectTemplate, type AutomationRule, type TimeEntry } from "./mock-data";
 
 // User profiles store (with page access)
 export const ACCESS_PAGES = ["/", "/projetos", "/kanban", "/minhas-tarefas", "/calendario", "/equipe", "/relatorios", "/configuracoes", "/perfis"] as const;
@@ -111,6 +111,124 @@ export const projectsStore = {
 export function useProjects() {
   return useSyncExternalStore(projectsStore.subscribe, projectsStore.getSnapshot, projectsStore.getSnapshot);
 }
+
+// ============== Templates ==============
+let templatesState: ProjectTemplate[] = [...initialTemplates];
+const tplListeners = new Set<() => void>();
+const notifyTpl = () => tplListeners.forEach(l => l());
+export const templatesStore = {
+  getSnapshot: () => templatesState,
+  subscribe: (l: () => void) => { tplListeners.add(l); return () => tplListeners.delete(l); },
+  addTemplate(t: ProjectTemplate) { templatesState = [t, ...templatesState]; notifyTpl(); },
+  updateTemplate(id: string, patch: Partial<ProjectTemplate>) {
+    templatesState = templatesState.map(t => t.id === id ? { ...t, ...patch } : t);
+    notifyTpl();
+  },
+  removeTemplate(id: string) { templatesState = templatesState.filter(t => t.id !== id); notifyTpl(); },
+};
+export function useTemplates() {
+  return useSyncExternalStore(templatesStore.subscribe, templatesStore.getSnapshot, templatesStore.getSnapshot);
+}
+
+// Apply template to a newly created project: spawns tasks with offset dates and dependencies
+export function applyTemplateToProject(template: ProjectTemplate, projectId: string, projectStart: string, assigneeId: string) {
+  const start = new Date(projectStart + "T00:00:00");
+  const addD = (days: number) => {
+    const d = new Date(start); d.setDate(d.getDate() + (days || 0));
+    return d.toISOString().slice(0, 10);
+  };
+  const createdIds: string[] = [];
+  template.tasks.forEach((tt, idx) => {
+    const id = `t_${Date.now().toString(36)}_${idx}`;
+    createdIds.push(id);
+    const dependsOn = (tt.dependsOnIndex || []).map(i => createdIds[i]).filter(Boolean);
+    tasksStore.addTask({
+      id, title: tt.title, description: "", projectId,
+      assigneeId, participantIds: [], department: tt.department || "Geral",
+      tags: [], priority: tt.priority || "normal", status: tt.status || "backlog",
+      createdAt: new Date().toISOString().slice(0, 10),
+      startDate: addD(tt.offsetStartDays ?? 0),
+      dueDate: addD(tt.offsetDueDays ?? (tt.offsetStartDays ?? 0) + 5),
+      checklist: [], comments: [], attachments: [],
+      estimatedHours: tt.estimatedHours ?? 8, loggedHours: 0,
+      dependsOn, timeEntries: [],
+    });
+  });
+}
+
+// ============== Automações ==============
+let autoState: AutomationRule[] = [...initialAutomations];
+const autoListeners = new Set<() => void>();
+const notifyAuto = () => autoListeners.forEach(l => l());
+export const automationsStore = {
+  getSnapshot: () => autoState,
+  subscribe: (l: () => void) => { autoListeners.add(l); return () => autoListeners.delete(l); },
+  addRule(r: AutomationRule) { autoState = [r, ...autoState]; notifyAuto(); },
+  toggleRule(id: string) {
+    autoState = autoState.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r);
+    notifyAuto();
+  },
+  updateRule(id: string, patch: Partial<AutomationRule>) {
+    autoState = autoState.map(r => r.id === id ? { ...r, ...patch } : r);
+    notifyAuto();
+  },
+  removeRule(id: string) { autoState = autoState.filter(r => r.id !== id); notifyAuto(); },
+};
+export function useAutomations() {
+  return useSyncExternalStore(automationsStore.subscribe, automationsStore.getSnapshot, automationsStore.getSnapshot);
+}
+
+// ============== Time tracker (apenas 1 ativo por vez) ==============
+interface ActiveTimer { taskId: string; userId: string; startedAt: string; }
+let activeTimer: ActiveTimer | null = null;
+let entriesState: TimeEntry[] = [...seedTimeEntries];
+const timerListeners = new Set<() => void>();
+const notifyTimer = () => timerListeners.forEach(l => l());
+
+export const timerStore = {
+  getActive: () => activeTimer,
+  getEntries: () => entriesState,
+  subscribe: (l: () => void) => { timerListeners.add(l); return () => timerListeners.delete(l); },
+  start(taskId: string, userId: string) {
+    if (activeTimer) timerStore.stop();
+    activeTimer = { taskId, userId, startedAt: new Date().toISOString() };
+    notifyTimer();
+  },
+  stop(note?: string) {
+    if (!activeTimer) return;
+    const end = new Date();
+    const start = new Date(activeTimer.startedAt);
+    const minutes = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
+    const entry: TimeEntry = {
+      id: `te_${Date.now().toString(36)}`,
+      userId: activeTimer.userId,
+      start: activeTimer.startedAt,
+      end: end.toISOString(),
+      minutes, note,
+    };
+    entriesState = [entry, ...entriesState];
+    // anexa à tarefa e atualiza loggedHours
+    const task = state.find(t => t.id === activeTimer!.taskId);
+    if (task) {
+      const newEntries = [...(task.timeEntries || []), entry];
+      const totalMin = newEntries.reduce((s, e) => s + e.minutes, 0);
+      tasksStore.updateTask(task.id, {
+        timeEntries: newEntries,
+        loggedHours: Math.round((totalMin / 60) * 10) / 10,
+      });
+    }
+    activeTimer = null;
+    notifyTimer();
+  },
+};
+
+export function useActiveTimer() {
+  return useSyncExternalStore(timerStore.subscribe, timerStore.getActive, () => null);
+}
+export function useTimeEntries() {
+  return useSyncExternalStore(timerStore.subscribe, timerStore.getEntries, timerStore.getEntries);
+}
+
 
 // Theme store
 const THEME_KEY = "gs-theme";
