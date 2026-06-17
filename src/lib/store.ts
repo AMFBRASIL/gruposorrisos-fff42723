@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { tasks as initialTasks, projects as initialProjects, users as initialUsers, projectTemplates as initialTemplates, automationRules as initialAutomations, seedTimeEntries, type Task, type TaskStatus, type Project, type User, type ProjectTemplate, type AutomationRule, type TimeEntry } from "./mock-data";
+import { tasks as initialTasks, projects as initialProjects, users as initialUsers, projectTemplates as initialTemplates, automationRules as initialAutomations, seedTimeEntries, clients as initialClients, deals as initialDeals, invoices as initialInvoices, type Task, type TaskStatus, type Project, type User, type ProjectTemplate, type AutomationRule, type TimeEntry, type Client, type Deal, type DealStage, type Invoice } from "./mock-data";
 
 // User profiles store (with page access)
 export const ACCESS_PAGES = ["/", "/projetos", "/kanban", "/minhas-tarefas", "/calendario", "/equipe", "/relatorios", "/configuracoes", "/perfis"] as const;
@@ -254,4 +254,64 @@ export const themeStore = {
 };
 export function useTheme() {
   return useSyncExternalStore(themeStore.subscribe, themeStore.getSnapshot, () => "dark" as Theme);
+}
+
+// ============== Wave 3 — Clients ==============
+let clientsState: Client[] = [...initialClients];
+const clientListeners = new Set<() => void>();
+const notifyClients = () => clientListeners.forEach(l => l());
+export const clientsStore = {
+  getSnapshot: () => clientsState,
+  subscribe: (l: () => void) => { clientListeners.add(l); return () => clientListeners.delete(l); },
+  addClient(c: Client) { clientsState = [c, ...clientsState]; notifyClients(); },
+  updateClient(id: string, patch: Partial<Client>) {
+    clientsState = clientsState.map(c => c.id === id ? { ...c, ...patch } : c);
+    notifyClients();
+  },
+};
+export function useClients() {
+  return useSyncExternalStore(clientsStore.subscribe, clientsStore.getSnapshot, clientsStore.getSnapshot);
+}
+
+// ============== Wave 3 — Deals (Pipeline) ==============
+let dealsState: Deal[] = [...initialDeals];
+const dealListeners = new Set<() => void>();
+const notifyDeals = () => dealListeners.forEach(l => l());
+export const dealsStore = {
+  getSnapshot: () => dealsState,
+  subscribe: (l: () => void) => { dealListeners.add(l); return () => dealListeners.delete(l); },
+  addDeal(d: Deal) { dealsState = [d, ...dealsState]; notifyDeals(); },
+  updateDeal(id: string, patch: Partial<Deal>) {
+    dealsState = dealsState.map(d => d.id === id ? { ...d, ...patch } : d);
+    notifyDeals();
+  },
+  moveStage(id: string, stage: DealStage) {
+    const prob = stage === "ganho" ? 100 : stage === "perdido" ? 0 : undefined;
+    dealsState = dealsState.map(d => d.id === id ? { ...d, stage, ...(prob !== undefined ? { probability: prob } : {}) } : d);
+    notifyDeals();
+  },
+};
+export function useDeals() {
+  return useSyncExternalStore(dealsStore.subscribe, dealsStore.getSnapshot, dealsStore.getSnapshot);
+}
+
+// ============== Wave 3 — Invoices ==============
+let invoicesState: Invoice[] = [...initialInvoices];
+const invListeners = new Set<() => void>();
+const notifyInv = () => invListeners.forEach(l => l());
+export const invoicesStore = {
+  getSnapshot: () => invoicesState,
+  subscribe: (l: () => void) => { invListeners.add(l); return () => invListeners.delete(l); },
+  addInvoice(i: Invoice) { invoicesState = [i, ...invoicesState]; notifyInv(); },
+  updateInvoice(id: string, patch: Partial<Invoice>) {
+    invoicesState = invoicesState.map(i => i.id === id ? { ...i, ...patch } : i);
+    notifyInv();
+  },
+  markPaid(id: string) {
+    invoicesState = invoicesState.map(i => i.id === id ? { ...i, status: "paga" as const, paidAt: new Date().toISOString().slice(0,10) } : i);
+    notifyInv();
+  },
+};
+export function useInvoices() {
+  return useSyncExternalStore(invoicesStore.subscribe, invoicesStore.getSnapshot, invoicesStore.getSnapshot);
 }

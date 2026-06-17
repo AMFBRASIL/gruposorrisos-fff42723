@@ -335,3 +335,158 @@ export const seedTimeEntries: TimeEntry[] = [
   { id: "te4", userId: "u4", start: "2026-06-09T09:00:00", end: "2026-06-09T13:00:00", minutes: 240, note: "Configurar integrações" },
   { id: "te5", userId: "u5", start: "2026-06-10T10:00:00", end: "2026-06-10T13:00:00", minutes: 180, note: "Produção de vídeo" },
 ];
+
+// =============================================================
+// ============== WAVE 3 — Financeiro & Comercial ==============
+// =============================================================
+
+export interface Client {
+  id: string;
+  name: string;
+  segment: string;
+  city: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  logo: string; // initials
+  color: string;
+  status: "ativo" | "prospect" | "inativo";
+  since: string;
+  ltv: number;
+  ownerId: string;
+}
+
+export type DealStage = "lead" | "qualificacao" | "proposta" | "negociacao" | "ganho" | "perdido";
+export interface Deal {
+  id: string;
+  title: string;
+  clientId: string;
+  ownerId: string;
+  value: number;
+  stage: DealStage;
+  probability: number; // 0-100
+  expectedCloseDate: string;
+  source: string;
+  createdAt: string;
+  notes?: string;
+  lostReason?: string;
+}
+
+export type InvoiceStatus = "rascunho" | "enviada" | "paga" | "vencida" | "cancelada";
+export interface InvoiceItem { id: string; description: string; quantity: number; unitPrice: number; }
+export interface Invoice {
+  id: string;
+  number: string;
+  clientId: string;
+  projectId?: string;
+  issueDate: string;
+  dueDate: string;
+  paidAt?: string;
+  status: InvoiceStatus;
+  items: InvoiceItem[];
+  notes?: string;
+}
+
+export type CostCategory = "Pessoal" | "Fornecedor" | "Software" | "Infraestrutura" | "Marketing" | "Outros";
+export interface CostEntry {
+  id: string;
+  projectId: string;
+  category: CostCategory;
+  description: string;
+  amount: number;
+  date: string;
+  vendor?: string;
+}
+
+export interface ProjectBudget {
+  projectId: string;
+  budget: number;
+  currency: "BRL";
+}
+
+export const DEAL_STAGES: { id: DealStage; title: string; color: string }[] = [
+  { id: "lead",          title: "Lead",           color: "oklch(0.65 0.14 230)" },
+  { id: "qualificacao",  title: "Qualificação",   color: "oklch(0.7 0.15 70)" },
+  { id: "proposta",      title: "Proposta",       color: "oklch(0.7 0.18 340)" },
+  { id: "negociacao",    title: "Negociação",     color: "oklch(0.65 0.18 25)" },
+  { id: "ganho",         title: "Ganho",          color: "oklch(0.62 0.16 155)" },
+  { id: "perdido",       title: "Perdido",        color: "oklch(0.55 0.04 260)" },
+];
+
+export const invoiceStatusMeta: Record<InvoiceStatus, { label: string; className: string }> = {
+  rascunho:  { label: "Rascunho",  className: "bg-muted text-muted-foreground" },
+  enviada:   { label: "Enviada",   className: "bg-info/15 text-info" },
+  paga:      { label: "Paga",      className: "bg-success/15 text-success" },
+  vencida:   { label: "Vencida",   className: "bg-destructive/15 text-destructive" },
+  cancelada: { label: "Cancelada", className: "bg-muted text-muted-foreground line-through" },
+};
+
+export const clients: Client[] = [
+  { id: "cli1", name: "Clínica Bem Estar",     segment: "Saúde",         city: "São Paulo",   contactName: "Dra. Helena Rocha", contactEmail: "helena@bemestar.com",  contactPhone: "(11) 98888-1234", logo: "BE", color: "oklch(0.6 0.18 260)",  status: "ativo",    since: "2024-03-12", ltv: 285000, ownerId: "u7" },
+  { id: "cli2", name: "Odonto Sorrir",         segment: "Saúde",         city: "Sorocaba",    contactName: "Dr. Marcos Vinhas", contactEmail: "marcos@odontosorrir.com", contactPhone: "(15) 99777-5566", logo: "OS", color: "oklch(0.62 0.16 155)", status: "ativo",    since: "2025-01-08", ltv: 142000, ownerId: "u7" },
+  { id: "cli3", name: "Rede Saúde+",            segment: "Saúde",         city: "Campinas",    contactName: "Camila Duarte",     contactEmail: "camila@saudemais.com",  contactPhone: "(19) 99666-7788", logo: "S+", color: "oklch(0.7 0.18 340)",  status: "prospect", since: "2026-04-22", ltv: 0,      ownerId: "u5" },
+  { id: "cli4", name: "Hospital Vida Plena",    segment: "Hospitalar",    city: "Rio de Janeiro", contactName: "Eduardo Lins",  contactEmail: "eduardo@vidaplena.com", contactPhone: "(21) 98555-3322", logo: "VP", color: "oklch(0.65 0.14 230)", status: "ativo",    since: "2023-11-03", ltv: 612000, ownerId: "u2" },
+  { id: "cli5", name: "Clínica Alegria",        segment: "Saúde",         city: "Belo Horizonte", contactName: "Renata Prado",  contactEmail: "renata@alegria.com",    contactPhone: "(31) 98111-2244", logo: "CA", color: "oklch(0.7 0.15 70)",   status: "ativo",    since: "2025-07-19", ltv: 98000,  ownerId: "u5" },
+  { id: "cli6", name: "Smile Express",          segment: "Franquia",      city: "Curitiba",    contactName: "Tiago Almeida",     contactEmail: "tiago@smileexpress.com",contactPhone: "(41) 99000-1010", logo: "SE", color: "oklch(0.6 0.2 295)",   status: "prospect", since: "2026-05-30", ltv: 0,      ownerId: "u7" },
+  { id: "cli7", name: "Centro Médico Aurora",   segment: "Hospitalar",    city: "Porto Alegre",contactName: "Patrícia Mendes",   contactEmail: "patricia@aurora.com",   contactPhone: "(51) 98444-9988", logo: "CM", color: "oklch(0.65 0.18 25)",  status: "inativo",  since: "2022-09-15", ltv: 76000,  ownerId: "u2" },
+];
+
+export const deals: Deal[] = [
+  { id: "d1", title: "Implantação ERP — Bem Estar Matriz",       clientId: "cli1", ownerId: "u7", value: 180000, stage: "negociacao",   probability: 70, expectedCloseDate: "2026-07-05", source: "Indicação",    createdAt: "2026-05-02", notes: "Cliente avaliando 2 fornecedores." },
+  { id: "d2", title: "Expansão Sorocaba — Pacote completo",       clientId: "cli2", ownerId: "u7", value: 95000,  stage: "proposta",     probability: 55, expectedCloseDate: "2026-06-28", source: "Inbound",      createdAt: "2026-05-15" },
+  { id: "d3", title: "Sistema de Agendamento — Rede Saúde+",      clientId: "cli3", ownerId: "u5", value: 240000, stage: "qualificacao", probability: 30, expectedCloseDate: "2026-08-15", source: "LinkedIn",     createdAt: "2026-05-20" },
+  { id: "d4", title: "Renovação anual — Hospital Vida Plena",     clientId: "cli4", ownerId: "u2", value: 320000, stage: "ganho",        probability: 100,expectedCloseDate: "2026-06-01", source: "Renovação",    createdAt: "2026-04-10" },
+  { id: "d5", title: "Treinamento equipe — Clínica Alegria",      clientId: "cli5", ownerId: "u5", value: 32000,  stage: "negociacao",   probability: 80, expectedCloseDate: "2026-06-25", source: "Indicação",    createdAt: "2026-05-28" },
+  { id: "d6", title: "Piloto Smile Express — 3 unidades",         clientId: "cli6", ownerId: "u7", value: 120000, stage: "lead",         probability: 15, expectedCloseDate: "2026-09-30", source: "Evento",       createdAt: "2026-06-01" },
+  { id: "d7", title: "Marketing digital trimestral — Bem Estar",  clientId: "cli1", ownerId: "u5", value: 45000,  stage: "proposta",     probability: 60, expectedCloseDate: "2026-07-12", source: "Cross-sell",   createdAt: "2026-05-25" },
+  { id: "d8", title: "Auditoria LGPD — Aurora",                   clientId: "cli7", ownerId: "u4", value: 28000,  stage: "perdido",      probability: 0,  expectedCloseDate: "2026-05-20", source: "Outbound",     createdAt: "2026-04-25", lostReason: "Sem orçamento neste ciclo" },
+  { id: "d9", title: "Consultoria de processos — Vida Plena",     clientId: "cli4", ownerId: "u2", value: 88000,  stage: "qualificacao", probability: 40, expectedCloseDate: "2026-08-02", source: "Cross-sell",   createdAt: "2026-06-03" },
+  { id: "d10",title: "Implantação Sorocaba — fase 2",             clientId: "cli2", ownerId: "u7", value: 60000,  stage: "lead",         probability: 20, expectedCloseDate: "2026-09-10", source: "Cliente atual",createdAt: "2026-06-05" },
+];
+
+export const invoices: Invoice[] = [
+  { id: "inv1", number: "NF-2026-0042", clientId: "cli4", projectId: "p5", issueDate: "2026-05-01", dueDate: "2026-05-31", paidAt: "2026-05-28", status: "paga",
+    items: [{ id: "i1", description: "Auditoria LGPD — Fase 1", quantity: 1, unitPrice: 45000 }, { id: "i2", description: "Treinamento equipe (8h)", quantity: 8, unitPrice: 350 }] },
+  { id: "inv2", number: "NF-2026-0043", clientId: "cli1", projectId: "p2", issueDate: "2026-05-10", dueDate: "2026-06-09", paidAt: "2026-06-05", status: "paga",
+    items: [{ id: "i3", description: "Campanha mensal", quantity: 1, unitPrice: 22000 }] },
+  { id: "inv3", number: "NF-2026-0044", clientId: "cli2", projectId: "p1", issueDate: "2026-05-20", dueDate: "2026-06-19", status: "enviada",
+    items: [{ id: "i4", description: "Implantação Sorocaba — entrada", quantity: 1, unitPrice: 50000 }] },
+  { id: "inv4", number: "NF-2026-0045", clientId: "cli5", projectId: "p4", issueDate: "2026-05-25", dueDate: "2026-06-08", status: "vencida",
+    items: [{ id: "i5", description: "Treinamento clínica", quantity: 1, unitPrice: 12000 }] },
+  { id: "inv5", number: "NF-2026-0046", clientId: "cli4",                   issueDate: "2026-06-01", dueDate: "2026-07-01", status: "enviada",
+    items: [{ id: "i6", description: "Renovação anual", quantity: 1, unitPrice: 320000 }] },
+  { id: "inv6", number: "NF-2026-0047", clientId: "cli1", projectId: "p2", issueDate: "2026-06-05", dueDate: "2026-07-05", status: "enviada",
+    items: [{ id: "i7", description: "Mídia paga (junho)", quantity: 1, unitPrice: 18500 }] },
+  { id: "inv7", number: "NF-2026-0048", clientId: "cli3",                   issueDate: "2026-06-08", dueDate: "2026-07-08", status: "rascunho",
+    items: [{ id: "i8", description: "Estudo de viabilidade", quantity: 1, unitPrice: 14000 }] },
+  { id: "inv8", number: "NF-2026-0040", clientId: "cli7",                   issueDate: "2026-04-12", dueDate: "2026-05-12", status: "vencida",
+    items: [{ id: "i9", description: "Consultoria abril", quantity: 1, unitPrice: 9800 }] },
+];
+
+export const projectBudgets: ProjectBudget[] = [
+  { projectId: "p1", budget: 380000, currency: "BRL" },
+  { projectId: "p2", budget: 95000,  currency: "BRL" },
+  { projectId: "p3", budget: 140000, currency: "BRL" },
+  { projectId: "p4", budget: 32000,  currency: "BRL" },
+  { projectId: "p5", budget: 120000, currency: "BRL" },
+];
+
+export const costEntries: CostEntry[] = [
+  { id: "ce1",  projectId: "p1", category: "Fornecedor",     description: "Construtora — etapa 1",         amount: 120000, date: "2026-05-05", vendor: "Const. Horizonte" },
+  { id: "ce2",  projectId: "p1", category: "Pessoal",        description: "Equipe operações (maio)",       amount: 38000,  date: "2026-05-30" },
+  { id: "ce3",  projectId: "p1", category: "Fornecedor",     description: "Mobiliário clínico",            amount: 64000,  date: "2026-06-02", vendor: "MedMov" },
+  { id: "ce4",  projectId: "p2", category: "Marketing",      description: "Mídia paga Meta + Google",      amount: 22000,  date: "2026-05-22" },
+  { id: "ce5",  projectId: "p2", category: "Fornecedor",     description: "Produtora de vídeo",            amount: 18000,  date: "2026-06-01", vendor: "Studio Lux" },
+  { id: "ce6",  projectId: "p3", category: "Software",       description: "Licenças ERP novo",             amount: 48000,  date: "2026-04-20", vendor: "ERPHub" },
+  { id: "ce7",  projectId: "p3", category: "Pessoal",        description: "Consultoria migração",          amount: 36000,  date: "2026-05-18" },
+  { id: "ce8",  projectId: "p3", category: "Infraestrutura", description: "Servidor + cloud (3 meses)",    amount: 12000,  date: "2026-05-10" },
+  { id: "ce9",  projectId: "p4", category: "Pessoal",        description: "Instrutores externos",          amount: 14000,  date: "2026-06-04" },
+  { id: "ce10", projectId: "p5", category: "Pessoal",        description: "Time LGPD",                     amount: 52000,  date: "2026-05-12" },
+  { id: "ce11", projectId: "p5", category: "Software",       description: "DPO as a Service",              amount: 18000,  date: "2026-05-22" },
+  { id: "ce12", projectId: "p5", category: "Outros",         description: "Assessoria jurídica",           amount: 22000,  date: "2026-06-03" },
+];
+
+// ===== Helpers =====
+export const getClient = (id?: string) => clients.find(c => c.id === id);
+export const invoiceTotal = (inv: Invoice) => inv.items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
+export const formatBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
