@@ -13,6 +13,7 @@ import { Route as TimesheetRouteImport } from './routes/timesheet'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as ProjetosRouteImport } from './routes/projetos'
+import { Route as PortalClienteRouteImport } from './routes/portal-cliente'
 import { Route as PerfisRouteImport } from './routes/perfis'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as LoginRouteImport } from './routes/login'
@@ -20,11 +21,13 @@ import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as EquipeRouteImport } from './routes/equipe'
+import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ComercialRouteImport } from './routes/comercial'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as AutomacoesRouteImport } from './routes/automacoes'
+import { Route as AprovacoesRouteImport } from './routes/aprovacoes'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TimesheetRoute = TimesheetRouteImport.update({
@@ -45,6 +48,11 @@ const RelatoriosRoute = RelatoriosRouteImport.update({
 const ProjetosRoute = ProjetosRouteImport.update({
   id: '/projetos',
   path: '/projetos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PortalClienteRoute = PortalClienteRouteImport.update({
+  id: '/portal-cliente',
+  path: '/portal-cliente',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PerfisRoute = PerfisRouteImport.update({
@@ -82,6 +90,11 @@ const EquipeRoute = EquipeRouteImport.update({
   path: '/equipe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentosRoute = DocumentosRouteImport.update({
+  id: '/documentos',
+  path: '/documentos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
@@ -107,6 +120,11 @@ const AutomacoesRoute = AutomacoesRouteImport.update({
   path: '/automacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AprovacoesRoute = AprovacoesRouteImport.update({
+  id: '/aprovacoes',
+  path: '/aprovacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -115,11 +133,13 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/aprovacoes': typeof AprovacoesRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/clientes': typeof ClientesRoute
   '/comercial': typeof ComercialRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
@@ -127,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/perfis': typeof PerfisRoute
+  '/portal-cliente': typeof PortalClienteRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
   '/templates': typeof TemplatesRoute
@@ -134,11 +155,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/aprovacoes': typeof AprovacoesRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/clientes': typeof ClientesRoute
   '/comercial': typeof ComercialRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
@@ -146,6 +169,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/perfis': typeof PerfisRoute
+  '/portal-cliente': typeof PortalClienteRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
   '/templates': typeof TemplatesRoute
@@ -154,11 +178,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/aprovacoes': typeof AprovacoesRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/clientes': typeof ClientesRoute
   '/comercial': typeof ComercialRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
@@ -166,6 +192,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/perfis': typeof PerfisRoute
+  '/portal-cliente': typeof PortalClienteRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
   '/templates': typeof TemplatesRoute
@@ -175,11 +202,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/aprovacoes'
     | '/automacoes'
     | '/calendario'
     | '/clientes'
     | '/comercial'
     | '/configuracoes'
+    | '/documentos'
     | '/equipe'
     | '/financeiro'
     | '/insights'
@@ -187,6 +216,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/minhas-tarefas'
     | '/perfis'
+    | '/portal-cliente'
     | '/projetos'
     | '/relatorios'
     | '/templates'
@@ -194,11 +224,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/aprovacoes'
     | '/automacoes'
     | '/calendario'
     | '/clientes'
     | '/comercial'
     | '/configuracoes'
+    | '/documentos'
     | '/equipe'
     | '/financeiro'
     | '/insights'
@@ -206,6 +238,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/minhas-tarefas'
     | '/perfis'
+    | '/portal-cliente'
     | '/projetos'
     | '/relatorios'
     | '/templates'
@@ -213,11 +246,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/aprovacoes'
     | '/automacoes'
     | '/calendario'
     | '/clientes'
     | '/comercial'
     | '/configuracoes'
+    | '/documentos'
     | '/equipe'
     | '/financeiro'
     | '/insights'
@@ -225,6 +260,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/minhas-tarefas'
     | '/perfis'
+    | '/portal-cliente'
     | '/projetos'
     | '/relatorios'
     | '/templates'
@@ -233,11 +269,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AprovacoesRoute: typeof AprovacoesRoute
   AutomacoesRoute: typeof AutomacoesRoute
   CalendarioRoute: typeof CalendarioRoute
   ClientesRoute: typeof ClientesRoute
   ComercialRoute: typeof ComercialRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  DocumentosRoute: typeof DocumentosRoute
   EquipeRoute: typeof EquipeRoute
   FinanceiroRoute: typeof FinanceiroRoute
   InsightsRoute: typeof InsightsRoute
@@ -245,6 +283,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
   PerfisRoute: typeof PerfisRoute
+  PortalClienteRoute: typeof PortalClienteRoute
   ProjetosRoute: typeof ProjetosRoute
   RelatoriosRoute: typeof RelatoriosRoute
   TemplatesRoute: typeof TemplatesRoute
@@ -279,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/projetos'
       fullPath: '/projetos'
       preLoaderRoute: typeof ProjetosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/portal-cliente': {
+      id: '/portal-cliente'
+      path: '/portal-cliente'
+      fullPath: '/portal-cliente'
+      preLoaderRoute: typeof PortalClienteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/perfis': {
@@ -330,6 +376,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EquipeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/documentos': {
+      id: '/documentos'
+      path: '/documentos'
+      fullPath: '/documentos'
+      preLoaderRoute: typeof DocumentosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/configuracoes': {
       id: '/configuracoes'
       path: '/configuracoes'
@@ -365,6 +418,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AutomacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/aprovacoes': {
+      id: '/aprovacoes'
+      path: '/aprovacoes'
+      fullPath: '/aprovacoes'
+      preLoaderRoute: typeof AprovacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -377,11 +437,13 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AprovacoesRoute: AprovacoesRoute,
   AutomacoesRoute: AutomacoesRoute,
   CalendarioRoute: CalendarioRoute,
   ClientesRoute: ClientesRoute,
   ComercialRoute: ComercialRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  DocumentosRoute: DocumentosRoute,
   EquipeRoute: EquipeRoute,
   FinanceiroRoute: FinanceiroRoute,
   InsightsRoute: InsightsRoute,
@@ -389,6 +451,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
   PerfisRoute: PerfisRoute,
+  PortalClienteRoute: PortalClienteRoute,
   ProjetosRoute: ProjetosRoute,
   RelatoriosRoute: RelatoriosRoute,
   TemplatesRoute: TemplatesRoute,
