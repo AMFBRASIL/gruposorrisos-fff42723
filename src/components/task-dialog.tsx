@@ -716,3 +716,68 @@ export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onC
     </Dialog>
   );
 }
+
+function TimerButton({ taskId }: { taskId: string }) {
+  const active = useActiveTimer();
+  const running = active?.taskId === taskId;
+  return (
+    <Button
+      variant={running ? "default" : "outline"}
+      size="sm"
+      className={running ? "bg-success text-success-foreground hover:bg-success/90" : ""}
+      onClick={() => running ? timerStore.stop() : timerStore.start(taskId, users[0].id)}
+    >
+      <PlayCircle className="h-3.5 w-3.5" /> {running ? "Parar timer" : "Iniciar timer"}
+    </Button>
+  );
+}
+
+function DependenciesPanel({ task, allTasks }: { task: Task; allTasks: Task[] }) {
+  const deps = (task.dependsOn || []).map(id => allTasks.find(t => t.id === id)).filter(Boolean) as Task[];
+  const blockers = deps.filter(d => d.status !== "concluido");
+  const candidates = allTasks.filter(t => t.id !== task.id && t.projectId === task.projectId && !(task.dependsOn || []).includes(t.id));
+
+  const addDep = (id: string) => tasksStore.updateTask(task.id, { dependsOn: [...(task.dependsOn || []), id] });
+  const removeDep = (id: string) => tasksStore.updateTask(task.id, { dependsOn: (task.dependsOn || []).filter(x => x !== id) });
+
+  return (
+    <div className="rounded-md border border-border bg-background p-2 space-y-1.5">
+      {blockers.length > 0 && (
+        <div className="rounded-md bg-warning/10 border border-warning/30 text-warning text-[11px] px-2 py-1.5 font-medium">
+          Bloqueada por {blockers.length} tarefa(s) não concluída(s)
+        </div>
+      )}
+      {deps.length === 0 ? (
+        <div className="text-[11px] text-muted-foreground italic px-1 py-1">Nenhuma dependência.</div>
+      ) : (
+        <ul className="space-y-1">
+          {deps.map(d => (
+            <li key={d.id} className="flex items-center gap-2 text-xs rounded-md hover:bg-muted/50 px-1.5 py-1">
+              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${d.status === "concluido" ? "bg-success" : "bg-warning"}`} />
+              <span className="flex-1 truncate">{d.title}</span>
+              <button onClick={() => removeDep(d.id)} className="text-muted-foreground hover:text-destructive">
+                <X className="h-3 w-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {candidates.length > 0 && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="w-full text-[11px] text-primary hover:bg-primary/5 rounded-md px-1.5 py-1 inline-flex items-center gap-1">
+              <Plus className="h-3 w-3" /> Adicionar dependência
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="p-1 w-64 max-h-64 overflow-y-auto">
+            {candidates.map(c => (
+              <button key={c.id} onClick={() => addDep(c.id)} className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted truncate">
+                {c.title}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
+      )}
+    </div>
+  );
+}
