@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe } from "lucide-react";
 import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,9 @@ const nav = [
   { to: "/comercial", label: "Comercial", icon: Target },
   { to: "/clientes", label: "Clientes", icon: Building2 },
   { to: "/financeiro", label: "Financeiro", icon: DollarSign },
+  { to: "/documentos", label: "Documentos", icon: FileText },
+  { to: "/aprovacoes", label: "Aprovações", icon: ShieldCheck },
+  { to: "/portal-cliente", label: "Portal do Cliente", icon: Globe },
   { to: "/equipe", label: "Equipe", icon: Users },
   { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
