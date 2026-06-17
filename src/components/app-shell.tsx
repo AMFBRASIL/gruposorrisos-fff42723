@@ -77,7 +77,7 @@ function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; 
           </div>
         )}
       </div>
-      <nav className={`flex-1 overflow-y-auto py-3 space-y-1 ${collapsed ? "px-2" : "px-3"}`}>
+      <nav className={`flex-1 overflow-y-auto py-3 space-y-1 scrollbar-hide ${collapsed ? "px-2" : "px-3"}`}>
         <TooltipProvider delayDuration={0}>
           {nav.map(item => {
             const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
@@ -143,7 +143,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
     <div className="flex min-h-screen w-full bg-muted/40 text-foreground p-0 md:p-3 md:gap-3">
       {/* Desktop sidebar — detached card */}
       <aside
-        className={`hidden md:flex shrink-0 flex-col rounded-2xl border border-sidebar-border text-sidebar-foreground shadow-xl shadow-primary/10 overflow-hidden sticky top-3 self-start transition-[width] duration-200 ease-out ${collapsed ? "w-[72px]" : "w-64"}`}
+        className={`hidden md:flex shrink-0 flex-col rounded-lg border border-sidebar-border text-sidebar-foreground shadow-xl shadow-primary/10 overflow-hidden sticky top-3 self-start transition-[width] duration-200 ease-out ${collapsed ? "w-[72px]" : "w-64"}`}
         style={{ height: "calc(100vh - 1.5rem)", background: "linear-gradient(180deg, var(--sidebar) 0%, color-mix(in oklab, var(--sidebar) 80%, black) 100%)" }}
       >
         <SidebarBody collapsed={collapsed} pathname={pathname} />
@@ -156,7 +156,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
         </SheetContent>
       </Sheet>
 
-      <main className="flex-1 flex flex-col min-w-0 rounded-none md:rounded-2xl bg-background border-0 md:border border-border overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 rounded-none md:rounded-lg bg-background border-0 md:border border-border overflow-hidden">
         <header className="sticky top-0 z-20 flex items-center gap-2 md:gap-3 border-b border-border bg-background/85 backdrop-blur px-3 md:px-6 h-16">
           <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
             <Menu className="h-5 w-5" />
