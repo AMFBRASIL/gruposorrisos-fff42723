@@ -11,26 +11,56 @@ import { users } from "@/lib/mock-data";
 import { CreateTaskWizard } from "@/components/create-task-wizard";
 import { useState, useEffect, type ReactNode } from "react";
 
-const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/projetos", label: "Projetos", icon: FolderKanban },
-  { to: "/templates", label: "Templates", icon: FileStack },
-  { to: "/kanban", label: "Kanban", icon: Columns3 },
-  { to: "/minhas-tarefas", label: "Minhas Tarefas", icon: CheckSquare },
-  { to: "/calendario", label: "Calendário", icon: Calendar },
-  { to: "/timesheet", label: "Timesheet", icon: Clock },
-  { to: "/automacoes", label: "Automações", icon: Zap },
-  { to: "/insights", label: "IA Insights", icon: Brain },
-  { to: "/comercial", label: "Comercial", icon: Target },
-  { to: "/clientes", label: "Clientes", icon: Building2 },
-  { to: "/financeiro", label: "Financeiro", icon: DollarSign },
-  { to: "/documentos", label: "Documentos", icon: FileText },
-  { to: "/aprovacoes", label: "Aprovações", icon: ShieldCheck },
-  { to: "/portal-cliente", label: "Portal do Cliente", icon: Globe },
-  { to: "/equipe", label: "Equipe", icon: Users },
-  { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
-  { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
-  { to: "/configuracoes", label: "Configurações", icon: Settings },
+const navGroups = [
+  {
+    label: "Principal",
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/projetos", label: "Projetos", icon: FolderKanban },
+      { to: "/templates", label: "Templates", icon: FileStack },
+      { to: "/kanban", label: "Kanban", icon: Columns3 },
+      { to: "/minhas-tarefas", label: "Minhas Tarefas", icon: CheckSquare },
+      { to: "/calendario", label: "Calendário", icon: Calendar },
+      { to: "/timesheet", label: "Timesheet", icon: Clock },
+    ],
+  },
+  {
+    label: "Automação & IA",
+    items: [
+      { to: "/automacoes", label: "Automações", icon: Zap },
+      { to: "/insights", label: "IA Insights", icon: Brain },
+    ],
+  },
+  {
+    label: "Negócios",
+    items: [
+      { to: "/comercial", label: "Comercial", icon: Target },
+      { to: "/clientes", label: "Clientes", icon: Building2 },
+      { to: "/financeiro", label: "Financeiro", icon: DollarSign },
+    ],
+  },
+  {
+    label: "Documentos",
+    items: [
+      { to: "/documentos", label: "Documentos", icon: FileText },
+      { to: "/aprovacoes", label: "Aprovações", icon: ShieldCheck },
+      { to: "/portal-cliente", label: "Portal do Cliente", icon: Globe },
+    ],
+  },
+  {
+    label: "Gestão",
+    items: [
+      { to: "/equipe", label: "Equipe", icon: Users },
+      { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
+      { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      { to: "/configuracoes", label: "Configurações", icon: Settings },
+    ],
+  },
 ] as const;
 
 function TimerChip() {
@@ -64,6 +94,25 @@ function TimerChip() {
   );
 }
 
+function NavLink({ item, active, collapsed, onNavigate }: {
+  item: (typeof navGroups)[number]["items"][number];
+  active: boolean;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.to}
+      onClick={onNavigate}
+      className={`flex items-center gap-3 rounded-lg text-sm transition-colors ${collapsed ? "justify-center h-10 w-10 mx-auto" : "px-3 py-2"} ${active ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"}`}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {!collapsed && <span className="truncate">{item.label}</span>}
+    </Link>
+  );
+}
+
 function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; pathname: string; onNavigate?: () => void }) {
   const me = users[0];
   return (
@@ -77,29 +126,29 @@ function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; 
           </div>
         )}
       </div>
-      <nav className={`flex-1 overflow-y-auto py-3 space-y-1 scrollbar-hide ${collapsed ? "px-2" : "px-3"}`}>
+      <nav className={`flex-1 overflow-y-auto py-3 scrollbar-hide ${collapsed ? "px-2" : "px-3"}`}>
         <TooltipProvider delayDuration={0}>
-          {nav.map(item => {
-            const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            const link = (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={onNavigate}
-                className={`flex items-center gap-3 rounded-lg text-sm transition-colors ${collapsed ? "justify-center h-10 w-10 mx-auto" : "px-3 py-2"} ${active ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm" : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"}`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-            return collapsed ? (
-              <Tooltip key={item.to}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right">{item.label}</TooltipContent>
-              </Tooltip>
-            ) : link;
-          })}
+          {navGroups.map((group, gi) => (
+            <div key={group.label} className={gi > 0 ? (collapsed ? "mt-3" : "mt-4") : undefined}>
+              {!collapsed && (
+                <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                  {group.label}
+                </div>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map(item => {
+                  const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+                  const link = <NavLink key={item.to} item={item} active={active} collapsed={collapsed} onNavigate={onNavigate} />;
+                  return collapsed ? (
+                    <Tooltip key={item.to}>
+                      <TooltipTrigger asChild>{link}</TooltipTrigger>
+                      <TooltipContent side="right">{item.label}</TooltipContent>
+                    </Tooltip>
+                  ) : link;
+                })}
+              </div>
+            </div>
+          ))}
         </TooltipProvider>
       </nav>
       <div className={`border-t border-sidebar-border ${collapsed ? "p-2" : "p-3"}`}>
