@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useInvoices, useClients, useProjects, invoicesStore } from "@/lib/store";
 import { invoiceTotal, formatBRL, costEntries, projectBudgets, invoiceStatusMeta } from "@/lib/mock-data";
+import { CreateInvoiceWizard } from "@/components/create-invoice-wizard";
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, FileText, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/financeiro")({ component: FinanceiroPage });
 
@@ -16,6 +17,7 @@ function FinanceiroPage() {
   const invoices = useInvoices();
   const clients = useClients();
   const projects = useProjects();
+  const [wizard, setWizard] = useState(false);
 
   const totals = useMemo(() => {
     const paid = invoices.filter(i => i.status === "paga");
@@ -47,7 +49,8 @@ function FinanceiroPage() {
   const recentInvoices = [...invoices].sort((a, b) => b.issueDate.localeCompare(a.issueDate)).slice(0, 8);
 
   return (
-    <AppShell title="Financeiro" subtitle="Receita, custos e faturamento" primaryAction={<Button size="sm"><FileText className="h-4 w-4 mr-1" /> Nova Fatura</Button>}>
+    <AppShell title="Financeiro" subtitle="Receita, custos e faturamento" primaryAction={<Button size="sm" onClick={() => setWizard(true)}><FileText className="h-4 w-4 mr-1" /> Nova Fatura</Button>}>
+      <CreateInvoiceWizard open={wizard} onClose={() => setWizard(false)} />
       <div className="p-4 md:p-8 space-y-6">
         {/* KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
