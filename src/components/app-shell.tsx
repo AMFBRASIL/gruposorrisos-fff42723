@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown } from "lucide-react";
 import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { users } from "@/lib/mock-data";
 import { CreateTaskWizard } from "@/components/create-task-wizard";
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 
 const navGroups = [
   {
@@ -115,6 +115,33 @@ function NavLink({ item, active, collapsed, onNavigate }: {
 
 function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; pathname: string; onNavigate?: () => void }) {
   const me = users[0];
+  const navRef = useRef<HTMLElement>(null);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  const checkScroll = () => {
+    const el = navRef.current;
+    if (!el) return;
+    setCanScrollDown(el.scrollHeight > el.clientHeight + el.scrollTop + 2);
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const el = navRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", checkScroll);
+    window.addEventListener("resize", checkScroll);
+    return () => {
+      el.removeEventListener("scroll", checkScroll);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, []);
+
+  const scrollDown = () => {
+    const el = navRef.current;
+    if (!el) return;
+    el.scrollBy({ top: el.clientHeight * 0.75, behavior: "smooth" });
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className={`flex items-center gap-2 border-b border-sidebar-border ${collapsed ? "px-3 py-4 justify-center" : "px-4 py-4"}`}>
@@ -126,31 +153,42 @@ function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; 
           </div>
         )}
       </div>
-      <nav className={`flex-1 overflow-y-auto py-3 scrollbar-hide ${collapsed ? "px-2" : "px-3"}`}>
-        <TooltipProvider delayDuration={0}>
-          {navGroups.map((group, gi) => (
-            <div key={group.label} className={gi > 0 ? (collapsed ? "mt-3" : "mt-4") : undefined}>
-              {!collapsed && (
-                <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                  {group.label}
+      <div className="relative flex-1 overflow-hidden">
+        <nav ref={navRef} className={`h-full overflow-y-auto py-3 scrollbar-hide ${collapsed ? "px-2" : "px-3"}`}>
+          <TooltipProvider delayDuration={0}>
+            {navGroups.map((group, gi) => (
+              <div key={group.label} className={gi > 0 ? (collapsed ? "mt-3" : "mt-4") : undefined}>
+                {!collapsed && (
+                  <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                    {group.label}
+                  </div>
+                )}
+                <div className="space-y-0.5">
+                  {group.items.map(item => {
+                    const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+                    const link = <NavLink key={item.to} item={item} active={active} collapsed={collapsed} onNavigate={onNavigate} />;
+                    return collapsed ? (
+                      <Tooltip key={item.to}>
+                        <TooltipTrigger asChild>{link}</TooltipTrigger>
+                        <TooltipContent side="right">{item.label}</TooltipContent>
+                      </Tooltip>
+                    ) : link;
+                  })}
                 </div>
-              )}
-              <div className="space-y-0.5">
-                {group.items.map(item => {
-                  const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
-                  const link = <NavLink key={item.to} item={item} active={active} collapsed={collapsed} onNavigate={onNavigate} />;
-                  return collapsed ? (
-                    <Tooltip key={item.to}>
-                      <TooltipTrigger asChild>{link}</TooltipTrigger>
-                      <TooltipContent side="right">{item.label}</TooltipContent>
-                    </Tooltip>
-                  ) : link;
-                })}
               </div>
-            </div>
-          ))}
-        </TooltipProvider>
-      </nav>
+            ))}
+          </TooltipProvider>
+        </nav>
+        {canScrollDown && (
+          <button
+            onClick={scrollDown}
+            aria-label="Mais menu abaixo"
+            className={`absolute bottom-0 left-0 right-0 h-10 flex items-end justify-center pb-1 pointer-events-auto transition-opacity duration-200 ${collapsed ? "bg-gradient-to-t from-[var(--sidebar)] via-[var(--sidebar)]/90 to-transparent" : "bg-gradient-to-t from-[var(--sidebar)] via-[var(--sidebar)]/90 to-transparent"}`}
+          >
+            <ChevronDown className="h-4 w-4 text-sidebar-foreground/60 animate-bounce" />
+          </button>
+        )}
+      </div>
       <div className={`border-t border-sidebar-border ${collapsed ? "p-2" : "p-3"}`}>
         <div className={`flex items-center gap-3 rounded-lg ${collapsed ? "justify-center" : "px-2 py-2"}`}>
           <Avatar className="h-9 w-9 shrink-0"><AvatarFallback style={{ backgroundColor: me.color, color: "white" }}>{me.initials}</AvatarFallback></Avatar>
