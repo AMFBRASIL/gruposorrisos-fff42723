@@ -34,12 +34,12 @@ function LoginPage() {
       {/* Left — form */}
       <div className="flex flex-col px-6 sm:px-10 lg:px-16 py-8 lg:py-10">
         <header className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-chart-5 text-primary-foreground font-bold text-lg shadow-lg shadow-primary/20">
-            S
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-chart-5 text-primary-foreground font-bold text-sm shadow-lg shadow-primary/20">
+            GS
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-semibold">Grupo Sorrisos</div>
-            <div className="text-xs text-muted-foreground">Tasks Platform</div>
+            <div className="text-sm font-semibold">Grupo | Sorrisos</div>
+            <div className="text-xs text-muted-foreground">Plataforma Gestão</div>
           </div>
         </header>
 

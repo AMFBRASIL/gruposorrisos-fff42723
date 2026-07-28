@@ -145,11 +145,11 @@ function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; 
   return (
     <div className="flex h-full flex-col">
       <div className={`flex items-center gap-2 border-b border-sidebar-border ${collapsed ? "px-3 py-4 justify-center" : "px-4 py-4"}`}>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-chart-5 text-primary-foreground font-bold">S</div>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-chart-5 text-primary-foreground font-bold text-xs">GS</div>
         {!collapsed && (
           <div className="leading-tight min-w-0">
-            <div className="text-sm font-semibold truncate">Grupo Sorrisos</div>
-            <div className="text-xs text-muted-foreground truncate">Tasks Platform</div>
+            <div className="text-sm font-semibold truncate">Grupo | Sorrisos</div>
+            <div className="text-[10px] text-sidebar-foreground/60 truncate">Plataforma Gestão</div>
           </div>
         )}
       </div>

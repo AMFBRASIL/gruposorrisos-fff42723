@@ -35,10 +35,10 @@ function PortalPage() {
       <header className="border-b border-border bg-card/80 backdrop-blur sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-chart-5 text-white flex items-center justify-center font-bold">S</div>
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-chart-5 text-white flex items-center justify-center font-bold text-xs">GS</div>
             <div className="leading-tight">
-              <div className="text-sm font-semibold">Portal do Cliente</div>
-              <div className="text-xs text-muted-foreground">Grupo Sorrisos</div>
+              <div className="text-sm font-semibold">Grupo | Sorrisos</div>
+              <div className="text-xs text-muted-foreground">Portal do Cliente</div>
             </div>
           </div>
           <div className="ml-auto flex items-center gap-3">
