@@ -23,6 +23,7 @@ function ClientesPage() {
   const deals = useDeals();
   const invoices = useInvoices();
   const [q, setQ] = useState("");
+  const [wizard, setWizard] = useState(false);
   const [filter, setFilter] = useState<"todos" | "ativo" | "prospect" | "inativo">("todos");
 
   const enriched = useMemo(() => clients.map(c => {
