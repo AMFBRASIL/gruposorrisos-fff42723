@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useClients, useDeals, useInvoices } from "@/lib/store";
 import { getUser, formatBRL } from "@/lib/mock-data";
+import { CreateClientWizard } from "@/components/create-client-wizard";
 import { Search, Phone, Mail, MapPin, TrendingUp, FileText, Briefcase, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
