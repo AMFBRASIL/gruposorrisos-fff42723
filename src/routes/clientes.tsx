@@ -47,7 +47,8 @@ function ClientesPage() {
   }), [clients, enriched]);
 
   return (
-    <AppShell title="Clientes" subtitle="Base de relacionamento comercial" primaryAction={<Button size="sm"><Plus className="h-4 w-4 mr-1" /> Novo Cliente</Button>}>
+    <AppShell title="Clientes" subtitle="Base de relacionamento comercial" primaryAction={<Button size="sm" onClick={() => setWizard(true)}><Plus className="h-4 w-4 mr-1" /> Novo Cliente</Button>}>
+      <CreateClientWizard open={wizard} onClose={() => setWizard(false)} />
       <div className="p-4 md:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard label="Clientes ativos" value={totals.ativos} icon={Briefcase} tone="success" />
