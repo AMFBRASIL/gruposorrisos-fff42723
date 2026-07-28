@@ -9,7 +9,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { users } from "@/lib/mock-data";
 import { CreateTaskWizard } from "@/components/create-task-wizard";
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 
 const navGroups = [
   {
