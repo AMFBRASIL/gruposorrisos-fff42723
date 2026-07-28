@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useClients, useDeals, useInvoices } from "@/lib/store";
 import { getUser, formatBRL } from "@/lib/mock-data";
+import { CreateClientWizard } from "@/components/create-client-wizard";
 import { Search, Phone, Mail, MapPin, TrendingUp, FileText, Briefcase, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -23,6 +24,7 @@ function ClientesPage() {
   const deals = useDeals();
   const invoices = useInvoices();
   const [q, setQ] = useState("");
+  const [wizard, setWizard] = useState(false);
   const [filter, setFilter] = useState<"todos" | "ativo" | "prospect" | "inativo">("todos");
 
   const enriched = useMemo(() => clients.map(c => {
@@ -47,7 +49,8 @@ function ClientesPage() {
   }), [clients, enriched]);
 
   return (
-    <AppShell title="Clientes" subtitle="Base de relacionamento comercial" primaryAction={<Button size="sm"><Plus className="h-4 w-4 mr-1" /> Novo Cliente</Button>}>
+    <AppShell title="Clientes" subtitle="Base de relacionamento comercial" primaryAction={<Button size="sm" onClick={() => setWizard(true)}><Plus className="h-4 w-4 mr-1" /> Novo Cliente</Button>}>
+      <CreateClientWizard open={wizard} onClose={() => setWizard(false)} />
       <div className="p-4 md:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard label="Clientes ativos" value={totals.ativos} icon={Briefcase} tone="success" />

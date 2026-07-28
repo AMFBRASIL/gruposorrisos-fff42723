@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useDeals, useClients, dealsStore } from "@/lib/store";
 import { DEAL_STAGES, getUser, formatBRL, type DealStage, type Deal } from "@/lib/mock-data";
+import { CreateDealWizard } from "@/components/create-deal-wizard";
 import { Plus, TrendingUp, Trophy, Target, Calendar, GripVertical } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -15,6 +16,7 @@ function ComercialPage() {
   const deals = useDeals();
   const clients = useClients();
   const [dragId, setDragId] = useState<string | null>(null);
+  const [wizard, setWizard] = useState(false);
 
   const byStage = useMemo(() => {
     const m: Record<DealStage, Deal[]> = { lead: [], qualificacao: [], proposta: [], negociacao: [], ganho: [], perdido: [] };
@@ -44,7 +46,8 @@ function ComercialPage() {
   };
 
   return (
-    <AppShell title="Comercial" subtitle="Pipeline de oportunidades" primaryAction={<Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nova Oportunidade</Button>}>
+    <AppShell title="Comercial" subtitle="Pipeline de oportunidades" primaryAction={<Button size="sm" onClick={() => setWizard(true)}><Plus className="h-4 w-4 mr-1" /> Nova Oportunidade</Button>}>
+      <CreateDealWizard open={wizard} onClose={() => setWizard(false)} />
       <div className="p-4 md:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Stat label="Pipeline aberto" value={formatBRL(totals.pipelineValue)} sub={`${totals.openCount} negócios`} icon={Target} tone="primary" />
