@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown, Warehouse, Package, ArrowLeftRight, Truck, CalendarClock } from "lucide-react";
 import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,16 @@ const navGroups = [
       { to: "/minhas-tarefas", label: "Minhas Tarefas", icon: CheckSquare },
       { to: "/calendario", label: "Calendário", icon: Calendar },
       { to: "/timesheet", label: "Timesheet", icon: Clock },
+    ],
+  },
+  {
+    label: "Estoque",
+    items: [
+      { to: "/estoque", label: "Visão Geral", icon: Warehouse },
+      { to: "/materiais", label: "Materiais e Produtos", icon: Package },
+      { to: "/movimentacoes", label: "Movimentações", icon: ArrowLeftRight },
+      { to: "/transferencias", label: "Transferências", icon: Truck },
+      { to: "/lotes-validades", label: "Lotes e Validades", icon: CalendarClock },
     ],
   },
   {

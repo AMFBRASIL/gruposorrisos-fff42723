@@ -18,17 +18,22 @@ import { Route as ComercialRouteImport } from './routes/comercial'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as EquipeRouteImport } from './routes/equipe'
+import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LotesValidadesRouteImport } from './routes/lotes-validades'
+import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
+import { Route as MovimentacoesRouteImport } from './routes/movimentacoes'
 import { Route as PerfisRouteImport } from './routes/perfis'
 import { Route as PortalClienteRouteImport } from './routes/portal-cliente'
 import { Route as ProjetosRouteImport } from './routes/projetos'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as TimesheetRouteImport } from './routes/timesheet'
+import { Route as TransferenciasRouteImport } from './routes/transferencias'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -75,6 +80,11 @@ const EquipeRoute = EquipeRouteImport.update({
   path: '/equipe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EstoqueRoute = EstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FinanceiroRoute = FinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
@@ -95,9 +105,24 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LotesValidadesRoute = LotesValidadesRouteImport.update({
+  id: '/lotes-validades',
+  path: '/lotes-validades',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MateriaisRoute = MateriaisRouteImport.update({
+  id: '/materiais',
+  path: '/materiais',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MinhasTarefasRoute = MinhasTarefasRouteImport.update({
   id: '/minhas-tarefas',
   path: '/minhas-tarefas',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MovimentacoesRoute = MovimentacoesRouteImport.update({
+  id: '/movimentacoes',
+  path: '/movimentacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PerfisRoute = PerfisRouteImport.update({
@@ -130,6 +155,11 @@ const TimesheetRoute = TimesheetRouteImport.update({
   path: '/timesheet',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransferenciasRoute = TransferenciasRouteImport.update({
+  id: '/transferencias',
+  path: '/transferencias',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -141,17 +171,22 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
+  '/estoque': typeof EstoqueRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
+  '/lotes-validades': typeof LotesValidadesRoute
+  '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/movimentacoes': typeof MovimentacoesRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
   '/templates': typeof TemplatesRoute
   '/timesheet': typeof TimesheetRoute
+  '/transferencias': typeof TransferenciasRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -163,17 +198,22 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
+  '/estoque': typeof EstoqueRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
+  '/lotes-validades': typeof LotesValidadesRoute
+  '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/movimentacoes': typeof MovimentacoesRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
   '/templates': typeof TemplatesRoute
   '/timesheet': typeof TimesheetRoute
+  '/transferencias': typeof TransferenciasRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -186,17 +226,22 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
+  '/estoque': typeof EstoqueRoute
   '/financeiro': typeof FinanceiroRoute
   '/insights': typeof InsightsRoute
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
+  '/lotes-validades': typeof LotesValidadesRoute
+  '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
+  '/movimentacoes': typeof MovimentacoesRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
   '/templates': typeof TemplatesRoute
   '/timesheet': typeof TimesheetRoute
+  '/transferencias': typeof TransferenciasRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -210,17 +255,22 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/documentos'
     | '/equipe'
+    | '/estoque'
     | '/financeiro'
     | '/insights'
     | '/kanban'
     | '/login'
+    | '/lotes-validades'
+    | '/materiais'
     | '/minhas-tarefas'
+    | '/movimentacoes'
     | '/perfis'
     | '/portal-cliente'
     | '/projetos'
     | '/relatorios'
     | '/templates'
     | '/timesheet'
+    | '/transferencias'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -232,17 +282,22 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/documentos'
     | '/equipe'
+    | '/estoque'
     | '/financeiro'
     | '/insights'
     | '/kanban'
     | '/login'
+    | '/lotes-validades'
+    | '/materiais'
     | '/minhas-tarefas'
+    | '/movimentacoes'
     | '/perfis'
     | '/portal-cliente'
     | '/projetos'
     | '/relatorios'
     | '/templates'
     | '/timesheet'
+    | '/transferencias'
   id:
     | '__root__'
     | '/'
@@ -254,17 +309,22 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/documentos'
     | '/equipe'
+    | '/estoque'
     | '/financeiro'
     | '/insights'
     | '/kanban'
     | '/login'
+    | '/lotes-validades'
+    | '/materiais'
     | '/minhas-tarefas'
+    | '/movimentacoes'
     | '/perfis'
     | '/portal-cliente'
     | '/projetos'
     | '/relatorios'
     | '/templates'
     | '/timesheet'
+    | '/transferencias'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -277,17 +337,22 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   DocumentosRoute: typeof DocumentosRoute
   EquipeRoute: typeof EquipeRoute
+  EstoqueRoute: typeof EstoqueRoute
   FinanceiroRoute: typeof FinanceiroRoute
   InsightsRoute: typeof InsightsRoute
   KanbanRoute: typeof KanbanRoute
   LoginRoute: typeof LoginRoute
+  LotesValidadesRoute: typeof LotesValidadesRoute
+  MateriaisRoute: typeof MateriaisRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
+  MovimentacoesRoute: typeof MovimentacoesRoute
   PerfisRoute: typeof PerfisRoute
   PortalClienteRoute: typeof PortalClienteRoute
   ProjetosRoute: typeof ProjetosRoute
   RelatoriosRoute: typeof RelatoriosRoute
   TemplatesRoute: typeof TemplatesRoute
   TimesheetRoute: typeof TimesheetRoute
+  TransferenciasRoute: typeof TransferenciasRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -355,6 +420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EquipeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/estoque': {
+      id: '/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof EstoqueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/financeiro': {
       id: '/financeiro'
       path: '/financeiro'
@@ -383,11 +455,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lotes-validades': {
+      id: '/lotes-validades'
+      path: '/lotes-validades'
+      fullPath: '/lotes-validades'
+      preLoaderRoute: typeof LotesValidadesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/materiais': {
+      id: '/materiais'
+      path: '/materiais'
+      fullPath: '/materiais'
+      preLoaderRoute: typeof MateriaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/minhas-tarefas': {
       id: '/minhas-tarefas'
       path: '/minhas-tarefas'
       fullPath: '/minhas-tarefas'
       preLoaderRoute: typeof MinhasTarefasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movimentacoes': {
+      id: '/movimentacoes'
+      path: '/movimentacoes'
+      fullPath: '/movimentacoes'
+      preLoaderRoute: typeof MovimentacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/perfis': {
@@ -432,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TimesheetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/transferencias': {
+      id: '/transferencias'
+      path: '/transferencias'
+      fullPath: '/transferencias'
+      preLoaderRoute: typeof TransferenciasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -445,17 +545,22 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   DocumentosRoute: DocumentosRoute,
   EquipeRoute: EquipeRoute,
+  EstoqueRoute: EstoqueRoute,
   FinanceiroRoute: FinanceiroRoute,
   InsightsRoute: InsightsRoute,
   KanbanRoute: KanbanRoute,
   LoginRoute: LoginRoute,
+  LotesValidadesRoute: LotesValidadesRoute,
+  MateriaisRoute: MateriaisRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
+  MovimentacoesRoute: MovimentacoesRoute,
   PerfisRoute: PerfisRoute,
   PortalClienteRoute: PortalClienteRoute,
   ProjetosRoute: ProjetosRoute,
   RelatoriosRoute: RelatoriosRoute,
   TemplatesRoute: TemplatesRoute,
   TimesheetRoute: TimesheetRoute,
+  TransferenciasRoute: TransferenciasRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
