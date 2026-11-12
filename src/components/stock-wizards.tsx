@@ -66,12 +66,12 @@ const moveMeta: Record<MovementType, { label: string; desc: string; icon: typeof
   transferencia: { label: "Transferência", desc: "Move saldo entre filiais na hora", icon: ArrowLeftRight, reasons: ["Entre clínicas", "Entre depósitos"] },
 };
 
-function MaterialPicker({ value, onChange, clinicId }: { value: string; onChange: (id: string) => void; clinicId?: string }) {
+function MaterialPicker({ value, selectedIds, onChange, clinicId }: { value?: string; selectedIds?: string[]; onChange: (id: string) => void; clinicId?: string }) {
   const s = useStock(); const [q, setQ] = useState("");
   const list = useMemo(() => materials.filter(m => `${m.name} ${m.code} ${m.sku}`.toLowerCase().includes(q.toLowerCase())), [q]);
   return (<div>
     <div className="relative mb-3"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Buscar material" value={q} onChange={e => setQ(e.target.value)} /></div>
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">{list.map(m => <OptionCard compact key={m.id} selected={value === m.id} onClick={() => onChange(m.id)} title={m.name} desc={`${m.code} · saldo ${balanceOf(s, m.id, clinicId)} ${m.unit}`} />)}</div>
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1">{list.map(m => <OptionCard compact key={m.id} selected={selectedIds ? selectedIds.includes(m.id) : value === m.id} onClick={() => onChange(m.id)} title={m.name} desc={`${m.code} · saldo ${balanceOf(s, m.id, clinicId)} ${m.unit}`} />)}</div>
   </div>);
 }
 
@@ -83,7 +83,6 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
   const [toClinicId, setTo] = useState(clinics.find(c => c.id !== clinicId)?.id ?? "c1");
   const [reason, setReason] = useState("Compra"); const [doc, setDoc] = useState("");
   const [items, setItems] = useState<{ materialId: string; qty: number }[]>([]);
-  const [pick, setPick] = useState(materials[0].id);
   const after = (i: { materialId: string; qty: number }) => balanceOf(s, i.materialId, clinicId) + (type === "entrada" ? i.qty : -i.qty);
   const invalid = items.length === 0 || items.some(i => i.qty <= 0 || (type !== "entrada" && after(i) < 0));
   const total = items.reduce((a, i) => a + i.qty * getMaterial(i.materialId).cost, 0);
@@ -105,8 +104,8 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
         <div><FieldLabel>Motivo</FieldLabel><div className="grid grid-cols-2 md:grid-cols-4 gap-2">{moveMeta[type].reasons.map(r => <OptionCard compact key={r} selected={reason === r} onClick={() => setReason(r)} title={r} />)}</div></div>
       </>}
       {step === 2 && <>
-        <StockCodeScanner onMaterial={id => { setPick(id); setItems(prev => prev.some(i => i.materialId === id) ? prev.map(i => i.materialId === id ? { ...i, qty: i.qty + 1 } : i) : [...prev, { materialId: id, qty: 1 }]); }} />
-        <MaterialPicker value={pick} onChange={id => { setPick(id); if (!items.some(i => i.materialId === id)) setItems([...items, { materialId: id, qty: 1 }]); }} clinicId={clinicId} />
+        <StockCodeScanner onMaterial={id => { setItems(prev => prev.some(i => i.materialId === id) ? prev.map(i => i.materialId === id ? { ...i, qty: i.qty + 1 } : i) : [...prev, { materialId: id, qty: 1 }]); }} />
+        <MaterialPicker selectedIds={items.map(i => i.materialId)} onChange={id => setItems(prev => prev.some(i => i.materialId === id) ? prev : [...prev, { materialId: id, qty: 1 }])} clinicId={clinicId} />
         <div className="rounded-xl border border-border divide-y divide-border">
           <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/40 flex justify-between"><span>{items.length} material(is) selecionado(s) — clique nos cards para adicionar</span><span>{brl(total)}</span></div>
           {items.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">Nenhum material adicionado.</div>}
