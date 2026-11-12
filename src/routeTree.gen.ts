@@ -24,6 +24,7 @@ import { Route as EstoqueRouteImport } from './routes/estoque'
 import { Route as EstoqueAvancadoRouteImport } from './routes/estoque-avancado'
 import { Route as FiliaisRouteImport } from './routes/filiais'
 import { Route as FinanceiroRouteImport } from './routes/financeiro'
+import { Route as FornecedoresRouteImport } from './routes/fornecedores'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as InventariosRouteImport } from './routes/inventarios'
 import { Route as KanbanRouteImport } from './routes/kanban'
@@ -116,6 +117,11 @@ const FiliaisRoute = FiliaisRouteImport.update({
 const FinanceiroRoute = FinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FornecedoresRoute = FornecedoresRouteImport.update({
+  id: '/fornecedores',
+  path: '/fornecedores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InsightsRoute = InsightsRouteImport.update({
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/estoque-avancado': typeof EstoqueAvancadoRoute
   '/filiais': typeof FiliaisRoute
   '/financeiro': typeof FinanceiroRoute
+  '/fornecedores': typeof FornecedoresRoute
   '/insights': typeof InsightsRoute
   '/inventarios': typeof InventariosRoute
   '/kanban': typeof KanbanRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByTo {
   '/estoque-avancado': typeof EstoqueAvancadoRoute
   '/filiais': typeof FiliaisRoute
   '/financeiro': typeof FinanceiroRoute
+  '/fornecedores': typeof FornecedoresRoute
   '/insights': typeof InsightsRoute
   '/inventarios': typeof InventariosRoute
   '/kanban': typeof KanbanRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/estoque-avancado': typeof EstoqueAvancadoRoute
   '/filiais': typeof FiliaisRoute
   '/financeiro': typeof FinanceiroRoute
+  '/fornecedores': typeof FornecedoresRoute
   '/insights': typeof InsightsRoute
   '/inventarios': typeof InventariosRoute
   '/kanban': typeof KanbanRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
     | '/estoque-avancado'
     | '/filiais'
     | '/financeiro'
+    | '/fornecedores'
     | '/insights'
     | '/inventarios'
     | '/kanban'
@@ -368,6 +378,7 @@ export interface FileRouteTypes {
     | '/estoque-avancado'
     | '/filiais'
     | '/financeiro'
+    | '/fornecedores'
     | '/insights'
     | '/inventarios'
     | '/kanban'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/estoque-avancado'
     | '/filiais'
     | '/financeiro'
+    | '/fornecedores'
     | '/insights'
     | '/inventarios'
     | '/kanban'
@@ -439,6 +451,7 @@ export interface RootRouteChildren {
   EstoqueAvancadoRoute: typeof EstoqueAvancadoRoute
   FiliaisRoute: typeof FiliaisRoute
   FinanceiroRoute: typeof FinanceiroRoute
+  FornecedoresRoute: typeof FornecedoresRoute
   InsightsRoute: typeof InsightsRoute
   InventariosRoute: typeof InventariosRoute
   KanbanRoute: typeof KanbanRoute
@@ -564,6 +577,13 @@ declare module '@tanstack/react-router' {
       path: '/financeiro'
       fullPath: '/financeiro'
       preLoaderRoute: typeof FinanceiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fornecedores': {
+      id: '/fornecedores'
+      path: '/fornecedores'
+      fullPath: '/fornecedores'
+      preLoaderRoute: typeof FornecedoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/insights': {
@@ -711,6 +731,7 @@ const rootRouteChildren: RootRouteChildren = {
   EstoqueAvancadoRoute: EstoqueAvancadoRoute,
   FiliaisRoute: FiliaisRoute,
   FinanceiroRoute: FinanceiroRoute,
+  FornecedoresRoute: FornecedoresRoute,
   InsightsRoute: InsightsRoute,
   InventariosRoute: InventariosRoute,
   KanbanRoute: KanbanRoute,

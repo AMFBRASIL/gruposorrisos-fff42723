@@ -9,6 +9,10 @@ export const Route = createFileRoute("/relatorios")({
   head: () => ({ meta: [
     { title: "Relatórios — Grupo Sorrisos Tasks" },
     { name: "description", content: "Relatórios de produtividade e SLA." },
+    { property: "og:title", content: "Relatórios — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Relatórios de produtividade e SLA." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: ReportsPage,
 });

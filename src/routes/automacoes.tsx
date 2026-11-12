@@ -29,6 +29,10 @@ export const Route = createFileRoute("/automacoes")({
   head: () => ({ meta: [
     { title: "Automações — Grupo Sorrisos Tasks" },
     { name: "description", content: "Regras automáticas para acelerar fluxos repetitivos." },
+    { property: "og:title", content: "Automações — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Regras automáticas para acelerar fluxos repetitivos." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: AutomacoesPage,
 });

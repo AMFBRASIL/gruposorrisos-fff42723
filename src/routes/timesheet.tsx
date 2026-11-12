@@ -10,6 +10,10 @@ export const Route = createFileRoute("/timesheet")({
   head: () => ({ meta: [
     { title: "Timesheet — Grupo Sorrisos Tasks" },
     { name: "description", content: "Acompanhe as horas registradas por colaborador e projeto." },
+    { property: "og:title", content: "Timesheet — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Acompanhe as horas registradas por colaborador e projeto." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: TimesheetPage,
 });

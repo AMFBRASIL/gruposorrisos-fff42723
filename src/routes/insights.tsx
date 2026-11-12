@@ -14,6 +14,10 @@ export const Route = createFileRoute("/insights")({
   head: () => ({ meta: [
     { title: "IA Insights — Grupo Sorrisos Tasks" },
     { name: "description", content: "Insights gerados por IA: riscos, prioridades inteligentes e resumos semanais." },
+    { property: "og:title", content: "IA Insights — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Insights gerados por IA: riscos, prioridades inteligentes e resumos semanais." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: InsightsPage,
 });

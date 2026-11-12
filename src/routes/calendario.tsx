@@ -13,6 +13,10 @@ export const Route = createFileRoute("/calendario")({
   head: () => ({ meta: [
     { title: "Calendário — Grupo Sorrisos Tasks" },
     { name: "description", content: "Calendário mensal das tarefas e prazos." },
+    { property: "og:title", content: "Calendário — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Calendário mensal das tarefas e prazos." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: CalendarPage,
 });

@@ -12,6 +12,10 @@ export const Route = createFileRoute("/")({
   head: () => ({ meta: [
     { title: "Dashboard — Grupo Sorrisos Tasks" },
     { name: "description", content: "Painel executivo de gestão de tarefas corporativas do Grupo Sorrisos." },
+    { property: "og:title", content: "Dashboard — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Painel executivo de gestão de tarefas corporativas do Grupo Sorrisos." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: Dashboard,
 });

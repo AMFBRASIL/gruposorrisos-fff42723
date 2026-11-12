@@ -44,6 +44,7 @@ const navGroups = [
       { to: "/pedidos", label: "Pedidos de Materiais", icon: ShoppingCart },
       { to: "/centro-distribuicao", label: "Centro de Distribuição", icon: Boxes },
       { to: "/compras", label: "Compras e Fornecedores", icon: ShoppingBag },
+      { to: "/fornecedores", label: "Pedidos por Fornecedor", icon: Building2 },
     ],
   },
   {

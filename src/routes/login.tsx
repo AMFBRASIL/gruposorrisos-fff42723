@@ -11,6 +11,10 @@ export const Route = createFileRoute("/login")({
     meta: [
       { title: "Entrar — Grupo Sorrisos Tasks" },
       { name: "description", content: "Acesse a plataforma de gestão de tarefas do Grupo Sorrisos." },
+    { property: "og:title", content: "Entrar — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Acesse a plataforma de gestão de tarefas do Grupo Sorrisos." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
     ],
   }),
   component: LoginPage,

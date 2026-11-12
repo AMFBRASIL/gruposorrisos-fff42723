@@ -12,6 +12,10 @@ export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [
     { title: "Configurações — Grupo Sorrisos Tasks" },
     { name: "description", content: "Preferências do sistema." },
+    { property: "og:title", content: "Configurações — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Preferências do sistema." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: SettingsPage,
 });

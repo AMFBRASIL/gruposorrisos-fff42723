@@ -15,6 +15,13 @@ import { StockCodeScanner } from './stock-code-scanner';
 import { fefo } from '@/lib/stock-intelligence';
 import { Leaf, Gauge, Flame, Siren } from "lucide-react";
 import { Check, Search, Trash2, ClipboardList, PackageSearch, FileCheck2 } from "lucide-react";
+import { Upload, Store, ClipboardPenLine } from 'lucide-react';
+import { OrderCsvImport } from './order-csv-import';
+import { OrderReview } from './order-review';
+import { CurrencyInput } from './ui/currency-input';
+import { usePurchasing } from '@/lib/purchasing';
+import { saveSupplierRequest } from '@/lib/supplier-orders';
+import type { ImportItem } from '@/lib/order-csv';
 
 const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
 export const priorityMeta: Record<Priority, string> = { baixa: "bg-muted text-muted-foreground", normal: "bg-info/10 text-info border-info/30", alta: "bg-warning/10 text-warning border-warning/30", urgente: "bg-destructive/10 text-destructive border-destructive/30" };
@@ -30,13 +37,23 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
   const [priority, setPriority] = useState<Priority>(initial?.priority ?? "normal");
   const [desiredDate, setDate] = useState(initial?.desiredDate ?? "2026-11-18");
   const [notes, setNotes] = useState(initial?.notes ?? "");
-  const [cart, setCart] = useState<{ materialId: string; requested: number }[]>(initial?.items.map(i => ({ materialId: i.materialId, requested: i.requested })) ?? []);
+  const [cart, setCart] = useState<ImportItem[]>(initial?.items.map(i => ({ materialId: i.materialId, requested: i.requested })) ?? []);
+  const { sup } = usePurchasing();
+  const [target, setTarget] = useState('cd'); const [supplierId, setSupplierId] = useState(sup[0]?.id ?? '');
+  const [mode, setMode] = useState('manual'); const [file, setFile] = useState<string>();
   const [q, setQ] = useState(""); const [cat, setCat] = useState("Todas");
   const found = useMemo(() => materials.filter(m => (cat === "Todas" || m.category === cat) && `${m.name} ${m.code} ${m.sku}`.toLowerCase().includes(q.toLowerCase())), [q, cat]);
   const avail = (mid: string) => balanceOf(st, mid, "cd") - (st.balances.find(b => b.materialId === mid && b.clinicId === "cd")?.reserved ?? 0);
   const suggested = (mid: string) => { const m = getMaterial(mid); return Math.max(0, m.max - balanceOf(st, mid, branchId)); };
-  const steps = [{ title: "Cabeçalho", desc: "Filial, prazo e prioridade", icon: ClipboardList }, { title: "Materiais", desc: "Catálogo, sugestão e disponibilidade", icon: PackageSearch }, { title: "Revisão", desc: "Confira e envie para aprovação", icon: FileCheck2 }];
+  const steps = [{ title: "Identificação", desc: "Filial, atendimento e prioridade", icon: ClipboardList }, { title: "Origem da lista", desc: "Catálogo manual ou arquivo CSV", icon: Upload }, { title: "Materiais", desc: "Quantidades, unidades e conciliação", icon: PackageSearch }, { title: "Condições", desc: "Prazo e observações", icon: ClipboardPenLine }, { title: "Revisão", desc: "Volumes, saldos e valores", icon: FileCheck2 }];
+  const valid = !!branchId && !!desiredDate && (target === 'cd' || !!supplierId) && cart.length > 0 && cart.every(i => Number.isFinite(i.requested) && i.requested > 0);
   const finish = (send: boolean) => {
+    if (!valid) return toast.error('Confira filial, prazo e quantidades');
+    if (target === 'supplier') {
+      const result = saveSupplierRequest({ branchId, supplierId, priority, desiredDate, notes, items: cart, file }, send);
+      if (result.error) return toast.error(result.error);
+      toast.success(send ? `Pedido ${result.request?.number} aguardando preços` : 'Rascunho salvo'); onClose(); return;
+    }
     const r = saveDraft({ branchId, priority, desiredDate, notes, items: cart }, initial?.id);
     if (!r.ok) return toast.error(r.error);
     if (send) { const e = actions.submit(r.order.id); if (e) return toast.error(e); toast.success(`Pedido ${r.order.number} enviado para aprovação`); }
@@ -46,12 +63,13 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
   if (allowed.length === 0) return <Dialog open={open} onOpenChange={o => !o && onClose()}><DialogContent><DialogHeader><DialogTitle>Sem permissão</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Seu perfil não pode criar pedidos em nenhuma filial.</p></DialogContent></Dialog>;
   return (
     <WizardShell open={open} onClose={onClose} badge={initial ? `Editando ${initial.number}` : "Pedido de material"} headline={<>Abasteça sua filial<br /><span className="opacity-60">sem rupturas.</span></>} sub="Solicitação ao Centro de Distribuição com sugestão de reposição e disponibilidade em tempo real."
-      steps={steps} step={step} setStep={setStep} footer={<WizardFooter step={step} last={2} onClose={onClose} setStep={setStep} onFinish={() => finish(true)} finishLabel="Enviar pedido" canNext={step !== 1 || cart.length > 0} extra={<Button variant="outline" onClick={() => finish(false)} disabled={cart.length === 0}>Salvar rascunho</Button>} />}>
+      steps={steps} step={step} setStep={setStep} footer={<WizardFooter step={step} last={4} onClose={onClose} setStep={setStep} onFinish={() => finish(true)} finishLabel={target === 'supplier' ? 'Solicitar preços' : 'Enviar pedido'} canNext={step === 0 ? !!branchId && !!desiredDate && (target === 'cd' || !!supplierId) : step === 2 || step === 4 ? valid : true} extra={<Button variant="outline" onClick={() => finish(false)} disabled={!valid}>Salvar rascunho</Button>} />}>
 
             {step === 0 && (<>
               <div className="grid md:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label>Filial solicitante</Label><select className={sel} value={branchId} onChange={e => setBranch(e.target.value)}>{allowed.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
-                <div className="space-y-1"><Label>Depósito de atendimento</Label><Input value="Centro de Distribuição" disabled /></div>
+                <div className="space-y-1"><Label>Atendimento</Label><select aria-label="Atendimento do pedido" disabled={!!initial} className={sel} value={target} onChange={e => setTarget(e.target.value)}><option value="cd">Centro de Distribuição</option><option value="supplier">Fornecedor definido</option></select></div>
+                {target === 'supplier' && <div className="space-y-1 md:col-span-2"><Label>Fornecedor</Label><select aria-label="Fornecedor do pedido" className={sel} value={supplierId} onChange={e => setSupplierId(e.target.value)}>{sup.map(supplier => <option value={supplier.id} key={supplier.id}>{supplier.name}</option>)}</select></div>}
                 <div className="space-y-1"><Label>Solicitante</Label><Input value={ses.user.name} disabled /></div>
                 <div className="space-y-1"><Label>Data desejada</Label><Input type="date" value={desiredDate} onChange={e => setDate(e.target.value)} /></div>
               </div>
@@ -61,17 +79,19 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
               </div>
               <div className="space-y-1"><Label>Observações</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} /></div>
             </>)}
-            {step === 1 && (<>
+            {step === 1 && <div className="grid sm:grid-cols-2 gap-4"><Button variant={mode === 'manual' ? 'default' : 'outline'} className="h-28 flex-col gap-3" onClick={() => setMode('manual')}><PackageSearch className="h-7 w-7" />Selecionar no catálogo</Button><Button variant={mode === 'csv' ? 'default' : 'outline'} className="h-28 flex-col gap-3" onClick={() => setMode('csv')}><Upload className="h-7 w-7" />Importar arquivo CSV</Button></div>}
+            {step === 2 && (<>
+              {mode === 'csv' && <OrderCsvImport onConfirm={(items, filename) => { if (items.some(i => cart.some(c => c.materialId === i.materialId))) return toast.error('Há materiais já presentes na lista. Remova-os antes de confirmar o arquivo'); setCart([...cart, ...items]); setFile(filename); setMode('manual'); toast.success(`${items.length} materiais incluídos`); }} />}
               <div className="flex gap-2">
                 <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Nome, código ou código de barras" value={q} onChange={e => setQ(e.target.value)} /></div>
                 <select className={`${sel} w-56`} value={cat} onChange={e => setCat(e.target.value)}><option>Todas</option>{categories.map(c => <option key={c}>{c}</option>)}</select>
               </div>
               <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
                 {found.map(m => { const inCart = cart.some(c => c.materialId === m.id); return (
-                  <button key={m.id} disabled={inCart} onClick={() => setCart([...cart, { materialId: m.id, requested: Math.max(1, suggested(m.id)) }])} className="rounded-lg border border-border p-3 text-left hover:border-primary/40 disabled:opacity-50">
-                    <div className="text-sm font-medium truncate">{m.name}</div>
+                  <Button key={m.id} variant="outline" aria-pressed={inCart} onClick={() => !inCart && setCart([...cart, { materialId: m.id, requested: Math.max(1, suggested(m.id)) }])} className={`h-auto block rounded-lg p-3 text-left whitespace-normal ${inCart ? 'border-primary bg-primary/5' : ''}`}>
+                    <div className="text-sm font-medium flex justify-between gap-2">{m.name}{inCart && <Check className="h-4 w-4 shrink-0 text-primary" />}</div>
                     <div className="text-xs text-muted-foreground">{m.code} · {m.unit} · CD disponível: {avail(m.id)}</div>
-                  </button>
+                  </Button>
                 ); })}
               </div>
               <div className="rounded-lg border border-border overflow-hidden">
@@ -91,12 +111,14 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
                 </table>
               </div>
             </>)}
-            {step === 2 && (
+            {step === 3 && <div className="space-y-4"><div className="space-y-1"><Label>Data desejada</Label><Input aria-label="Prazo do pedido" type="date" value={desiredDate} onChange={e => setDate(e.target.value)} /></div><div className="space-y-1"><Label>Condições e observações</Label><Textarea maxLength={2000} value={notes} onChange={e => setNotes(e.target.value)} /></div>{target === 'supplier' && <div className="space-y-3">{cart.map(i => <div key={i.materialId} className="flex flex-wrap items-center justify-between gap-3"><Label>{getMaterial(i.materialId).name} · preço de referência</Label><CurrencyInput aria-label={`Preço de referência ${getMaterial(i.materialId).name}`} className="w-40" value={i.unitPrice ?? getMaterial(i.materialId).cost} onValueChange={value => setCart(cart.map(c => c.materialId === i.materialId ? { ...c, unitPrice: value === '' ? undefined : value } : c))} /></div>)}</div>}</div>}
+            {step === 4 && (
               <div className="space-y-3 text-sm">
                 <div className="grid md:grid-cols-4 gap-3">
                   {[["Filial", branchName(branchId)], ["Prioridade", priority], ["Data desejada", desiredDate.split("-").reverse().join("/")], ["Itens", String(cart.length)]].map(([k, v]) => <div key={k} className="rounded-lg border border-border p-3"><div className="text-xs text-muted-foreground">{k}</div><div className="font-medium capitalize">{v}</div></div>)}
                 </div>
-                {cart.map(c => <div key={c.materialId} className="flex justify-between border-b border-border py-2"><span>{getMaterial(c.materialId).name}</span><span className="font-medium">{c.requested} {getMaterial(c.materialId).unit}</span></div>)}
+                <div className="flex gap-2 items-center text-muted-foreground"><Store className="h-4 w-4" />{target === 'supplier' ? sup.find(supplier => supplier.id === supplierId)?.name : 'Centro de Distribuição'}{file && <Badge variant="outline">{file}</Badge>}</div>
+                <OrderReview items={cart} branchId={branchId} external={target === 'supplier'} />
                 {notes && <div className="text-muted-foreground">Obs.: {notes}</div>}
               </div>
             )}

@@ -12,6 +12,10 @@ export const Route = createFileRoute("/equipe")({
   head: () => ({ meta: [
     { title: "Equipe — Grupo Sorrisos Tasks" },
     { name: "description", content: "Equipe e departamentos." },
+    { property: "og:title", content: "Equipe — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Equipe e departamentos." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: TeamPage,
 });

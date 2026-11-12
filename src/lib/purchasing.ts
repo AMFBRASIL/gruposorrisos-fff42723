@@ -31,9 +31,10 @@ const set = (p: PurchaseOrder[], s = sup) => { pos = p; sup = s; cache = { pos, 
 const guard = () => can(currentUser(), getErp().roles, "compras.gerenciar") ? null : "Sem permissão para gerenciar compras";
 
 export function addSupplier(s: Omit<Supplier, "id">) { const g = guard(); if (g) return g; if (!s.name.trim()) return "Informe o nome"; set(pos, [...sup, { ...s, id: `s${Date.now()}` }]); return null; }
-export function createRequisition(branchId: string, items: { materialId: string; qty: number }[]) {
+export function createRequisition(branchId: string, items: { materialId: string; qty: number }[], confirmed?: { supplierId: string; prices: Record<string, number> }) {
   const g = guard(); if (g) return g; if (!items.length) return "Adicione itens";
-  set([{ id: `po${Date.now()}`, number: `OC-${2042 + pos.length}`, branchId, status: "requisicao", createdAt: new Date().toISOString().slice(0, 10), items: items.map(i => ({ ...i, received: 0, quotes: [] })) }, ...pos]); return null;
+  if (confirmed && (!sup.some(s => s.id === confirmed.supplierId) || items.some(i => !Number.isFinite(confirmed.prices[i.materialId]) || confirmed.prices[i.materialId] < 0))) return "Fornecedor ou preços confirmados inválidos";
+  set([{ id: crypto.randomUUID(), number: `OC-${2042 + pos.length}`, branchId, status: confirmed ? "aprovado" : "requisicao", createdAt: new Date().toISOString().slice(0, 10), items: items.map(i => ({ ...i, received: 0, quotes: confirmed ? [{ supplierId: confirmed.supplierId, unitPrice: confirmed.prices[i.materialId] ?? 0, days: 0 }] : [], chosen: confirmed?.supplierId })) }, ...pos]); return null;
 }
 export function addQuote(poId: string, materialId: string, q: Quote) {
   const g = guard(); if (g) return g;

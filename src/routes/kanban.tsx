@@ -15,6 +15,10 @@ export const Route = createFileRoute("/kanban")({
   head: () => ({ meta: [
     { title: "Kanban — Grupo Sorrisos Tasks" },
     { name: "description", content: "Quadro Kanban interativo com drag-and-drop." },
+    { property: "og:title", content: "Kanban — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Quadro Kanban interativo com drag-and-drop." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: KanbanPage,
 });

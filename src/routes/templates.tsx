@@ -12,6 +12,10 @@ export const Route = createFileRoute("/templates")({
   head: () => ({ meta: [
     { title: "Templates de Projeto — Grupo Sorrisos Tasks" },
     { name: "description", content: "Modelos prontos para acelerar a criação de projetos." },
+    { property: "og:title", content: "Templates de Projeto — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Modelos prontos para acelerar a criação de projetos." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: TemplatesPage,
 });

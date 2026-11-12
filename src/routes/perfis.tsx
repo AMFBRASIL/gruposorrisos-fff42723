@@ -18,6 +18,10 @@ export const Route = createFileRoute("/perfis")({
   head: () => ({ meta: [
     { title: "Perfis de Acesso — Grupo Sorrisos Tasks" },
     { name: "description", content: "Crie e edite perfis de acesso e defina as permissões de páginas de cada perfil." },
+    { property: "og:title", content: "Perfis de Acesso — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Crie e edite perfis de acesso e defina as permissões de páginas de cada perfil." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: ProfilesPage,
 });

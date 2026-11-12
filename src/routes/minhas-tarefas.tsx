@@ -11,6 +11,10 @@ export const Route = createFileRoute("/minhas-tarefas")({
   head: () => ({ meta: [
     { title: "Minhas Tarefas — Grupo Sorrisos Tasks" },
     { name: "description", content: "Lista de tarefas atribuídas a você." },
+    { property: "og:title", content: "Minhas Tarefas — Grupo Sorrisos Tasks" },
+    { property: "og:description", content: "Lista de tarefas atribuídas a você." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
   ]}),
   component: MyTasksPage,
 });
