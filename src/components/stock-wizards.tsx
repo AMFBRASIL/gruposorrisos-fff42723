@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -40,7 +41,7 @@ export function NewMaterialWizard({ open, onClose }: { open: boolean; onClose: (
         <div className="space-y-1"><Label htmlFor="material-supplier">Fornecedor</Label><select id="material-supplier" className={`${selectCls} w-full`} value={f.supplierId} onChange={e => set("supplierId", e.target.value)}><option value="">Selecione um fornecedor</option>{sup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
         <div className="space-y-1"><Label htmlFor="material-manufacturer">Fabricante</Label><Input id="material-manufacturer" list="material-manufacturers" value={f.manufacturer} onChange={e => set("manufacturer", e.target.value)} placeholder="Selecione ou informe o fabricante" /><datalist id="material-manufacturers">{manufacturers.map(m => <option key={m} value={m} />)}</datalist></div>
         <div className="space-y-1"><Label htmlFor="material-brand">Marca</Label><Input id="material-brand" value={f.brand} onChange={e => set("brand", e.target.value)} /></div>
-        <div className="space-y-1"><Label>Custo unitário (R$)</Label><Input type="number" min={0} step="0.01" value={f.cost} onChange={e => set("cost", Number(e.target.value))} /></div>
+        <div className="space-y-1"><Label htmlFor="material-cost">Custo unitário (R$)</Label><CurrencyInput id="material-cost" value={f.cost} onValueChange={value => set("cost", value === "" ? 0 : value)} /></div>
         <div className="md:col-span-2 space-y-1"><Label htmlFor="material-description">Descrição</Label><Textarea id="material-description" rows={3} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Descrição detalhada do material" /></div>
         <div className="md:col-span-2"><FieldLabel>Unidade de medida</FieldLabel><div className="grid grid-cols-4 md:grid-cols-8 gap-2">{units.map(u => <OptionCard compact key={u} selected={f.unit === u} onClick={() => set("unit", u)} title={u} />)}</div></div>
       </div>}

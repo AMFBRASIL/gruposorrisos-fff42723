@@ -1,4 +1,5 @@
 # Roadmap — Grupo Sorrisos ERP Multifiliais (dados de demonstração)
+- [x] Padronizar todos os campos monetários com máscara de reais brasileira e validar digitação/salvamento
 - [x] Onda 1 — Estoque básico
 - [x] Fase 2 — Filiais, depósitos, usuários por filial, perfis e permissões, seletor de filial
 - [x] Fase 3 — Telas de estoque filtradas por filial

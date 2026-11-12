@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
@@ -227,9 +228,7 @@ export function CreateClientWizard({ open, onClose }: { open: boolean; onClose: 
                     </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wide text-muted-foreground">LTV inicial (R$)</Label>
-                      <Input type="number" min={0} value={ltv}
-                        onChange={e => setLtv(e.target.value === "" ? "" : Number(e.target.value))}
-                        placeholder="0" className="mt-2 h-11" />
+                      <CurrencyInput aria-label="LTV inicial (R$)" value={ltv} onValueChange={setLtv} className="mt-2 h-11" />
                     </div>
                   </div>
                 </div>

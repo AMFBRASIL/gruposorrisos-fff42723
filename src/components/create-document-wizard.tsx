@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -201,9 +202,7 @@ export function CreateDocumentWizard({ open, onClose }: { open: boolean; onClose
                     </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wide text-muted-foreground">Valor (R$)</Label>
-                      <Input type="number" min={0} value={value}
-                        onChange={e => setValue(e.target.value === "" ? "" : Number(e.target.value))}
-                        placeholder="Opcional" className="mt-2 h-11" />
+                      <CurrencyInput aria-label="Valor (R$)" value={value} onValueChange={setValue} className="mt-2 h-11" />
                     </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wide text-muted-foreground">Data de expiração</Label>

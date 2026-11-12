@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -198,7 +199,7 @@ export function CreateInvoiceWizard({ open, onClose }: { open: boolean; onClose:
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-[1fr_90px_130px_120px] gap-2">
                             <Input value={it.description} onChange={e => updateItem(i, { description: e.target.value })} placeholder="Descrição do serviço" className="h-9" />
                             <Input type="number" min={1} value={it.quantity} onChange={e => updateItem(i, { quantity: Number(e.target.value) || 0 })} placeholder="Qtd" className="h-9" />
-                            <Input type="number" min={0} value={it.unitPrice} onChange={e => updateItem(i, { unitPrice: Number(e.target.value) || 0 })} placeholder="Valor unit." className="h-9" />
+                            <CurrencyInput aria-label={`Valor unitário do item ${i + 1}`} value={it.unitPrice} onValueChange={value => updateItem(i, { unitPrice: value === "" ? 0 : value })} className="h-9" />
                             <div className="h-9 flex items-center justify-end text-sm font-medium">{formatBRL(it.quantity * it.unitPrice)}</div>
                           </div>
                           <Button size="icon" variant="ghost" onClick={() => removeItem(i)} className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive">

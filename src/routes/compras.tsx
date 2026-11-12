@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSession, branchName } from "@/lib/erp";
 import { materials, getMaterial, brl } from "@/lib/stock";
@@ -30,7 +31,7 @@ function ComprasPage() {
   const { pos, sup } = usePurchasing(); const ses = useSession();
   const canBuy = ses.can("compras.gerenciar");
   const [receiving, setReceiving] = useState<PurchaseOrder | null>(null);
-  const [quote, setQuote] = useState({ supplierId: "s1", price: "", days: "5" });
+  const [quote, setQuote] = useState<{ supplierId: string; price: number | ''; days: string }>({ supplierId: "s1", price: "", days: "5" });
   const [reqMat, setReqMat] = useState(materials[0].id); const [reqQty, setReqQty] = useState(50);
   const [ns, setNs] = useState({ name: "", cnpj: "", contact: "", email: "" });
   const t = (e: string | null, m: string) => e ? toast.error(e) : toast.success(m);
@@ -57,7 +58,7 @@ function ComprasPage() {
                       {i.quotes.map(q => <Badge key={q.supplierId} variant="outline" className={i.chosen === q.supplierId ? "bg-success/10 text-success border-success/30" : ""}>{sup.find(s => s.id === q.supplierId)?.name}: {brl(q.unitPrice)} · {q.days}d</Badge>)}</div>
                     {canBuy && (p.status === "requisicao" || p.status === "cotacao") && <div className="flex flex-wrap gap-2 items-center">
                       <select className={sel} value={quote.supplierId} onChange={e => setQuote({ ...quote, supplierId: e.target.value })}>{sup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
-                      <Input placeholder="Preço unit." className="w-28 h-9" value={quote.price} onChange={e => setQuote({ ...quote, price: e.target.value })} />
+                      <CurrencyInput aria-label={`Preço unitário ${getMaterial(i.materialId).name}`} className="w-36 h-9" value={quote.price} onValueChange={price => setQuote({ ...quote, price })} />
                       <Input placeholder="Prazo" className="w-20 h-9" value={quote.days} onChange={e => setQuote({ ...quote, days: e.target.value })} />
                       <Button size="sm" variant="outline" onClick={() => Number(quote.price) > 0 ? t(addQuote(p.id, i.materialId, { supplierId: quote.supplierId, unitPrice: Number(quote.price), days: Number(quote.days) }), "Cotação registrada") : toast.error("Informe o preço")}>Registrar cotação</Button>
                     </div>}

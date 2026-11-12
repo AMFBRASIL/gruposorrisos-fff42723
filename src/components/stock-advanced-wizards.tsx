@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Boxes, Stethoscope, ListChecks, FileCheck2, Settings, Bell, MapPin } from 'lucide-react';
 import { WizardShell, WizardFooter, OptionCard, ReviewGrid, selectCls } from './erp-wizard';
 import { Input } from './ui/input';
+import { CurrencyInput } from './ui/currency-input';
 import { Label } from './ui/label';
 import { Button } from './ui/button';
 import { useSession, branchName } from '@/lib/erp';
@@ -23,7 +24,7 @@ export function ProcedureWizard({ onClose, mode }: { onClose: () => void; mode: 
 export function StockPolicyWizard({ onClose }: { onClose: () => void }) {
   const a = useAdvancedStock(); const [step, setStep] = useState(0), [limit, setLimit] = useState(a.limit), [days, setDays] = useState(a.alertDays);
   return <WizardShell open onClose={onClose} badge="Políticas de estoque" headline={<>Governança<br /><span className="opacity-60">em cada ajuste.</span></>} steps={[{ title: 'Aprovações', desc: 'Limite do valor absoluto de divergências', icon: Settings }, { title: 'Alertas', desc: 'Antecedência de vencimento', icon: Bell }, { title: 'Revisão', desc: 'Confirme as políticas', icon: FileCheck2 }]} step={step} setStep={setStep} footer={<WizardFooter step={step} last={2} setStep={setStep} onClose={onClose} onFinish={() => { const e = configureStock(limit, days); if (e) return toast.error(e); toast.success('Políticas atualizadas'); onClose(); }} finishLabel="Salvar políticas" />}>
-    {step === 0 && <><Label htmlFor="adjust-limit">Limite sem aprovação (R$)</Label><Input id="adjust-limit" min={0} type="number" value={limit} onChange={e => setLimit(Number(e.target.value))} /><div className="text-sm text-muted-foreground">Acima de {brl(limit)}, a contagem aguarda outro gestor. Nenhum saldo é alterado antes da aprovação.</div></>}
+    {step === 0 && <><Label htmlFor="adjust-limit">Limite sem aprovação (R$)</Label><CurrencyInput id="adjust-limit" value={limit} onValueChange={value => setLimit(value === '' ? 0 : value)} /><div className="text-sm text-muted-foreground">Acima de {brl(limit)}, a contagem aguarda outro gestor. Nenhum saldo é alterado antes da aprovação.</div></>}
     {step === 1 && <><Label htmlFor="alert-days">Antecedência de vencimento (dias)</Label><Input id="alert-days" type="number" min={1} value={days} onChange={e => setDays(Number(e.target.value))} /></>}
     {step === 2 && <ReviewGrid items={[["Limite", brl(limit)], ['Alertas', `${days} dias`], ['Revisão', 'Gestor diferente do solicitante']]} />}
   </WizardShell>;
