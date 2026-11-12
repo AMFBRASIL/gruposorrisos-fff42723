@@ -1,0 +1,11 @@
+import { useState } from 'react';
+import { History, MessageSquare, Send } from 'lucide-react';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
+import { userName } from '@/lib/erp';
+import type { WorkflowEvent } from '@/lib/order-workflow';
+export function OrderActivity({ events, initialNotes, onComment }: { events: WorkflowEvent[]; initialNotes: string; onComment: (text: string) => boolean }) {
+  const [tab, setTab] = useState('history'); const [text, setText] = useState('');
+  const comments = events.filter(e => e.action === 'Observação adicionada');
+  return <section className="space-y-4"><div className="flex gap-2 border-b border-border pb-3"><Button size="sm" variant={tab === 'history' ? 'default' : 'ghost'} onClick={() => setTab('history')}><History className="h-4 w-4 mr-2" />Histórico ({events.length})</Button><Button size="sm" variant={tab === 'notes' ? 'default' : 'ghost'} onClick={() => setTab('notes')}><MessageSquare className="h-4 w-4 mr-2" />Observações ({comments.length})</Button></div>{tab === 'notes' && <>{initialNotes && <div className="text-sm p-3 bg-muted/40 rounded-md whitespace-pre-wrap"><span className="font-semibold">Observação inicial: </span>{initialNotes}</div>}<Textarea aria-label="Nova observação do pedido" placeholder="Acrescentar uma observação ao pedido…" maxLength={2000} value={text} onChange={e => setText(e.target.value)} /><div className="flex justify-end"><Button disabled={!text.trim()} size="sm" onClick={() => { if (onComment(text)) setText(''); }}><Send className="h-4 w-4 mr-2" />Adicionar observação</Button></div></>}<ol className="border-l border-border ml-2 space-y-4">{(tab === 'notes' ? comments : events).map((e, i) => <li key={`${e.at}-${i}`} className="pl-5 relative"><span className="absolute -left-1 top-1.5 h-2 w-2 rounded-full bg-primary" /><div className="text-sm font-medium">{e.action}</div><div className="text-xs text-muted-foreground mt-1">{userName(e.userId)} · {new Date(e.at).toLocaleString('pt-BR')}</div>{e.note && <p className="text-sm mt-2 whitespace-pre-wrap break-words">{e.note}</p>}</li>)}{!(tab === 'notes' ? comments : events).length && <li className="pl-5 text-sm text-muted-foreground">Nenhum registro.</li>}</ol></section>;
+}

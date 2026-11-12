@@ -1,4 +1,5 @@
 # Project rules
+- Order approval workflows use immutable per-order template snapshots and pure sequential assignee checks in order-workflow.ts; store actions gate final approval and stock reservation so configuration cannot bypass operational inventory rules.
 - Supplier registration and purchasing share the purchasing.ts in-memory supplier list; the registration route is distinct from supplier orders to keep master data and transactions separate.
 - Supplier summary derives scoped request and confirmed purchase counts without double-counting converted requests; portal access fields are presentation-only demo settings, never real credentials.
 - DialogContent owns the shared modal frame and overlay; custom wizard layouts retain their contents while global frame constraints normalize scrolling and dimensions, and simple dialogs receive a shared image rail without artificial steps.

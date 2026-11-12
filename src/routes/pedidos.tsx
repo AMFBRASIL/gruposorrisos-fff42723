@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StockStat, ChartCard, chartColors, tooltipStyle, axisProps } from "@/components/stock-ui";
 import { NewOrderDialog, OrderSheet, priorityMeta } from "@/components/order-dialogs";
+import { OrderWorkflowDialog } from '@/components/order-workflow';
+import { SupplierOrderDetail } from '@/components/supplier-order-detail';
 import { useSession, branchName, userName } from "@/lib/erp";
 import { useOrders, statusLabels, kanbanColumns, isLate, type Order, type OrderStatus } from "@/lib/orders";
 import { getMaterial, brl } from "@/lib/stock";
 import { useSupplierRequests, supplierStatus } from '@/lib/supplier-orders';
 import { usePurchasing } from '@/lib/purchasing';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from "recharts";
-import { Plus, Search, ClipboardList, Hourglass, PackageOpen, Truck, CheckCircle2, AlertOctagon, List, Columns3, Gauge, Wallet, Siren, ArrowRight } from "lucide-react";
+import { Plus, Search, ClipboardList, Hourglass, PackageOpen, Truck, CheckCircle2, AlertOctagon, List, Columns3, Gauge, Wallet, Siren, ArrowRight, GitBranch } from "lucide-react";
 
 export const Route = createFileRoute("/pedidos")({
   head: () => ({ meta: [
@@ -39,6 +41,7 @@ function PedidosPage() {
   const [view, setView] = useState<"lista" | "kanban">("lista");
   const [q, setQ] = useState(""); const [status, setStatus] = useState<OrderStatus | "todos">("todos"); const [prio, setPrio] = useState("todas");
   const [newOpen, setNewOpen] = useState(false); const [editing, setEditing] = useState<Order | undefined>(); const [openId, setOpenId] = useState<string | null>(null);
+  const [workflowOpen, setWorkflowOpen] = useState(false); const [supplierOpen, setSupplierOpen] = useState<string | null>(null);
   const scoped = all.filter(o => ses.scope.includes(o.branchId) || ses.scope.includes(o.sourceId));
   const rows = useMemo(() => scoped.filter(o => (status === "todos" || o.status === status) && (prio === "todas" || o.priority === prio) && `${o.number} ${branchName(o.branchId)} ${userName(o.requesterId)}`.toLowerCase().includes(q.toLowerCase())), [scoped, status, prio, q]);
   const n = (f: (o: Order) => boolean) => scoped.filter(f).length;
@@ -58,8 +61,9 @@ function PedidosPage() {
   return (
     <AppShell title="Pedidos de Materiais" subtitle="Solicitação → Aprovação → Separação → Expedição → Recebimento" primaryAction={ses.can("pedidos.criar") ? <Button size="sm" onClick={() => { setEditing(undefined); setNewOpen(true); }}><Plus className="h-4 w-4 mr-1" />Novo Pedido</Button> : null}>
       <div className="p-4 md:p-8 space-y-5">
+        {ses.can('usuarios.gerenciar') && <div className="flex justify-end"><Button variant="outline" size="sm" onClick={() => setWorkflowOpen(true)}><GitBranch className="h-4 w-4 mr-2" />Configurar etapas</Button></div>}
         <div className="flex flex-wrap items-center gap-3 border-b border-border pb-4"><div className="flex gap-1">{[['all', 'Todos'], ['cd', 'Centro de Distribuição'], ['supplier', 'Fornecedores']].map(([value, label]) => <Button key={value} variant={target === value ? 'default' : 'outline'} size="sm" onClick={() => setTarget(value)}>{label}</Button>)}</div>{target !== 'cd' && <select aria-label="Filtrar fornecedor" className="h-9 border border-input rounded-md bg-background text-sm px-3" value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}><option value="all">Todos fornecedores</option>{sup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}<Button className="ml-auto" variant="outline" size="sm" asChild><Link to="/fornecedores">Pedidos por fornecedor <ArrowRight className="h-4 w-4 ml-2" /></Link></Button></div>
-        {target !== 'cd' && <section className="space-y-3"><h2 className="font-semibold">Pedidos a fornecedores</h2><div className="overflow-x-auto border border-border rounded-lg"><table className="w-full text-sm"><thead className="bg-muted/50"><tr>{['Pedido', 'Fornecedor / filial', 'Itens', 'Valor de referência', 'Prazo', 'Situação', ''].map(h => <th className="px-4 py-3 text-left" key={h}>{h}</th>)}</tr></thead><tbody>{supplierRequests.filter(r => ses.scope.includes(r.branchId) && (supplierFilter === 'all' || r.supplierId === supplierFilter) && `${r.number} ${branchName(r.branchId)} ${sup.find(s => s.id === r.supplierId)?.name}`.toLowerCase().includes(q.toLowerCase())).map(r => <tr className="border-t border-border" key={r.id}><td className="px-4 py-3 font-mono">{r.number}</td><td className="px-4 py-3">{sup.find(s => s.id === r.supplierId)?.name}<div className="text-xs text-muted-foreground">{branchName(r.branchId)}</div></td><td className="px-4 py-3">{r.items.length}</td><td className="px-4 py-3 whitespace-nowrap">{brl((r.versions.at(-1)?.items ?? r.items).reduce((a, i) => a + i.requested * (i.unitPrice ?? getMaterial(i.materialId).cost), 0))}</td><td className="px-4 py-3">{fmt(r.desiredDate)}</td><td className="px-4 py-3"><Badge variant="outline">{supplierStatus[r.status]}</Badge></td><td><Button asChild variant="ghost" size="sm"><Link to="/fornecedores">Abrir</Link></Button></td></tr>)}</tbody></table>{!supplierRequests.some(r => ses.scope.includes(r.branchId) && (supplierFilter === 'all' || r.supplierId === supplierFilter)) && <div className="text-center py-8 text-sm text-muted-foreground">Nenhum pedido a fornecedor.</div>}</div></section>}
+        {target !== 'cd' && <section className="space-y-3"><h2 className="font-semibold">Pedidos a fornecedores</h2><div className="overflow-x-auto border border-border rounded-lg"><table className="w-full text-sm"><thead className="bg-muted/50"><tr>{['Pedido', 'Fornecedor / filial', 'Itens', 'Valor de referência', 'Prazo', 'Situação', ''].map(h => <th className="px-4 py-3 text-left" key={h}>{h}</th>)}</tr></thead><tbody>{supplierRequests.filter(r => ses.scope.includes(r.branchId) && (supplierFilter === 'all' || r.supplierId === supplierFilter) && `${r.number} ${branchName(r.branchId)} ${sup.find(s => s.id === r.supplierId)?.name}`.toLowerCase().includes(q.toLowerCase())).map(r => <tr className="border-t border-border" key={r.id}><td className="px-4 py-3 font-mono">{r.number}</td><td className="px-4 py-3">{sup.find(s => s.id === r.supplierId)?.name}<div className="text-xs text-muted-foreground">{branchName(r.branchId)}</div></td><td className="px-4 py-3">{r.items.length}</td><td className="px-4 py-3 whitespace-nowrap">{brl((r.versions.at(-1)?.items ?? r.items).reduce((a, i) => a + i.requested * (i.unitPrice ?? getMaterial(i.materialId).cost), 0))}</td><td className="px-4 py-3">{fmt(r.desiredDate)}</td><td className="px-4 py-3"><Badge variant="outline">{supplierStatus[r.status]}</Badge></td><td><Button variant="ghost" size="sm" onClick={() => setSupplierOpen(r.id)}>Abrir</Button></td></tr>)}</tbody></table>{!supplierRequests.some(r => ses.scope.includes(r.branchId) && (supplierFilter === 'all' || r.supplierId === supplierFilter)) && <div className="text-center py-8 text-sm text-muted-foreground">Nenhum pedido a fornecedor.</div>}</div></section>}
         {target !== 'supplier' && <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StockStat label="Pedidos" value={scoped.length} icon={ClipboardList} hint={`${n(o => o.status === "rascunho")} rascunhos`} />
@@ -143,7 +147,9 @@ function PedidosPage() {
         </>}
       </div>
       {newOpen && <NewOrderDialog open onClose={() => setNewOpen(false)} initial={editing} />}
-      <OrderSheet order={open} onClose={() => setOpenId(null)} onEdit={o => { setOpenId(null); setEditing(o); setNewOpen(true); }} />
+      {workflowOpen && <OrderWorkflowDialog onClose={() => setWorkflowOpen(false)} />}
+      {supplierOpen && <SupplierOrderDetail id={supplierOpen} onClose={() => setSupplierOpen(null)} />}
+      <OrderSheet key={open?.id ?? 'closed'} order={open} onClose={() => setOpenId(null)} onEdit={o => { setOpenId(null); setEditing(o); setNewOpen(true); }} />
     </AppShell>
   );
 }

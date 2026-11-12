@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ApprovalTimeline } from './order-workflow';
+import { OrderActivity } from './order-activity';
+import { workflowAssignee } from '@/lib/order-workflow';
 import { useErp, useSession, branchName, userName } from "@/lib/erp";
-import { useStock, materials, categories, getMaterial, balanceOf } from "@/lib/stock";
+import { useStock, materials, categories, getMaterial, balanceOf, brl } from "@/lib/stock";
 import { actions, saveDraft, statusLabels, type Order, type Priority } from "@/lib/orders";
 import { WizardShell, WizardFooter, OptionCard } from "@/components/erp-wizard";
 import { StockCodeScanner } from './stock-code-scanner';
@@ -127,25 +129,29 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
 }
 
 export function OrderSheet({ order, onClose, onEdit }: { order: Order | null; onClose: () => void; onEdit: (o: Order) => void }) {
-  const ses = useSession(); useErp(); const st = useStock();
+  const ses = useSession(); const erp = useErp(); const st = useStock();
   const [qty, setQty] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");
   if (!order) return null;
   const o = order;
+  const activeStep = o.workflow?.steps[o.workflow.index];
+  const mayApprove = activeStep ? workflowAssignee(activeStep, ses.user, erp.roles, o.branchId) : ses.can('pedidos.aprovar', o.branchId);
   const done = (e: string | null, msg: string) => { if (e) return toast.error(e); toast.success(msg); setQty({}); setNote(""); };
   const qcol = o.status === "enviado" ? "approved" : o.status === "aprovado" || o.status === "separacao" ? "picked" : o.status === "transporte" || o.status === "recebido_parcial" ? "received" : null;
   const defaultQ = (i: Order["items"][number]) => qcol === "approved" ? i.requested : qcol === "picked" ? Math.min(i.approved, balanceOf(st, i.materialId, order?.sourceId ?? "cd")) : i.shipped - i.received;
   const val = (i: Order["items"][number]) => qty[i.materialId] ?? defaultQ(i);
   const all = () => Object.fromEntries(o.items.map(i => [i.materialId, val(i)]));
   return (
-    <Sheet open onOpenChange={x => !x && onClose()}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-        <SheetHeader><SheetTitle className="flex items-center gap-2">{o.number} <Badge variant="outline">{statusLabels[o.status]}</Badge></SheetTitle></SheetHeader>
+    <Dialog open onOpenChange={x => !x && onClose()}>
+      <DialogContent>
+        <DialogHeader><DialogTitle className="flex flex-wrap items-center gap-2">{o.number} <Badge variant="outline">{statusLabels[o.status]}</Badge></DialogTitle></DialogHeader>
         <div className="mt-4 space-y-5 text-sm">
           <div className="grid grid-cols-2 gap-2">
             {[["Filial", branchName(o.branchId)], ["Atendimento", branchName(o.sourceId)], ["Solicitante", userName(o.requesterId)], ["Data desejada", o.desiredDate.split("-").reverse().join("/")]].map(([k, v]) => <div key={k} className="rounded-md bg-muted/50 p-2"><div className="text-xs text-muted-foreground">{k}</div><div className="font-medium">{v}</div></div>)}
           </div>
-          <table className="w-full">
+          <ApprovalTimeline workflow={o.workflow} active={o.status === 'enviado'} />
+          <div className="grid grid-cols-2 gap-3 border-y border-border py-3"><div><div className="text-xs text-muted-foreground">Materiais solicitados</div><div className="text-xl font-semibold">{o.items.length}</div></div><div><div className="text-xs text-muted-foreground">Valor de referência</div><div className="text-xl font-semibold">{brl(o.items.reduce((sum, i) => sum + i.requested * getMaterial(i.materialId).cost, 0))}</div></div></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
             <thead className="text-xs text-muted-foreground"><tr>{["Material", "Solic.", "Aprov.", "Separ.", "Exped.", "Receb.", qcol ? "Agora" : ""].map(h => <th key={h} className="text-left py-1">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">
               {o.items.map(i => <tr key={i.materialId}>
@@ -153,13 +159,13 @@ export function OrderSheet({ order, onClose, onEdit }: { order: Order | null; on
                 {qcol && <td title={qcol === "picked" ? `Disponível no depósito: ${balanceOf(st, i.materialId, o.sourceId)}` : undefined}><Input type="number" min={0} className="h-8 w-20" value={val(i)} onChange={e => setQty({ ...qty, [i.materialId]: Number(e.target.value) })} /></td>}
               </tr>)}
             </tbody>
-          </table>
+          </table></div>
           {(qcol === 'received' || qcol === 'picked') && <StockCodeScanner onMaterial={id => { const i = o.items.find(i => i.materialId === id); if (!i) return toast.error('Material não pertence ao pedido'); setQty(prev => ({ ...prev, [id]: Math.min((prev[id] ?? 0) + 1, qcol === 'received' ? i.shipped - i.received : i.approved) })); }} />}
-          <Textarea placeholder="Observação / motivo / divergência" value={note} onChange={e => setNote(e.target.value)} rows={2} />
+          <Textarea aria-label="Observação da decisão" placeholder="Observação / motivo / divergência" maxLength={2000} value={note} onChange={e => setNote(e.target.value)} rows={2} />
           <div className="flex flex-wrap gap-2">
             {(o.status === "rascunho" || o.status === "correcao") && o.requesterId === ses.user.id && <><Button variant="outline" onClick={() => onEdit(o)}>Editar</Button><Button onClick={() => done(actions.submit(o.id), "Pedido enviado")}>Enviar</Button></>}
-            {o.status === "enviado" && ses.can("pedidos.aprovar", o.branchId) && <>
-              <Button onClick={() => done(actions.approve(o.id, all()), "Pedido aprovado e reservado")}>Aprovar</Button>
+            {o.status === "enviado" && mayApprove && <>
+              <Button onClick={() => done(actions.approve(o.id, all(), note), "Aprovação registrada")}>{activeStep ? 'Aprovar etapa' : 'Aprovar'}</Button>
               <Button variant="outline" onClick={() => done(actions.reject(o.id, note, true), "Correção solicitada")}>Solicitar correção</Button>
               <Button variant="outline" className="text-destructive" onClick={() => done(actions.reject(o.id, note), "Pedido rejeitado")}>Rejeitar</Button></>}
             {(o.status === "aprovado" || o.status === "separacao") && ses.can("pedidos.separar", o.sourceId) && <Button onClick={() => done(actions.pick(o.id, all()), "Separação registrada")}>Registrar separação</Button>}
@@ -170,15 +176,9 @@ export function OrderSheet({ order, onClose, onEdit }: { order: Order | null; on
             <Button variant="ghost" onClick={() => { const r = actions.duplicate(o.id); if (r.ok) toast.success(`Rascunho ${r.order.number} criado`); else toast.error(r.error); }}>Duplicar</Button>
             <Button variant="ghost" onClick={() => window.print()}>Imprimir</Button>
           </div>
-          <div>
-            <div className="font-semibold mb-2">Histórico</div>
-            <ol className="border-l border-border ml-2 space-y-3">
-              {o.events.length === 0 && <li className="pl-4 text-muted-foreground">Sem eventos.</li>}
-              {o.events.map((e, i) => <li key={i} className="pl-4 relative"><span className="absolute -left-1.5 top-1 h-3 w-3 rounded-full bg-primary" /><div className="font-medium">{e.action}</div><div className="text-xs text-muted-foreground">{userName(e.userId)} · {new Date(e.at).toLocaleString("pt-BR")}{e.note ? ` · ${e.note}` : ""}</div></li>)}
-            </ol>
-          </div>
+          <OrderActivity key={o.id} events={o.events} initialNotes={o.notes} onComment={text => { const error = actions.comment(o.id, text); if (error) { toast.error(error); return false; } toast.success('Observação adicionada'); return true; }} />
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

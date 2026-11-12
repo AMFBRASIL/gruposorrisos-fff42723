@@ -1,0 +1,25 @@
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Textarea } from './ui/textarea';
+import { ApprovalTimeline } from './order-workflow';
+import { OrderActivity } from './order-activity';
+import { SupplierResponse } from './supplier-response';
+import { useSupplierRequests, supplierStatus, supplierAction, commentSupplierRequest } from '@/lib/supplier-orders';
+import { useErp, useSession, branchName } from '@/lib/erp';
+import { usePurchasing } from '@/lib/purchasing';
+import { getMaterial, brl } from '@/lib/stock';
+import { workflowAssignee } from '@/lib/order-workflow';
+
+export function SupplierOrderDetail({ id, onClose }: { id: string; onClose: () => void }) {
+  const requests = useSupplierRequests(); const erp = useErp(); const ses = useSession(); const { sup } = usePurchasing();
+  const [note, setNote] = useState(''); const [responseOpen, setResponseOpen] = useState(false);
+  const r = requests.find(x => x.id === id); if (!r) return null;
+  const current = r.workflow?.steps[r.workflow.index];
+  const mayApprove = current ? workflowAssignee(current, ses.user, erp.roles, r.branchId) : ses.can('compras.gerenciar', r.branchId);
+  const items = r.versions.at(-1)?.items ?? r.items;
+  const action = (a: 'send' | 'correction' | 'approve') => { const error = supplierAction(id, a, note); if (error) return toast.error(error); toast.success('Pedido atualizado'); setNote(''); };
+  return <><Dialog open onOpenChange={o => !o && onClose()}><DialogContent><DialogHeader><DialogTitle className="flex flex-wrap gap-2 items-center">{r.number}<Badge variant="outline">{supplierStatus[r.status]}</Badge></DialogTitle></DialogHeader><div className="grid sm:grid-cols-2 gap-3 text-sm"><div><div className="text-xs text-muted-foreground">Fornecedor</div>{sup.find(s => s.id === r.supplierId)?.name}</div><div><div className="text-xs text-muted-foreground">Filial</div>{branchName(r.branchId)}</div><div><div className="text-xs text-muted-foreground">Entrega desejada</div>{r.desiredDate.split('-').reverse().join('/')}</div><div><div className="text-xs text-muted-foreground">Prioridade</div>{r.priority}</div></div><ApprovalTimeline workflow={r.workflow} active={r.status === 'resposta'} /><div className="flex justify-between border-y border-border py-3"><span>{r.items.length} materiais</span><span className="font-semibold">{brl(items.reduce((sum, i) => sum + i.requested * (i.unitPrice ?? getMaterial(i.materialId).cost), 0))}</span></div><div className="overflow-x-auto"><table className="w-full text-sm min-w-[460px]"><thead className="text-xs text-muted-foreground"><tr><th className="text-left py-2">Material</th><th>Quantidade</th><th>Unitário</th><th>Total</th></tr></thead><tbody>{items.map(i => <tr className="border-t border-border" key={i.materialId}><td className="py-3">{getMaterial(i.materialId).name}<div className="text-xs text-muted-foreground">{getMaterial(i.materialId).code}</div></td><td className="text-center">{i.requested} {getMaterial(i.materialId).unit}</td><td className="text-right">{brl(i.unitPrice ?? getMaterial(i.materialId).cost)}</td><td className="text-right">{brl(i.requested * (i.unitPrice ?? getMaterial(i.materialId).cost))}</td></tr>)}</tbody></table></div><Textarea aria-label="Observação da decisão de compra" placeholder="Observação para aprovação ou correção…" maxLength={2000} value={note} onChange={e => setNote(e.target.value)} /><div className="flex flex-wrap gap-2">{r.status === 'resposta' && mayApprove && <Button onClick={() => action('approve')}>Aprovar etapa</Button>}{ses.can('compras.gerenciar', r.branchId) && <>{r.status === 'rascunho' && <Button onClick={() => action('send')}>Solicitar preços</Button>}{['aguardando', 'resposta', 'correcao'].includes(r.status) && <Button variant="outline" onClick={() => setResponseOpen(true)}>Importar / preencher resposta</Button>}{r.status === 'resposta' && <Button variant="outline" onClick={() => action('correction')}>Solicitar correção</Button>}</>}</div><OrderActivity initialNotes={r.notes} events={r.events ?? []} onComment={text => { const error = commentSupplierRequest(id, text); if (error) { toast.error(error); return false; } toast.success('Observação adicionada'); return true; }} />{r.versions.map((v, i) => <details key={`${v.at}-${i}`} className="border-t border-border pt-3 text-sm"><summary>Resposta {i + 1} · {v.user} · {v.file ?? 'Manual'}</summary><p className="text-xs text-muted-foreground mt-2">{new Date(v.at).toLocaleString('pt-BR')}</p>{v.notes && <p className="mt-2 whitespace-pre-wrap">{v.notes}</p>}{v.items.map(item => <div className="flex justify-between gap-2 py-2" key={item.materialId}><span>{getMaterial(item.materialId).name}</span><span>{brl(item.unitPrice ?? 0)}</span></div>)}</details>)}</DialogContent></Dialog>{responseOpen && <SupplierResponse request={r} onClose={() => setResponseOpen(false)} />}</>;
+}

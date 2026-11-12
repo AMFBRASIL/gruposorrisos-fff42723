@@ -1,0 +1,51 @@
+import { describe, it, expect } from 'vitest';
+import { approveWorkflow, commentEvent, snapshotWorkflow, validateTemplate, workflowAssignee, saveWorkflowTemplate, type Workflow } from './order-workflow';
+import { seedErpUsers, seedRoles, setCurrentUser } from './erp';
+import { actions, getOrders, saveDraft } from './orders';
+import { getState } from './stock';
+import { saveSupplierRequest, respondSupplierRequest, supplierAction } from './supplier-orders';
+import { getPurchasing } from './purchasing';
+const user = (id: string) => { const found = seedErpUsers.find(u => u.id === id); if (!found) throw new Error(id); return found; };
+const workflow: Workflow = { name: 'Aprovação', index: 0, startedAt: '2026-11-12T00:00:00Z', decisions: [], steps: [{ id: 'gestor', name: 'Gestor', assigneeType: 'user', assigneeId: 'u-maria', hours: 24, requireNote: true }, { id: 'diretor', name: 'Diretor', assigneeType: 'user', assigneeId: 'u-carlos', hours: 48, requireNote: false }] };
+describe('etapas de aprovação personalizadas', () => {
+  it('apenas o usuário designado aprova a etapa', () => expect(approveWorkflow(workflow, user('u-carlos'), seedRoles, 'c1', 'OK')).toEqual({ error: 'Somente o responsável da etapa pode aprovar' }));
+  it('exige observação quando configurada', () => expect(approveWorkflow(workflow, user('u-maria'), seedRoles, 'c1', '')).toEqual({ error: 'Esta etapa exige uma observação' }));
+  it('passa primeiro pelo gestor e depois pelo diretor mantendo autoria e observação', () => {
+    const first = approveWorkflow(workflow, user('u-maria'), seedRoles, 'c1', 'Reposição necessária', '2026-11-12T11:00:00Z');
+    if ('error' in first) throw new Error(first.error);
+    expect(first.workflow.index).toBe(1); expect(first.workflow.decisions[0]).toEqual({ stepId: 'gestor', userId: 'u-maria', at: '2026-11-12T11:00:00Z', note: 'Reposição necessária' });
+    expect(approveWorkflow(first.workflow, user('u-maria'), seedRoles, 'c1', '')).toHaveProperty('error');
+    const last = approveWorkflow(first.workflow, user('u-carlos'), seedRoles, 'c1', ''); if ('error' in last) throw new Error(last.error);
+    expect(last.workflow.index).toBe(2); expect(approveWorkflow(last.workflow, user('u-carlos'), seedRoles, 'c1', '')).toHaveProperty('error');
+  });
+  it('perfis respeitam vínculo da filial', () => { const step = { ...workflow.steps[0], assigneeType: 'role' as const, assigneeId: 'gerente' }; expect(workflowAssignee(step, user('u-maria'), seedRoles, 'c1')).toBe(true); expect(workflowAssignee(step, user('u-maria'), seedRoles, 'c2')).toBe(false); });
+  it('a cópia por pedido não altera o modelo', () => { const copy = snapshotWorkflow('cd'); copy.steps[0].name = 'Alterado'; expect(snapshotWorkflow('cd').steps[0].name).toBe('Aprovação da filial'); });
+  it('observações registram autor e data sem aceitar texto vazio', () => { expect(commentEvent(' ', 'u-maria')).toBeNull(); expect(commentEvent('Comprar urgente', 'u-maria', '2026-11-12')).toEqual({ at: '2026-11-12', userId: 'u-maria', action: 'Observação adicionada', note: 'Comprar urgente' }); });
+  it('configuração exige responsáveis válidos e ao menos uma etapa', () => { expect(validateTemplate({ name: 'Fluxo', steps: [] }, seedErpUsers, seedRoles)).not.toBeNull(); expect(validateTemplate({ name: 'Fluxo', steps: [{ ...workflow.steps[0], assigneeId: 'inexistente' }] }, seedErpUsers, seedRoles)).not.toBeNull(); expect(validateTemplate(workflow, seedErpUsers, seedRoles)).toBeNull(); });
+  it('reserva estoque somente após todas as aprovações do pedido', () => {
+    setCurrentUser('u-carlos');
+    const original = snapshotWorkflow('cd');
+    expect(saveWorkflowTemplate('cd', { name: 'Duas aprovações', steps: workflow.steps.map(s => ({ ...s, assigneeId: 'u-carlos', requireNote: false })) })).toBeNull();
+    const result = saveDraft({ branchId: 'c1', priority: 'normal', desiredDate: '2026-11-20', notes: '', items: [{ materialId: 'm1', requested: 3 }] });
+    if (!result.ok) throw new Error(result.error);
+    const reserved = () => getState().balances.find(b => b.clinicId === 'cd' && b.materialId === 'm1')?.reserved ?? 0;
+    const before = reserved();
+    expect(actions.submit(result.order.id)).toBeNull(); expect(actions.approve(result.order.id)).toBeNull();
+    expect(getOrders().find(o => o.id === result.order.id)?.status).toBe('enviado'); expect(reserved()).toBe(before);
+    expect(actions.approve(result.order.id)).toBeNull(); expect(reserved()).toBe(before + 3);
+    expect(actions.approve(result.order.id)).not.toBeNull(); expect(reserved()).toBe(before + 3);
+    expect(saveWorkflowTemplate('cd', original)).toBeNull();
+  });
+  it('cria uma única compra apenas depois da última etapa do fornecedor', () => {
+    setCurrentUser('u-carlos'); const original = snapshotWorkflow('supplier');
+    expect(saveWorkflowTemplate('supplier', { name: 'Compra em duas etapas', steps: workflow.steps.map(s => ({ ...s, assigneeId: 'u-carlos', requireNote: false })) })).toBeNull();
+    const result = saveSupplierRequest({ branchId: 'c1', supplierId: 's1', priority: 'normal', desiredDate: '2026-11-20', notes: '', items: [{ materialId: 'm1', requested: 3 }] }, true);
+    if (!result.request) throw new Error(result.error);
+    expect(respondSupplierRequest(result.request.id, [{ materialId: 'm1', requested: 3, unitPrice: 25 }])).toBeNull();
+    const before = getPurchasing().pos.length;
+    expect(supplierAction(result.request.id, 'approve')).toBeNull(); expect(getPurchasing().pos.length).toBe(before);
+    expect(supplierAction(result.request.id, 'approve')).toBeNull(); expect(getPurchasing().pos.length).toBe(before + 1);
+    expect(supplierAction(result.request.id, 'approve')).not.toBeNull(); expect(getPurchasing().pos.length).toBe(before + 1);
+    expect(saveWorkflowTemplate('supplier', original)).toBeNull();
+  });
+});

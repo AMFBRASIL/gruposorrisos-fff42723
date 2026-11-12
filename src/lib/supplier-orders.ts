@@ -4,8 +4,10 @@ import { can, currentUser, getErp } from './erp';
 import { createRequisition, getPurchasing } from './purchasing';
 import { materials } from './stock';
 import type { ImportItem } from './order-csv';
+import { approveWorkflow, commentEvent, resetWorkflow, snapshotWorkflow, type Workflow, type WorkflowEvent } from './order-workflow';
 
-export type SupplierRequest = { id: string; number: string; branchId: string; supplierId: string; desiredDate: string; priority: string; notes: string; status: 'rascunho' | 'aguardando' | 'resposta' | 'aprovado' | 'correcao'; items: ImportItem[]; file?: string; createdAt: string; purchaseId?: string; versions: { at: string; user: string; file?: string; notes?: string; items: ImportItem[] }[] };
+export type SupplierRequest = { id: string; number: string; branchId: string; supplierId: string; desiredDate: string; priority: string; notes: string; status: 'rascunho' | 'aguardando' | 'resposta' | 'aprovado' | 'correcao'; items: ImportItem[]; file?: string; createdAt: string; purchaseId?: string; workflow?: Workflow; events?: WorkflowEvent[]; versions: { at: string; user: string; file?: string; notes?: string; items: ImportItem[] }[] };
+const event = (action: string, note?: string): WorkflowEvent => ({ at: new Date().toISOString(), userId: currentUser().id, action, note });
 const schema = z.object({ branchId: z.string().min(1), supplierId: z.string().min(1), desiredDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), priority: z.enum(['baixa', 'normal', 'alta', 'urgente']), notes: z.string().max(2000), file: z.string().max(255).optional(), items: z.array(z.object({ materialId: z.string().min(1), requested: z.number().finite().positive().max(1e9), unitPrice: z.number().finite().nonnegative().max(1e9).optional(), supplierCode: z.string().max(100).optional() })).min(1).max(2000) });
 let requests: SupplierRequest[] = [];
 let links: Record<string, Record<string, string>> = {};
@@ -26,7 +28,7 @@ export function saveSupplierRequest(input: z.input<typeof schema>, send: boolean
   if (!can(currentUser(), getErp().roles, 'pedidos.criar', d.branchId) && !can(currentUser(), getErp().roles, 'compras.gerenciar', d.branchId)) return { error: 'Sem permissão nesta filial' };
   if (!getPurchasing().sup.some(s => s.id === d.supplierId) || !getErp().branches.some(b => b.id === d.branchId && b.active)) return { error: 'Filial ou fornecedor inválido' };
   if (new Set(d.items.map(i => i.materialId)).size !== d.items.length || d.items.some(i => !materials.some(m => m.id === i.materialId))) return { error: 'Materiais inválidos ou duplicados' };
-  const request: SupplierRequest = { ...d, id: crypto.randomUUID(), number: `FOR-${String(1001 + requests.length)}`, createdAt: new Date().toISOString(), status: send ? 'aguardando' : 'rascunho', versions: [] };
+  const request: SupplierRequest = { ...d, id: crypto.randomUUID(), number: `FOR-${String(1001 + requests.length)}`, createdAt: new Date().toISOString(), status: send ? 'aguardando' : 'rascunho', workflow: snapshotWorkflow('supplier'), events: [event(send ? 'Pedido criado e enviado ao fornecedor' : 'Rascunho criado')], versions: [] };
   requests = [request, ...requests]; emit(); return { request };
 }
 export function respondSupplierRequest(id: string, items: ImportItem[], file?: string) {
@@ -34,7 +36,7 @@ export function respondSupplierRequest(id: string, items: ImportItem[], file?: s
   if (!can(currentUser(), getErp().roles, 'compras.gerenciar', r.branchId)) return 'Sem permissão para conferir preços';
   const error = validateResponse(r, items); if (error) return error;
   const safe = schema.shape.items.safeParse(items); if (!safe.success) return 'Dados de resposta inválidos';
-  requests = requests.map(x => x.id === id ? { ...x, status: 'resposta', versions: [...x.versions, { at: new Date().toISOString(), user: currentUser().name, file, items: safe.data }] } : x);
+  requests = requests.map(x => x.id === id ? { ...x, status: 'resposta', workflow: x.workflow ? resetWorkflow(x.workflow) : undefined, events: [...(x.events ?? []), event('Preços registrados', file)], versions: [...x.versions, { at: new Date().toISOString(), user: currentUser().name, file, items: safe.data }] } : x);
   links = { ...links, [r.supplierId]: { ...links[r.supplierId], ...Object.fromEntries(items.filter(i => i.supplierCode).map(i => [i.supplierCode ?? '', i.materialId])) } };
   emit(); return null;
 }
@@ -43,20 +45,36 @@ export function respondDemoSupplierRequest(id: string, items: ImportItem[], note
   if (!request) return 'Pedido não encontrado';
   const error = validateResponse(request, items);
   if (error) return error;
-  requests = requests.map(r => r.id === id ? { ...r, status: 'resposta', versions: [...r.versions, { at: new Date().toISOString(), user: 'Fornecedor demonstrativo', notes, file, items: items.map(i => ({ ...i })) }] } : r);
+  requests = requests.map(r => r.id === id ? { ...r, status: 'resposta', workflow: r.workflow ? resetWorkflow(r.workflow) : undefined, events: [...(r.events ?? []), { at: new Date().toISOString(), userId: 'Fornecedor demonstrativo', action: 'Fornecedor respondeu com preços', note: notes }], versions: [...r.versions, { at: new Date().toISOString(), user: 'Fornecedor demonstrativo', notes, file, items: items.map(i => ({ ...i })) }] } : r);
   emit(); return null;
 }
-export function supplierAction(id: string, action: 'send' | 'correction' | 'approve') {
+export function supplierAction(id: string, action: 'send' | 'correction' | 'approve', note = '') {
   const r = requests.find(r => r.id === id); if (!r) return 'Pedido não encontrado';
-  if (!can(currentUser(), getErp().roles, 'compras.gerenciar', r.branchId)) return 'Sem permissão para gerenciar compra';
+  if (!(action === 'approve' && r.workflow) && !can(currentUser(), getErp().roles, 'compras.gerenciar', r.branchId)) return 'Sem permissão para gerenciar compra';
   if (action === 'send' && r.status !== 'rascunho') return 'Somente rascunhos podem ser enviados';
   if (action !== 'send' && r.status !== 'resposta') return 'Confira uma resposta antes de prosseguir';
   if (action === 'approve') {
     const latest = r.versions.at(-1); if (!latest) return 'Sem preços confirmados';
+    let workflow = r.workflow;
+    if (workflow) {
+      const result = approveWorkflow(workflow, currentUser(), getErp().roles, r.branchId, note);
+      if ('error' in result) return result.error;
+      workflow = result.workflow;
+      if (workflow.index < workflow.steps.length) {
+        requests = requests.map(x => x.id === id ? { ...x, workflow, events: [...(x.events ?? []), event(`Etapa aprovada: ${r.workflow?.steps[r.workflow.index]?.name}`, note)] } : x);
+        emit(); return null;
+      }
+    }
     const error = createRequisition(r.branchId, r.items.map(i => ({ materialId: i.materialId, qty: i.requested })), { supplierId: r.supplierId, prices: Object.fromEntries(latest.items.map(i => [i.materialId, i.unitPrice ?? 0])) });
     if (error) return error;
-    requests = requests.map(x => x.id === id ? { ...x, status: 'aprovado', purchaseId: getPurchasing().pos[0]?.id } : x);
-  } else requests = requests.map(x => x.id === id ? { ...x, status: action === 'send' ? 'aguardando' : 'correcao' } : x);
+    requests = requests.map(x => x.id === id ? { ...x, workflow, status: 'aprovado', purchaseId: getPurchasing().pos[0]?.id, events: [...(x.events ?? []), event('Compra aprovada', note)] } : x);
+  } else requests = requests.map(x => x.id === id ? { ...x, status: action === 'send' ? 'aguardando' : 'correcao', events: [...(x.events ?? []), event(action === 'send' ? 'Pedido enviado ao fornecedor' : 'Correção solicitada', note)] } : x);
   emit(); return null;
 }
 export const supplierStatus = { rascunho: 'Rascunho', aguardando: 'Aguardando preços', resposta: 'Em conferência', aprovado: 'Compra aprovada', correcao: 'Correção solicitada' };
+export function commentSupplierRequest(id: string, note: string) {
+  const request = requests.find(r => r.id === id); if (!request) return 'Pedido não encontrado';
+  if (!can(currentUser(), getErp().roles, 'pedidos.visualizar', request.branchId)) return 'Sem acesso ao pedido';
+  const entry = commentEvent(note, currentUser().id); if (!entry) return 'Informe uma observação de até 2.000 caracteres';
+  requests = requests.map(r => r.id === id ? { ...r, events: [...(r.events ?? []), entry] } : r); emit(); return null;
+}

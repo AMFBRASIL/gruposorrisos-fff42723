@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import { applyDelta, balanceOf, getState as getStock, logMovement, materials, consumeLots, addLot } from "./stock";
 import { fefo } from './stock-intelligence';
 import { can, currentUser, getErp, type ErpRole, type ErpUser } from "./erp";
+import { approveWorkflow, commentEvent, resetWorkflow, snapshotWorkflow, workflowAssignee, type Workflow } from './order-workflow';
 
 export type OrderStatus = "rascunho" | "enviado" | "correcao" | "rejeitado" | "aprovado" | "separacao" | "transporte" | "recebido_parcial" | "concluido" | "cancelado";
 export type Priority = "baixa" | "normal" | "alta" | "urgente";
@@ -10,6 +11,7 @@ export type OrderEvent = { at: string; userId: string; action: string; note?: st
 export type Order = {
   id: string; number: string; branchId: string; sourceId: string; requesterId: string; priority: Priority;
   createdAt: string; desiredDate: string; notes: string; status: OrderStatus; items: OrderItem[]; events: OrderEvent[];
+  workflow?: Workflow;
 };
 
 export const statusLabels: Record<OrderStatus, string> = {
@@ -28,19 +30,28 @@ export function submitOrder(o: Order, c: Ctx): Result {
   if (o.status !== "rascunho" && o.status !== "correcao") return fail("Só é possível enviar rascunhos ou pedidos em correção");
   if (!can(c.user, c.roles, "pedidos.criar", o.branchId)) return fail("Sem permissão para criar pedidos nesta filial");
   if (o.items.length === 0 || o.items.some(i => i.requested <= 0)) return fail("Adicione materiais com quantidade maior que zero");
-  return { ok: true, order: { ...o, status: "enviado", events: ev(o, c, "Pedido enviado") } };
+  return { ok: true, order: { ...o, workflow: o.status === 'correcao' && o.workflow ? resetWorkflow(o.workflow) : o.workflow, status: "enviado", events: ev(o, c, "Pedido enviado") } };
 }
 /** approvedQty: optional per-item approved quantities (defaults to requested). */
-export function approveOrder(o: Order, c: Ctx, approvedQty?: Record<string, number>): Result {
+export function approveOrder(o: Order, c: Ctx, approvedQty?: Record<string, number>, note = ''): Result {
   if (o.status !== "enviado") return fail("Pedido não está aguardando aprovação");
-  if (!can(c.user, c.roles, "pedidos.aprovar", o.branchId)) return fail("Sem permissão para aprovar pedidos desta filial");
+  if (!o.workflow && !can(c.user, c.roles, "pedidos.aprovar", o.branchId)) return fail("Sem permissão para aprovar pedidos desta filial");
+  let workflow = o.workflow;
+  if (workflow) {
+    const result = approveWorkflow(workflow, c.user, c.roles, o.branchId, note, c.now);
+    if ('error' in result) return fail(result.error);
+    workflow = result.workflow;
+    if (workflow.index < workflow.steps.length) return { ok: true, order: { ...o, workflow, events: ev(o, c, `Etapa aprovada: ${o.workflow?.steps[o.workflow.index]?.name}`, note) } };
+  }
   const items = o.items.map(i => { const a = approvedQty?.[i.materialId] ?? i.requested; return { ...i, approved: Math.max(0, Math.min(a, i.requested)) }; });
   if (items.every(i => i.approved === 0)) return fail("Aprove ao menos um item");
-  return { ok: true, order: { ...o, items, status: "aprovado", events: ev(o, c, "Pedido aprovado") } };
+  return { ok: true, order: { ...o, workflow, items, status: "aprovado", events: ev(o, c, "Pedido aprovado", note) } };
 }
 export function rejectOrder(o: Order, c: Ctx, reason: string, correction = false): Result {
   if (o.status !== "enviado") return fail("Pedido não está aguardando aprovação");
-  if (!can(c.user, c.roles, "pedidos.aprovar", o.branchId)) return fail("Sem permissão para aprovar pedidos desta filial");
+  const step = o.workflow?.steps[o.workflow.index];
+  if (step ? !workflowAssignee(step, c.user, c.roles, o.branchId) : !can(c.user, c.roles, "pedidos.aprovar", o.branchId)) return fail("Sem permissão para aprovar pedidos desta filial");
+  if (!reason.trim()) return fail('Informe o motivo da correção ou rejeição');
   return { ok: true, order: { ...o, status: correction ? "correcao" : "rejeitado", events: ev(o, c, correction ? "Correção solicitada" : "Pedido rejeitado", reason) } };
 }
 /** picked: per-item quantity separated; cannot exceed approved nor the stock available at the source. */
@@ -111,7 +122,7 @@ export function saveDraft(input: Pick<Order, "branchId" | "priority" | "desiredD
   const prev = id ? orders.find(o => o.id === id) : undefined;
   const o: Order = prev ? { ...prev, ...input, items: input.items.map(i => it(i.materialId, i.requested)) } : {
     id: `o${Date.now()}`, number: `PED-${1004 + orders.length}`, sourceId: "cd", requesterId: c.user.id, createdAt: new Date().toISOString(),
-    status: "rascunho", events: [], ...input, items: input.items.map(i => it(i.materialId, i.requested)),
+    status: "rascunho", workflow: snapshotWorkflow('cd'), events: [{ at: new Date().toISOString(), userId: c.user.id, action: 'Pedido criado' }], ...input, items: input.items.map(i => it(i.materialId, i.requested)),
   };
   put(o); return { ok: true, order: o };
 }
@@ -122,7 +133,12 @@ function run(id: string, fn: (o: Order, c: Ctx) => Result, effect?: (before: Ord
 }
 export const actions = {
   submit: (id: string) => run(id, submitOrder),
-  approve: (id: string, q?: Record<string, number>) => run(id, (o, c) => approveOrder(o, c, q), (_, a) => { for (const i of a.items) applyDelta(i.materialId, a.sourceId, 0, i.approved); }),
+  approve: (id: string, q?: Record<string, number>, note = '') => run(id, (o, c) => approveOrder(o, c, q, note), (_, a) => { if (a.status === 'aprovado') for (const i of a.items) applyDelta(i.materialId, a.sourceId, 0, i.approved); }),
+  comment: (id: string, note: string) => run(id, (o, c) => {
+    if (!can(c.user, c.roles, 'pedidos.visualizar', o.branchId) && !can(c.user, c.roles, 'pedidos.visualizar', o.sourceId)) return fail('Sem acesso ao pedido');
+    const event = commentEvent(note, c.user.id); if (!event) return fail('Informe uma observação de até 2.000 caracteres');
+    return { ok: true, order: { ...o, events: [...o.events, event] } };
+  }),
   reject: (id: string, reason: string, correction = false) => run(id, (o, c) => rejectOrder(o, c, reason, correction)),
   pick: (id: string, picked: Record<string, number>) => run(id, (o, c) => {
     const r = pickOrder(o, c, picked, available(o.sourceId)); if (!r.ok) return r;
@@ -138,7 +154,7 @@ export const actions = {
   receive: (id: string, r: Record<string, number>, note?: string) => run(id, (o, c) => receiveOrder(o, c, r, note), (before, a) => { for (const [mid, q] of Object.entries(r)) if (q > 0) { applyDelta(mid, a.branchId, q); let skip = before.items.find(i => i.materialId === mid)?.received ?? 0; let remaining = q; for (const l of a.items.find(i => i.materialId === mid)?.allocations ?? []) { const skipped = Math.min(skip, l.qty); skip -= skipped; const portion = Math.min(remaining, l.qty - skipped); if (portion > 0) addLot({ materialId: mid, clinicId: a.branchId, lot: l.lot, expires: l.expires, qty: portion }); remaining -= portion; } logMovement({ type: "entrada", reason: `Recebimento ${a.number}`, materialId: mid, clinicId: a.branchId, qty: q, user: currentUser().name }); } }),
   close: (id: string, note: string) => run(id, (o, c) => closeWithDivergence(o, c, note)),
   cancel: (id: string, reason: string) => run(id, (o, c) => cancelOrder(o, c, reason), (b) => { if (b.status === "aprovado") for (const i of b.items) applyDelta(i.materialId, b.sourceId, 0, -i.approved); }),
-  duplicate: (id: string) => { const o = orders.find(x => x.id === id)!; return saveDraft({ branchId: o.branchId, priority: o.priority, desiredDate: o.desiredDate, notes: o.notes, items: o.items.map(i => ({ materialId: i.materialId, requested: i.requested })) }); },
+  duplicate: (id: string) => { const o = orders.find(x => x.id === id); if (!o) return fail('Pedido não encontrado'); return saveDraft({ branchId: o.branchId, priority: o.priority, desiredDate: o.desiredDate, notes: o.notes, items: o.items.map(i => ({ materialId: i.materialId, requested: i.requested })) }); },
 };
 export const isLate = (o: Order) => !["concluido", "cancelado", "rejeitado"].includes(o.status) && o.desiredDate < "2026-11-11";
 export { balanceOf };

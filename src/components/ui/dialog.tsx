@@ -48,13 +48,13 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      {customLayout ? children : <div className="grid h-full min-h-0 md:grid-cols-[260px_1fr]">
+      {customLayout ? children : <div className="grid grid-cols-1 h-full min-h-0 min-w-0 md:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="relative hidden md:flex flex-col justify-between overflow-hidden bg-sidebar text-sidebar-foreground p-7">
           <img src={dialogImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20" />
           <div className="relative"><span className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-sidebar-accent font-semibold">GS</span><div className="mt-6 text-xl font-semibold">Grupo | Sorrisos</div><div className="mt-2 text-sm text-sidebar-foreground/70">Plataforma Gestão</div></div>
           <div className="relative border-t border-sidebar-border pt-4 text-xs text-sidebar-foreground/70">Grupo Sorrisos</div>
         </aside>
-        <div className="min-h-0 overflow-y-auto px-5 py-7 sm:px-8"><div className="space-y-5 pr-4">{children}</div></div>
+        <div className="min-h-0 min-w-0 overflow-y-auto px-5 py-7 sm:px-8"><div className="min-w-0 space-y-5 pr-4">{children}</div></div>
       </div>}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-4 w-4" />
