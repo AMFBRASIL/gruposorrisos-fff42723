@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AprovacoesRouteImport } from './routes/aprovacoes'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AutomacoesRouteImport } from './routes/automacoes'
+import { Route as CadastroFornecedoresRouteImport } from './routes/cadastro-fornecedores'
+import { Route as CadastrosRouteImport } from './routes/cadastros'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as CentroDistribuicaoRouteImport } from './routes/centro-distribuicao'
 import { Route as ClientesRouteImport } from './routes/clientes'
@@ -65,6 +67,16 @@ const AuthRoute = AuthRouteImport.update({
 const AutomacoesRoute = AutomacoesRouteImport.update({
   id: '/automacoes',
   path: '/automacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroFornecedoresRoute = CadastroFornecedoresRouteImport.update({
+  id: '/cadastro-fornecedores',
+  path: '/cadastro-fornecedores',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastrosRoute = CadastrosRouteImport.update({
+  id: '/cadastros',
+  path: '/cadastros',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CalendarioRoute = CalendarioRouteImport.update({
@@ -238,6 +250,8 @@ export interface FileRoutesByFullPath {
   '/aprovacoes': typeof AprovacoesRoute
   '/auth': typeof AuthRoute
   '/automacoes': typeof AutomacoesRoute
+  '/cadastro-fornecedores': typeof CadastroFornecedoresRoute
+  '/cadastros': typeof CadastrosRoute
   '/calendario': typeof CalendarioRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
   '/clientes': typeof ClientesRoute
@@ -277,6 +291,8 @@ export interface FileRoutesByTo {
   '/aprovacoes': typeof AprovacoesRoute
   '/auth': typeof AuthRoute
   '/automacoes': typeof AutomacoesRoute
+  '/cadastro-fornecedores': typeof CadastroFornecedoresRoute
+  '/cadastros': typeof CadastrosRoute
   '/calendario': typeof CalendarioRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
   '/clientes': typeof ClientesRoute
@@ -317,6 +333,8 @@ export interface FileRoutesById {
   '/aprovacoes': typeof AprovacoesRoute
   '/auth': typeof AuthRoute
   '/automacoes': typeof AutomacoesRoute
+  '/cadastro-fornecedores': typeof CadastroFornecedoresRoute
+  '/cadastros': typeof CadastrosRoute
   '/calendario': typeof CalendarioRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
   '/clientes': typeof ClientesRoute
@@ -358,6 +376,8 @@ export interface FileRouteTypes {
     | '/aprovacoes'
     | '/auth'
     | '/automacoes'
+    | '/cadastro-fornecedores'
+    | '/cadastros'
     | '/calendario'
     | '/centro-distribuicao'
     | '/clientes'
@@ -397,6 +417,8 @@ export interface FileRouteTypes {
     | '/aprovacoes'
     | '/auth'
     | '/automacoes'
+    | '/cadastro-fornecedores'
+    | '/cadastros'
     | '/calendario'
     | '/centro-distribuicao'
     | '/clientes'
@@ -436,6 +458,8 @@ export interface FileRouteTypes {
     | '/aprovacoes'
     | '/auth'
     | '/automacoes'
+    | '/cadastro-fornecedores'
+    | '/cadastros'
     | '/calendario'
     | '/centro-distribuicao'
     | '/clientes'
@@ -476,6 +500,8 @@ export interface RootRouteChildren {
   AprovacoesRoute: typeof AprovacoesRoute
   AuthRoute: typeof AuthRoute
   AutomacoesRoute: typeof AutomacoesRoute
+  CadastroFornecedoresRoute: typeof CadastroFornecedoresRoute
+  CadastrosRoute: typeof CadastrosRoute
   CalendarioRoute: typeof CalendarioRoute
   CentroDistribuicaoRoute: typeof CentroDistribuicaoRoute
   ClientesRoute: typeof ClientesRoute
@@ -539,6 +565,20 @@ declare module '@tanstack/react-router' {
       path: '/automacoes'
       fullPath: '/automacoes'
       preLoaderRoute: typeof AutomacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro-fornecedores': {
+      id: '/cadastro-fornecedores'
+      path: '/cadastro-fornecedores'
+      fullPath: '/cadastro-fornecedores'
+      preLoaderRoute: typeof CadastroFornecedoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastros': {
+      id: '/cadastros'
+      path: '/cadastros'
+      fullPath: '/cadastros'
+      preLoaderRoute: typeof CadastrosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/calendario': {
@@ -780,6 +820,8 @@ const rootRouteChildren: RootRouteChildren = {
   AprovacoesRoute: AprovacoesRoute,
   AuthRoute: AuthRoute,
   AutomacoesRoute: AutomacoesRoute,
+  CadastroFornecedoresRoute: CadastroFornecedoresRoute,
+  CadastrosRoute: CadastrosRoute,
   CalendarioRoute: CalendarioRoute,
   CentroDistribuicaoRoute: CentroDistribuicaoRoute,
   ClientesRoute: ClientesRoute,
