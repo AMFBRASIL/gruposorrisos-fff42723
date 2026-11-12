@@ -9,3 +9,7 @@ export function supplierSummary(id: string, requests: SupplierRequest[], orders:
 export function supplierPortalAccess(supplier: Supplier) {
   return { enabled: supplier.portalEnabled === true, email: supplier.portalEmail || supplier.email, name: supplier.portalContact || supplier.contact, profile: 'Fornecedor' };
 }
+export function validateDemoPassword(password: string, confirmation: string) {
+  if (!password && !confirmation) return null;
+  return password && password === confirmation ? null : 'As senhas não coincidem';
+}
