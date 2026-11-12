@@ -11,6 +11,7 @@ import { WizardShell, WizardFooter, OptionCard, FieldLabel, ReviewGrid, selectCl
 import { useStock, materials, categories, clinics, getMaterial, getClinic, balanceOf, brl, addMaterial, registerMovements, applyInventory, createTransfer, addLot, type MovementType } from "@/lib/stock";
 import { useSession } from "@/lib/erp";
 import { StockCodeScanner } from './stock-code-scanner';
+import { MovementReview } from './movement-review';
 import { submitInventory, useAdvancedStock } from '@/lib/stock-advanced';
 import { Package, Tag, Boxes, FileCheck2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, MapPin, Hash, Route as RouteIcon, ListChecks, CalendarClock, Stethoscope, Trash2, Wrench, Scissors, Sparkles, ShieldCheck, Briefcase, FileText, Shapes, Search } from "lucide-react";
 
@@ -112,10 +113,7 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
           {items.map(i => { const m = getMaterial(i.materialId); const a = after(i); return <div key={i.materialId} className="flex items-center gap-3 p-3"><div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{m.name}</div><div className={`text-xs ${a < 0 ? "text-destructive" : "text-muted-foreground"}`}>Saldo {balanceOf(s, i.materialId, clinicId)} → {a} {m.unit}</div></div><Input type="number" min={1} className="h-8 w-24" value={i.qty} onChange={e => setItems(items.map(x => x.materialId === i.materialId ? { ...x, qty: Number(e.target.value) } : x))} /><Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setItems(items.filter(x => x.materialId !== i.materialId))}><Trash2 className="h-4 w-4" /></Button></div>; })}
         </div>
       </>}
-      {step === 3 && <>
-        <ReviewGrid items={[["Tipo", moveMeta[type].label], [type === "transferencia" ? "Origem → Destino" : "Filial", type === "transferencia" ? `${getClinic(clinicId).name} → ${getClinic(toClinicId).name}` : getClinic(clinicId).name], ["Motivo", reason], ["Itens", String(items.length)], ["Unidades", String(items.reduce((a, i) => a + i.qty, 0))], ["Valor", brl(total)]]} />
-        <div className="rounded-xl border border-border divide-y divide-border">{items.map(i => <div key={i.materialId} className="flex justify-between p-3 text-sm"><span>{getMaterial(i.materialId).name}</span><span className="font-medium">{i.qty} {getMaterial(i.materialId).unit}</span></div>)}</div>
-      </>}
+      {step === 3 && <MovementReview stock={s} type={type} clinicId={clinicId} toClinicId={toClinicId} items={items} reason={reason} document={doc} />}
     </WizardShell>
   );
 }
