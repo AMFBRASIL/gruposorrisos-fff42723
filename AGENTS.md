@@ -5,6 +5,7 @@
 - CSV parsing uses PapaParse with explicit column mapping and pure reconciliation in order-csv.ts; ambiguous names require human confirmation to prevent catalog substitutions.
 - Supplier requests and versioned prices live in supplier-orders.ts, separate from CD orders; approval creates one purchasing record and never changes stock before receiving.
 - Supplier portal access uses authenticated Cloud membership-scoped reads and an atomic SQL response function; demo supplier selection never authorizes access.
+- Client and supplier portals share the supplier order workspace and price wizard so authenticated request isolation and CSV reconciliation stay identical on both URLs; legacy client documents remain separate from Cloud orders.
 - Procurement explicitly publishes demo requests as immutable Cloud snapshots; Cloud responses and status are read independently so demo refreshes cannot discard supplier submissions.
 - Supplier access invitations require a server-validated procurement role and create only a company membership; no user-facing profile fields or supplier privileges come from editable metadata.
 - Current Start bundler options are mirrored into Vite 7 rollupOptions by a compatibility plugin because generated client entries otherwise fall back to index.html.

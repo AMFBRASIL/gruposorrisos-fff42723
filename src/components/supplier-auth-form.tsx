@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 
-export function SupplierAuthForm({ destination }: { destination: '/portal-fornecedor' | '/fornecedores' }) {
+export function SupplierAuthForm({ destination }: { destination: '/portal-fornecedor' | '/portal-cliente' | '/fornecedores' }) {
   const navigate = useNavigate(); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [busy, setBusy] = useState(false);
   async function login(e: React.FormEvent) { e.preventDefault(); setBusy(true); const { error } = await supabase.auth.signInWithPassword({ email, password }); setBusy(false); if (error) return toast.error('Confira seu e-mail e senha'); await navigate({ to: destination, replace: true }); }
   async function reset() { if (!email) return toast.error('Informe seu e-mail'); setBusy(true); const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` }); setBusy(false); if (error) toast.error('Não foi possível enviar o e-mail'); else toast.success('Confira seu e-mail para definir uma nova senha'); }

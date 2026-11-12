@@ -1,4 +1,5 @@
 # Roadmap — Grupo Sorrisos ERP Multifiliais (dados de demonstração)
+- [x] Portal do Cliente: pedidos de Compras como primeira área; CSV preenche preços, observações e histórico persistem, situação muda e isolamento verificado; projetos/documentos/faturas preservados e celular verificado
 - [x] Modernizar Filiais com indicadores, distribuição regional, filtros e cadastro em etapas; cadastro verificado em desktop e celular
 - [x] Padronizar apresentação de todos os diálogos, confirmações e modernizar vínculos de usuários; moldura global compartilhada
 - [x] Novo processo de pedidos — manual/CSV, conciliação, revisão e fornecedor definido; fluxo demonstrativo verificado no navegador
