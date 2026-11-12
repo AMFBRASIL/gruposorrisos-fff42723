@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { applyDelta, logMovement } from "./stock";
 import { can, currentUser, getErp } from "./erp";
 
-export type Supplier = { id: string; name: string; cnpj: string; contact: string; email: string; leadDays: number; rating: number; categories: string[]; phone?: string; address?: string; city?: string; state?: string; notes?: string };
+export type Supplier = { id: string; name: string; cnpj: string; contact: string; email: string; leadDays: number; rating: number; categories: string[]; phone?: string; address?: string; city?: string; state?: string; notes?: string; portalEnabled?: boolean; portalEmail?: string; portalContact?: string };
 export type PoStatus = "requisicao" | "cotacao" | "aprovado" | "enviado" | "recebido_parcial" | "recebido" | "cancelado";
 export type Quote = { supplierId: string; unitPrice: number; days: number };
 export type PoItem = { materialId: string; qty: number; received: number; quotes: Quote[]; chosen?: string };

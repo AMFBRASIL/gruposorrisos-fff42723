@@ -1,4 +1,5 @@
 # Roadmap — Grupo Sorrisos ERP Multifiliais (dados de demonstração)
+- [x] Fornecedores com etapa de acesso demonstrativo, usuário/login, situação e filtro do portal, contagens e consulta de pedidos vinculados; edição e leitura verificadas
 - [x] Cadastro de fornecedores em Gestão com formulário por etapas e central dos cadastros existentes; criação e edição verificadas, sem backend
 - [x] Portais e acesso de Compras retornados ao modo visual demonstrativo: resposta muda situação em memória, atualização apaga os dados e nenhuma chamada ao Cloud ocorre; testes de CSV passaram
 - [x] Portal do Cliente: pedidos de Compras como primeira área; CSV preenche preços, observações e histórico persistem, situação muda e isolamento verificado; projetos/documentos/faturas preservados e celular verificado

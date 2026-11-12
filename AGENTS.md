@@ -1,5 +1,6 @@
 # Project rules
 - Supplier registration and purchasing share the purchasing.ts in-memory supplier list; the registration route is distinct from supplier orders to keep master data and transactions separate.
+- Supplier summary derives scoped request and confirmed purchase counts without double-counting converted requests; portal access fields are presentation-only demo settings, never real credentials.
 - DialogContent owns the shared modal frame and overlay; custom wizard layouts retain their contents while global frame constraints normalize scrolling and dimensions, and simple dialogs receive a shared image rail without artificial steps.
 - Branch and ERP-user forms use WizardShell with staged fields and final review; presentation changes preserve existing store permissions and save rules.
 - MovementReview derives pre/post quantities and stock valuations from the live stock snapshot without mutating inventory; quantities are grouped by unit to avoid adding incompatible volumes.
