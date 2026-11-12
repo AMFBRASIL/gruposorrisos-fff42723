@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useSession, useErp } from "@/lib/erp";
 import { BranchSwitcher, NotificationsBell } from "@/components/erp-header";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown, Warehouse, Package, ArrowLeftRight, Truck, CalendarClock, ClipboardCheck, ShoppingCart, Boxes, ShoppingBag, Network, KeyRound, TrendingUp } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown, Warehouse, Package, ArrowLeftRight, Truck, CalendarClock, ClipboardCheck, ShoppingCart, Boxes, ShoppingBag, Network, KeyRound, TrendingUp, BookOpen } from "lucide-react";
 import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,7 @@ const navGroups = [
     label: "Sistema",
     items: [
       { to: "/configuracoes", label: "Configurações", icon: Settings },
+      { to: "/manual-sistema", label: "Manual Sistema", icon: BookOpen },
     ],
   },
 ] as const;

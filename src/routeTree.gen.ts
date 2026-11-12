@@ -35,6 +35,7 @@ import { Route as InventariosRouteImport } from './routes/inventarios'
 import { Route as KanbanRouteImport } from './routes/kanban'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LotesValidadesRouteImport } from './routes/lotes-validades'
+import { Route as ManualSistemaRouteImport } from './routes/manual-sistema'
 import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as MovimentacoesRouteImport } from './routes/movimentacoes'
@@ -182,6 +183,11 @@ const LotesValidadesRoute = LotesValidadesRouteImport.update({
   path: '/lotes-validades',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ManualSistemaRoute = ManualSistemaRouteImport.update({
+  id: '/manual-sistema',
+  path: '/manual-sistema',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MateriaisRoute = MateriaisRouteImport.update({
   id: '/materiais',
   path: '/materiais',
@@ -290,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
   '/lotes-validades': typeof LotesValidadesRoute
+  '/manual-sistema': typeof ManualSistemaRoute
   '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/movimentacoes': typeof MovimentacoesRoute
@@ -334,6 +341,7 @@ export interface FileRoutesByTo {
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
   '/lotes-validades': typeof LotesValidadesRoute
+  '/manual-sistema': typeof ManualSistemaRoute
   '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/movimentacoes': typeof MovimentacoesRoute
@@ -379,6 +387,7 @@ export interface FileRoutesById {
   '/kanban': typeof KanbanRoute
   '/login': typeof LoginRoute
   '/lotes-validades': typeof LotesValidadesRoute
+  '/manual-sistema': typeof ManualSistemaRoute
   '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/movimentacoes': typeof MovimentacoesRoute
@@ -425,6 +434,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/login'
     | '/lotes-validades'
+    | '/manual-sistema'
     | '/materiais'
     | '/minhas-tarefas'
     | '/movimentacoes'
@@ -469,6 +479,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/login'
     | '/lotes-validades'
+    | '/manual-sistema'
     | '/materiais'
     | '/minhas-tarefas'
     | '/movimentacoes'
@@ -513,6 +524,7 @@ export interface FileRouteTypes {
     | '/kanban'
     | '/login'
     | '/lotes-validades'
+    | '/manual-sistema'
     | '/materiais'
     | '/minhas-tarefas'
     | '/movimentacoes'
@@ -558,6 +570,7 @@ export interface RootRouteChildren {
   KanbanRoute: typeof KanbanRoute
   LoginRoute: typeof LoginRoute
   LotesValidadesRoute: typeof LotesValidadesRoute
+  ManualSistemaRoute: typeof ManualSistemaRoute
   MateriaisRoute: typeof MateriaisRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
   MovimentacoesRoute: typeof MovimentacoesRoute
@@ -760,6 +773,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LotesValidadesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/manual-sistema': {
+      id: '/manual-sistema'
+      path: '/manual-sistema'
+      fullPath: '/manual-sistema'
+      preLoaderRoute: typeof ManualSistemaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/materiais': {
       id: '/materiais'
       path: '/materiais'
@@ -902,6 +922,7 @@ const rootRouteChildren: RootRouteChildren = {
   KanbanRoute: KanbanRoute,
   LoginRoute: LoginRoute,
   LotesValidadesRoute: LotesValidadesRoute,
+  ManualSistemaRoute: ManualSistemaRoute,
   MateriaisRoute: MateriaisRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
   MovimentacoesRoute: MovimentacoesRoute,
