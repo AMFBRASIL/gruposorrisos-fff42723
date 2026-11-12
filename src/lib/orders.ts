@@ -1,10 +1,11 @@
 import { useSyncExternalStore } from "react";
-import { applyDelta, balanceOf, getState as getStock, logMovement } from "./stock";
+import { applyDelta, balanceOf, getState as getStock, logMovement, materials, consumeLots, addLot } from "./stock";
+import { fefo } from './stock-intelligence';
 import { can, currentUser, getErp, type ErpRole, type ErpUser } from "./erp";
 
 export type OrderStatus = "rascunho" | "enviado" | "correcao" | "rejeitado" | "aprovado" | "separacao" | "transporte" | "recebido_parcial" | "concluido" | "cancelado";
 export type Priority = "baixa" | "normal" | "alta" | "urgente";
-export type OrderItem = { materialId: string; requested: number; approved: number; picked: number; shipped: number; received: number; lot?: string; note?: string };
+export type OrderItem = { materialId: string; requested: number; approved: number; picked: number; shipped: number; received: number; lot?: string; note?: string; allocations?: ReturnType<typeof fefo>['allocations'] };
 export type OrderEvent = { at: string; userId: string; action: string; note?: string };
 export type Order = {
   id: string; number: string; branchId: string; sourceId: string; requesterId: string; priority: Priority;
@@ -96,6 +97,7 @@ let orders = seed;
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l); };
 export const useOrders = () => useSyncExternalStore(subscribe, () => orders, () => orders);
+export const getOrders = () => orders;
 const ctx = (): Ctx => ({ user: currentUser(), roles: getErp().roles });
 const put = (o: Order) => { orders = orders.some(x => x.id === o.id) ? orders.map(x => x.id === o.id ? o : x) : [o, ...orders]; listeners.forEach(l => l()); };
 const available = (sourceId: string) => (mid: string) => {
@@ -122,9 +124,18 @@ export const actions = {
   submit: (id: string) => run(id, submitOrder),
   approve: (id: string, q?: Record<string, number>) => run(id, (o, c) => approveOrder(o, c, q), (_, a) => { for (const i of a.items) applyDelta(i.materialId, a.sourceId, 0, i.approved); }),
   reject: (id: string, reason: string, correction = false) => run(id, (o, c) => rejectOrder(o, c, reason, correction)),
-  pick: (id: string, picked: Record<string, number>) => { const o = orders.find(x => x.id === id); return run(id, (x, c) => pickOrder(x, c, picked, available(o?.sourceId ?? "cd"))); },
-  ship: (id: string) => run(id, shipOrder, (_, a) => { for (const i of a.items) { applyDelta(i.materialId, a.sourceId, -i.shipped, -i.approved); if (i.shipped) logMovement({ type: "saida", reason: `Expedição ${a.number}`, materialId: i.materialId, clinicId: a.sourceId, qty: i.shipped, user: currentUser().name }); } }),
-  receive: (id: string, r: Record<string, number>, note?: string) => run(id, (o, c) => receiveOrder(o, c, r, note), (_, a) => { for (const [mid, q] of Object.entries(r)) if (q > 0) { applyDelta(mid, a.branchId, q); logMovement({ type: "entrada", reason: `Recebimento ${a.number}`, materialId: mid, clinicId: a.branchId, qty: q, user: currentUser().name }); } }),
+  pick: (id: string, picked: Record<string, number>) => run(id, (o, c) => {
+    const r = pickOrder(o, c, picked, available(o.sourceId)); if (!r.ok) return r;
+    const items = r.order.items.map(i => ({ ...i, allocations: materials.find(m => m.id === i.materialId)?.lotControl ? fefo(getStock().lots, i.materialId, o.sourceId, i.picked).allocations : [] }));
+    if (items.some(i => materials.find(m => m.id === i.materialId)?.lotControl && (i.allocations ?? []).reduce((a, l) => a + l.qty, 0) < i.picked)) return fail('Lotes válidos insuficientes. Reduza a separação ou cadastre os lotes');
+    return { ok: true, order: { ...r.order, items } };
+  }),
+  ship: (id: string) => run(id, (o, c) => {
+    if (o.items.some(i => i.picked > balanceOf(getStock(), i.materialId, o.sourceId))) return fail('Saldo mudou. Revise a separação');
+    if (o.items.some(i => (i.allocations ?? []).some(a => { const l = getStock().lots.find(l => l.id === a.lotId); return !l || l.qty < a.qty || l.expires < '2026-11-12'; }))) return fail('Lote indisponível ou vencido. Refazer separação');
+    return shipOrder(o, c);
+  }, (_, a) => { consumeLots(a.items.flatMap(i => i.allocations ?? [])); for (const i of a.items) { applyDelta(i.materialId, a.sourceId, -i.shipped, -i.approved); if (i.shipped) logMovement({ type: "saida", reason: `Expedição ${a.number} · ${(i.allocations ?? []).map(l => `${l.lot}: ${l.qty}`).join(', ')}`, materialId: i.materialId, clinicId: a.sourceId, qty: i.shipped, user: currentUser().name }); } }),
+  receive: (id: string, r: Record<string, number>, note?: string) => run(id, (o, c) => receiveOrder(o, c, r, note), (before, a) => { for (const [mid, q] of Object.entries(r)) if (q > 0) { applyDelta(mid, a.branchId, q); let skip = before.items.find(i => i.materialId === mid)?.received ?? 0; let remaining = q; for (const l of a.items.find(i => i.materialId === mid)?.allocations ?? []) { const skipped = Math.min(skip, l.qty); skip -= skipped; const portion = Math.min(remaining, l.qty - skipped); if (portion > 0) addLot({ materialId: mid, clinicId: a.branchId, lot: l.lot, expires: l.expires, qty: portion }); remaining -= portion; } logMovement({ type: "entrada", reason: `Recebimento ${a.number}`, materialId: mid, clinicId: a.branchId, qty: q, user: currentUser().name }); } }),
   close: (id: string, note: string) => run(id, (o, c) => closeWithDivergence(o, c, note)),
   cancel: (id: string, reason: string) => run(id, (o, c) => cancelOrder(o, c, reason), (b) => { if (b.status === "aprovado") for (const i of b.items) applyDelta(i.materialId, b.sourceId, 0, -i.approved); }),
   duplicate: (id: string) => { const o = orders.find(x => x.id === id)!; return saveDraft({ branchId: o.branchId, priority: o.priority, desiredDate: o.desiredDate, notes: o.notes, items: o.items.map(i => ({ materialId: i.materialId, requested: i.requested })) }); },

@@ -7,6 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { WizardShell, WizardFooter, OptionCard, FieldLabel, ReviewGrid, selectCls } from "@/components/erp-wizard";
 import { useStock, materials, categories, clinics, getMaterial, getClinic, balanceOf, brl, addMaterial, registerMovements, applyInventory, createTransfer, addLot, type MovementType } from "@/lib/stock";
 import { useSession } from "@/lib/erp";
+import { StockCodeScanner } from './stock-code-scanner';
+import { submitInventory, useAdvancedStock } from '@/lib/stock-advanced';
 import { Package, Tag, Boxes, FileCheck2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, MapPin, Hash, Route as RouteIcon, ListChecks, CalendarClock, Stethoscope, Trash2, Wrench, Scissors, Sparkles, ShieldCheck, Briefcase, FileText, Shapes, Search } from "lucide-react";
 
 const catIcons: Record<string, typeof Package> = { "Materiais odontológicos": Stethoscope, Descartáveis: Trash2, Equipamentos: Wrench, Instrumentais: Scissors, Limpeza: Sparkles, Escritório: Briefcase, EPIs: ShieldCheck, Administrativos: FileText, Outros: Shapes };
@@ -93,6 +95,7 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
         <div><FieldLabel>Motivo</FieldLabel><div className="grid grid-cols-2 md:grid-cols-4 gap-2">{moveMeta[type].reasons.map(r => <OptionCard compact key={r} selected={reason === r} onClick={() => setReason(r)} title={r} />)}</div></div>
       </>}
       {step === 2 && <>
+        <StockCodeScanner onMaterial={id => { setPick(id); setItems(prev => prev.some(i => i.materialId === id) ? prev.map(i => i.materialId === id ? { ...i, qty: i.qty + 1 } : i) : [...prev, { materialId: id, qty: 1 }]); }} />
         <MaterialPicker value={pick} onChange={id => { setPick(id); if (!items.some(i => i.materialId === id)) setItems([...items, { materialId: id, qty: 1 }]); }} clinicId={clinicId} />
         <div className="rounded-xl border border-border divide-y divide-border">
           <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/40 flex justify-between"><span>{items.length} material(is) selecionado(s) — clique nos cards para adicionar</span><span>{brl(total)}</span></div>
@@ -109,6 +112,7 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
 }
 
 export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const policy = useAdvancedStock();
   const s = useStock(); const ses = useSession(); const vis = useVisibleClinics();
   const allowedBranches = vis.filter(c => ses.can("inventario.realizar", c.id));
   const [step, setStep] = useState(0);
@@ -125,12 +129,12 @@ export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: 
   const vOut = -divs.filter(r => r.diff < 0).reduce((a, r) => a + r.diff * r.m.cost, 0);
   const accuracy = counted ? Math.round(((counted - divs.length) / counted) * 100) : 100;
   const steps = [{ title: "Filial", desc: "Onde será a contagem", icon: MapPin }, { title: "Escopo", desc: "Completo ou por categoria", icon: Boxes }, { title: "Contagem", desc: "Quantidade física por item", icon: ListChecks }, { title: "Conciliação", desc: "Divergências e ajustes", icon: FileCheck2 }];
-  const finish = () => { const r = applyInventory({ branchId, scope, blind, user: ses.user.name, counts: Object.fromEntries(rows.filter(x => x.cnt !== null).map(x => [x.m.id, x.cnt as number])) }); toast.success(`${r.number} concluído · ${r.divergences} ajuste(s)`); onClose(); };
+  const finish = () => { const r = submitInventory({ branchId, scope, blind, user: ses.user.name, counts: Object.fromEntries(rows.filter(x => x.cnt !== null).map(x => [x.m.id, x.cnt as number])) }); if (r.error) return toast.error(r.error); toast.success(r.pending ? 'Contagem enviada para aprovação · saldo não alterado' : `${r.record?.number} concluído`); onClose(); };
   if (allowedBranches.length === 0) return <WizardShell open={open} onClose={onClose} badge="Novo inventário" headline="Sem permissão" steps={[{ title: "Acesso", desc: "Seu perfil não pode inventariar nenhuma filial", icon: MapPin }]} step={0} setStep={() => {}} footer={<Button variant="outline" onClick={onClose}>Fechar</Button>}><p className="text-sm text-muted-foreground">Peça a um administrador a permissão de inventário.</p></WizardShell>;
   const shown = rows.filter(r => r.m.name.toLowerCase().includes(q.toLowerCase()) && true);
   return (
     <WizardShell open={open} onClose={onClose} badge="Novo inventário" headline={<>Estoque físico<br /><span className="opacity-60">igual ao sistema.</span></>} sub="Contagem completa ou cíclica, com conciliação automática das diferenças." steps={steps} step={step} setStep={setStep}
-      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel={`Concluir e ajustar (${divs.length})`} canNext={step !== 2 || counted > 0} extra={step === 2 ? <Button variant="outline" onClick={() => setCounts(Object.fromEntries(rows.map(r => [r.m.id, counts[r.m.id] ?? String(r.sys)])))}>Preencher não contados com saldo</Button> : undefined} />}>
+      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel={vIn + vOut > policy.limit ? 'Enviar para aprovação' : `Concluir e ajustar (${divs.length})`} canNext={step < 2 || (counted === items.length && rows.every(r => r.cnt !== null && Number.isFinite(r.cnt) && r.cnt >= 0))} extra={step === 2 && !blind ? <Button variant="outline" onClick={() => setCounts(Object.fromEntries(rows.map(r => [r.m.id, counts[r.m.id] || String(r.sys)])))}>Preencher não contados com saldo</Button> : undefined} />}>
       {step === 0 && <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{allowedBranches.map(c => <OptionCard key={c.id} selected={branchId === c.id} onClick={() => { setBranch(c.id); setCounts({}); }} icon={MapPin} title={c.name} desc={`${c.city} · ${materials.reduce((a, m) => a + balanceOf(s, m.id, c.id), 0)} un em estoque`} />)}</div>}
       {step === 1 && <>
         <div><FieldLabel>Tipo de inventário</FieldLabel><div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -140,6 +144,7 @@ export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: 
         <div className="rounded-xl border border-border p-4 flex items-center justify-between"><div><div className="text-sm font-medium">Contagem cega</div><div className="text-xs text-muted-foreground">Esconde o saldo do sistema durante a contagem para evitar viés</div></div><Switch checked={blind} onCheckedChange={setBlind} /></div>
       </>}
       {step === 2 && <>
+        <StockCodeScanner onMaterial={id => { const m = getMaterial(id); if (!items.some(i => i.id === id)) return toast.error('Material fora do escopo'); setQ(m.name); setCounts(prev => ({ ...prev, [id]: String(Number(prev[id] || 0) + 1) })); }} />
         <div className="flex flex-col md:flex-row gap-3 md:items-center">
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Buscar item" value={q} onChange={e => setQ(e.target.value)} /></div>
           <div className="text-sm text-muted-foreground whitespace-nowrap">{counted}/{items.length} contados</div>
@@ -152,6 +157,7 @@ export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: 
         </div>)}</div>
       </>}
       {step === 3 && <>
+        {vIn + vOut > policy.limit && <div className="border border-warning/30 bg-warning/10 p-3 rounded-lg text-sm">Divergências de {brl(vIn + vOut)}: aprovação de outro gestor obrigatória antes de alterar o saldo.</div>}
         <ReviewGrid items={[["Filial", getClinic(branchId).name], ["Escopo", scope], ["Itens contados", `${counted}/${items.length}`], ["Acurácia", `${accuracy}%`], ["Sobras", brl(vIn)], ["Faltas", brl(vOut)]]} />
         <FieldLabel>Divergências ({divs.length})</FieldLabel>
         <div className="rounded-xl border border-border divide-y divide-border">

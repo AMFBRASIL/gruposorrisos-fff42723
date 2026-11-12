@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useSession, useErp } from "@/lib/erp";
 import { BranchSwitcher, NotificationsBell } from "@/components/erp-header";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown, Warehouse, Package, ArrowLeftRight, Truck, CalendarClock, ClipboardCheck, ShoppingCart, Boxes, ShoppingBag, Network, KeyRound } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown, Warehouse, Package, ArrowLeftRight, Truck, CalendarClock, ClipboardCheck, ShoppingCart, Boxes, ShoppingBag, Network, KeyRound, TrendingUp } from "lucide-react";
 import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ const navGroups = [
     label: "Estoque",
     items: [
       { to: "/estoque", label: "Visão Geral", icon: Warehouse },
+      { to: "/estoque-avancado", label: "Inteligência de Estoque", icon: TrendingUp },
       { to: "/materiais", label: "Materiais e Produtos", icon: Package },
       { to: "/movimentacoes", label: "Movimentações", icon: ArrowLeftRight },
       { to: "/transferencias", label: "Transferências", icon: Truck },
@@ -190,7 +191,7 @@ function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; 
                 )}
                 <div className="space-y-0.5">
                   {group.items.map(item => {
-                    const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
+                    const active = pathname === item.to || (item.to !== '/' && pathname.startsWith(`${item.to}/`));
                     const link = <NavLink key={item.to} item={item} active={active} collapsed={collapsed} onNavigate={onNavigate} />;
                     return collapsed ? (
                       <Tooltip key={item.to}>

@@ -26,6 +26,7 @@ const sub = (l: () => void) => { ls.add(l); return () => ls.delete(l); };
 const snap = { get: () => ({ pos, sup }) };
 let cache = snap.get();
 export const usePurchasing = () => useSyncExternalStore(sub, () => cache, () => cache);
+export const getPurchasing = () => cache;
 const set = (p: PurchaseOrder[], s = sup) => { pos = p; sup = s; cache = { pos, sup }; emit(); };
 const guard = () => can(currentUser(), getErp().roles, "compras.gerenciar") ? null : "Sem permissão para gerenciar compras";
 

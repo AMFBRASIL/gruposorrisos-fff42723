@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { fefo } from './stock-intelligence';
 
 export type Clinic = { id: string; name: string; city: string };
 export type Material = {
@@ -109,6 +110,9 @@ export function logMovement(mv: Omit<Movement, "id" | "number" | "date">) {
   emit();
 }
 export function getState() { return state; }
+export function consumeLots(allocations: { lotId: string; qty: number }[]) {
+  state = { ...state, lots: state.lots.map(l => ({ ...l, qty: l.qty - allocations.filter(a => a.lotId === l.id).reduce((sum, a) => sum + a.qty, 0) })) }; emit();
+}
 export function addClinic(c: Clinic) {
   if (clinics.some(x => x.id === c.id)) return;
   clinics.push(c);
@@ -128,7 +132,7 @@ export function registerMovement(input: Omit<Movement, "id" | "number" | "date">
     if (input.type === "transferencia" && b.clinicId === input.toClinicId) return { ...b, qty: b.qty + input.qty };
     return b;
   });
-  const mv: Movement = { ...input, id: `mv${Date.now()}`, number: `MOV-${1200 + state.movements.length}`, date: new Date().toISOString().slice(0, 10) };
+  const mv: Movement = { ...input, id: crypto.randomUUID(), number: `MOV-${1200 + state.movements.length}`, date: new Date().toISOString().slice(0, 10) };
   state = { ...state, balances, movements: [mv, ...state.movements] };
   emit();
   return null;
@@ -177,7 +181,7 @@ export function createTransfer(input: { fromId: string; toId: string; items: { m
 export function addLot(l: Omit<Lot, "id">): string | null {
   if (!l.lot.trim()) return "Informe o número do lote";
   if (l.qty <= 0) return "Quantidade deve ser maior que zero";
-  state = { ...state, lots: [{ ...l, id: `l${Date.now()}` }, ...state.lots] };
+  state = { ...state, lots: [{ ...l, id: crypto.randomUUID() }, ...state.lots] };
   emit();
   return null;
 }
@@ -187,12 +191,15 @@ export function registerMovements(lines: Omit<Movement, "id" | "number" | "date"
   if (lines.length === 0) return "Adicione ao menos um material";
   const need: Record<string, number> = {};
   for (const l of lines) {
-    if (l.qty <= 0) return `Quantidade inválida para ${getMaterial(l.materialId).name}`;
+    if (!Number.isFinite(l.qty) || l.qty <= 0) return `Quantidade inválida para ${getMaterial(l.materialId).name}`;
     if (l.type === "transferencia" && (!l.toClinicId || l.toClinicId === l.clinicId)) return "Escolha um destino diferente da origem";
-    if (l.type !== "entrada") need[l.materialId] = (need[l.materialId] ?? 0) + l.qty;
+    if (l.type !== "entrada") { const key = `${l.clinicId}:${l.materialId}`; need[key] = (need[key] ?? 0) + l.qty; }
   }
-  for (const [mid, q] of Object.entries(need)) if (balanceOf(state, mid, lines[0].clinicId) < q) return `Saldo insuficiente de ${getMaterial(mid).name} na origem`;
+  for (const [key, q] of Object.entries(need)) { const [cid, mid] = key.split(':'); if (balanceOf(state, mid, cid) < q) return `Saldo insuficiente de ${getMaterial(mid).name} na origem`; }
+  const lotNeeds = lines.filter(l => l.type === 'saida' && l.reason.startsWith('Procedimento')).map(l => ({ ...l, plan: fefo(state.lots, l.materialId, l.clinicId, l.qty) }));
+  if (lotNeeds.some(l => getMaterial(l.materialId).lotControl && l.plan.shortage > 0)) return 'Lotes válidos insuficientes para o procedimento';
   for (const l of lines) { const e = registerMovement(l); if (e) return e; }
+  consumeLots(lotNeeds.flatMap(l => l.plan.allocations));
   return null;
 }
 

@@ -11,6 +11,8 @@ import { useErp, useSession, branchName, userName } from "@/lib/erp";
 import { useStock, materials, categories, getMaterial, balanceOf } from "@/lib/stock";
 import { actions, saveDraft, statusLabels, type Order, type Priority } from "@/lib/orders";
 import { WizardShell, WizardFooter, OptionCard } from "@/components/erp-wizard";
+import { StockCodeScanner } from './stock-code-scanner';
+import { fefo } from '@/lib/stock-intelligence';
 import { Leaf, Gauge, Flame, Siren } from "lucide-react";
 import { Check, Search, Trash2, ClipboardList, PackageSearch, FileCheck2 } from "lucide-react";
 
@@ -125,11 +127,12 @@ export function OrderSheet({ order, onClose, onEdit }: { order: Order | null; on
             <thead className="text-xs text-muted-foreground"><tr>{["Material", "Solic.", "Aprov.", "Separ.", "Exped.", "Receb.", qcol ? "Agora" : ""].map(h => <th key={h} className="text-left py-1">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">
               {o.items.map(i => <tr key={i.materialId}>
-                <td className="py-2">{getMaterial(i.materialId).name}</td><td>{i.requested}</td><td>{i.approved}</td><td>{i.picked}</td><td>{i.shipped}</td><td>{i.received}</td>
+                <td className="py-2">{getMaterial(i.materialId).name}{qcol === 'picked' && <div className="text-[11px] text-muted-foreground">FEFO: {fefo(st.lots, i.materialId, o.sourceId, val(i)).allocations.map(l => `${l.lot} · ${l.qty} · ${l.expires}`).join(' / ') || 'Sem lote válido'}</div>}{i.allocations?.map(l => <div className="text-[11px] text-muted-foreground" key={l.lotId}>{l.lot} · {l.qty}</div>)}</td><td>{i.requested}</td><td>{i.approved}</td><td>{i.picked}</td><td>{i.shipped}</td><td>{i.received}</td>
                 {qcol && <td title={qcol === "picked" ? `Disponível no depósito: ${balanceOf(st, i.materialId, o.sourceId)}` : undefined}><Input type="number" min={0} className="h-8 w-20" value={val(i)} onChange={e => setQty({ ...qty, [i.materialId]: Number(e.target.value) })} /></td>}
               </tr>)}
             </tbody>
           </table>
+          {(qcol === 'received' || qcol === 'picked') && <StockCodeScanner onMaterial={id => { const i = o.items.find(i => i.materialId === id); if (!i) return toast.error('Material não pertence ao pedido'); setQty(prev => ({ ...prev, [id]: Math.min((prev[id] ?? 0) + 1, qcol === 'received' ? i.shipped - i.received : i.approved) })); }} />}
           <Textarea placeholder="Observação / motivo / divergência" value={note} onChange={e => setNote(e.target.value)} rows={2} />
           <div className="flex flex-wrap gap-2">
             {(o.status === "rascunho" || o.status === "correcao") && o.requesterId === ses.user.id && <><Button variant="outline" onClick={() => onEdit(o)}>Editar</Button><Button onClick={() => done(actions.submit(o.id), "Pedido enviado")}>Enviar</Button></>}

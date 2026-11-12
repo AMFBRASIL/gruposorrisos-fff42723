@@ -13,7 +13,7 @@ import { FileText, Plus, Search, Clock, CheckCircle2, AlertTriangle, History, Pe
 import { useMemo, useState } from "react";
 import { CreateDocumentWizard } from "@/components/create-document-wizard";
 
-export const Route = createFileRoute("/documentos")({ component: DocumentosPage });
+export const Route = createFileRoute("/documentos")({ head: () => ({ meta: [{ title: 'Documentos | Grupo Sorrisos' }, { name: 'description', content: 'Contratos, propostas e documentos do Grupo Sorrisos.' }, { property: 'og:title', content: 'Documentos | Grupo Sorrisos' }, { property: 'og:description', content: 'Gestão documental e assinaturas.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: DocumentosPage });
 
 const TYPE_FILTERS: Array<{ id: "all" | DocumentType; label: string }> = [
   { id: "all", label: "Todos" },

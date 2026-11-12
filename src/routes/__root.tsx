@@ -88,8 +88,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Grupo Sorrisos Tasks" },
       { name: "twitter:description", content: "Plataforma corporativa de gestão de tarefas do Grupo Sorrisos." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b8724713-8ce1-4a0e-adc6-a3258a4baa4f/id-preview-771aa9f8--81cf76c7-0dbc-4286-872b-12be42022f4e.lovable.app-1781122518789.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b8724713-8ce1-4a0e-adc6-a3258a4baa4f/id-preview-771aa9f8--81cf76c7-0dbc-4286-872b-12be42022f4e.lovable.app-1781122518789.png" },
     ],
     links: [
       {

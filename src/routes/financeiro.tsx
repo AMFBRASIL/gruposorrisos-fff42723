@@ -9,7 +9,7 @@ import { CreateInvoiceWizard } from "@/components/create-invoice-wizard";
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, FileText, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
-export const Route = createFileRoute("/financeiro")({ component: FinanceiroPage });
+export const Route = createFileRoute("/financeiro")({ head: () => ({ meta: [{ title: 'Financeiro | Grupo Sorrisos' }, { name: 'description', content: 'Faturas, custos e orçamentos do Grupo Sorrisos.' }, { property: 'og:title', content: 'Financeiro | Grupo Sorrisos' }, { property: 'og:description', content: 'Acompanhamento financeiro e orçamentário.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: FinanceiroPage });
 
 const today = new Date("2026-06-10");
 

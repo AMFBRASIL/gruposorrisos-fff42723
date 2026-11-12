@@ -11,7 +11,7 @@ import { CreateClientWizard } from "@/components/create-client-wizard";
 import { Search, Phone, Mail, MapPin, TrendingUp, FileText, Briefcase, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
-export const Route = createFileRoute("/clientes")({ component: ClientesPage });
+export const Route = createFileRoute("/clientes")({ head: () => ({ meta: [{ title: 'Clientes | Grupo Sorrisos' }, { name: 'description', content: 'Cadastro e relacionamento com clientes do Grupo Sorrisos.' }, { property: 'og:title', content: 'Clientes | Grupo Sorrisos' }, { property: 'og:description', content: 'Cadastro e relacionamento com clientes.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: ClientesPage });
 
 const statusMeta: Record<string, { label: string; cls: string }> = {
   ativo:    { label: "Ativo",    cls: "bg-success/15 text-success border-success/30" },

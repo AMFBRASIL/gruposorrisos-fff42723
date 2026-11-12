@@ -11,6 +11,8 @@ import { useSession, branchName } from "@/lib/erp";
 import { materials, getMaterial, brl } from "@/lib/stock";
 import { usePurchasing, poLabels, addQuote, approvePo, sendPo, receivePo, addSupplier, createRequisition } from "@/lib/purchasing";
 import { Star, Plus } from "lucide-react";
+import { PurchaseReceivingWizard } from '@/components/purchase-receiving-wizard';
+import type { PurchaseOrder } from '@/lib/purchasing';
 
 export const Route = createFileRoute("/compras")({
   head: () => ({ meta: [
@@ -27,6 +29,7 @@ const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
 function ComprasPage() {
   const { pos, sup } = usePurchasing(); const ses = useSession();
   const canBuy = ses.can("compras.gerenciar");
+  const [receiving, setReceiving] = useState<PurchaseOrder | null>(null);
   const [quote, setQuote] = useState({ supplierId: "s1", price: "", days: "5" });
   const [reqMat, setReqMat] = useState(materials[0].id); const [reqQty, setReqQty] = useState(50);
   const [ns, setNs] = useState({ name: "", cnpj: "", contact: "", email: "" });
@@ -63,7 +66,7 @@ function ComprasPage() {
                 {canBuy && <div className="flex gap-2">
                   {(p.status === "requisicao" || p.status === "cotacao") && <Button size="sm" onClick={() => t(approvePo(p.id), "Aprovado com a melhor cotação")}>Aprovar melhor preço</Button>}
                   {p.status === "aprovado" && <Button size="sm" onClick={() => t(sendPo(p.id), "Ordem enviada ao fornecedor")}>Enviar ao fornecedor</Button>}
-                  {(p.status === "enviado" || p.status === "recebido_parcial") && <Button size="sm" onClick={() => t(receivePo(p.id, Object.fromEntries(p.items.map(i => [i.materialId, i.qty - i.received]))), "Recebido e lançado no estoque")}>Receber tudo</Button>}
+                  {(p.status === "enviado" || p.status === "recebido_parcial") && <Button size="sm" onClick={() => setReceiving(p)}>Conferir recebimento</Button>}
                 </div>}
               </Card>
             ))}
@@ -84,6 +87,7 @@ function ComprasPage() {
           </TabsContent>
         </Tabs>
       </div>
+      {receiving && <PurchaseReceivingWizard order={receiving} onClose={() => setReceiving(null)} />}
     </AppShell>
   );
 }

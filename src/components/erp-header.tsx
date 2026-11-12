@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useErp, useSession, setBranchFilter, setCurrentUser, restoreSession } from "@/lib/erp";
 import { useOrders, statusLabels } from "@/lib/orders";
+import { useStock } from '@/lib/stock';
+import { useAdvancedStock, stockAlerts } from '@/lib/stock-advanced';
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-xs md:text-sm max-w-[200px]";
 
@@ -43,18 +45,20 @@ export function usePendingForMe() {
 
 export function NotificationsBell() {
   const pending = usePendingForMe();
+  useStock(); useAdvancedStock(); const ses = useSession(); const alerts = stockAlerts(ses.scope);
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button size="icon" variant="ghost" className="relative hidden sm:inline-flex" aria-label="Notificações">
           <Bell className="h-4 w-4" />
-          {pending.length > 0 && <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4">{pending.length}</span>}
+          {pending.length + alerts.length > 0 && <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] leading-4">{pending.length + alerts.length}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-0">
         <div className="px-4 py-3 border-b border-border text-sm font-semibold">Pendências para você</div>
         <div className="max-h-80 overflow-y-auto divide-y divide-border">
-          {pending.length === 0 && <div className="p-4 text-sm text-muted-foreground">Nenhuma pendência.</div>}
+          {pending.length + alerts.length === 0 && <div className="p-4 text-sm text-muted-foreground">Nenhuma pendência.</div>}
+          {alerts.slice(0, 8).map(a => <Link key={a.id} to="/estoque-avancado" className="block px-4 py-3 hover:bg-muted/50 text-sm"><div className="font-medium">{a.title}</div><div className="text-xs text-muted-foreground">{a.detail}</div></Link>)}
           {pending.map(o => (
             <Link key={o.id} to="/pedidos" className="block px-4 py-3 hover:bg-muted/50 text-sm">
               <div className="font-medium">{o.number}</div><div className="text-xs text-muted-foreground">{statusLabels[o.status]}</div>

@@ -11,7 +11,7 @@ import { approvalTypeMeta, approvalStatusMeta, getUser, getClient, formatBRL, ty
 import { Plus, CheckCircle2, XCircle, Clock, AlertTriangle, FileText, ChevronRight, Paperclip } from "lucide-react";
 import { useMemo, useState } from "react";
 
-export const Route = createFileRoute("/aprovacoes")({ component: AprovacoesPage });
+export const Route = createFileRoute("/aprovacoes")({ head: () => ({ meta: [{ title: 'Aprovações | Grupo Sorrisos' }, { name: 'description', content: 'Solicitações e decisões corporativas do Grupo Sorrisos.' }, { property: 'og:title', content: 'Aprovações | Grupo Sorrisos' }, { property: 'og:description', content: 'Acompanhamento de aprovações e solicitações.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: AprovacoesPage });
 
 // Demo: o "eu" é o approver da primeira etapa pendente; aqui usamos u2 (Sofia — Diretora)
 const ME_ID = "u2";

@@ -10,7 +10,7 @@ import { clients, projects, tasks, getUser, invoiceTotal, formatBRL, documentTyp
 import { FileText, FileSignature, DollarSign, CheckCircle2, Clock, Download, ExternalLink, Building2, MessageCircle, AlertCircle, Calendar, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
-export const Route = createFileRoute("/portal-cliente")({ component: PortalPage });
+export const Route = createFileRoute("/portal-cliente")({ head: () => ({ meta: [{ title: 'Portal do Cliente | Grupo Sorrisos' }, { name: 'description', content: 'Projetos, documentos e faturas no portal do cliente do Grupo Sorrisos.' }, { property: 'og:title', content: 'Portal do Cliente | Grupo Sorrisos' }, { property: 'og:description', content: 'Acompanhamento de projetos, documentos e faturas.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: PortalPage });
 
 // Cliente visualizando seu próprio portal (demo: Hospital Vida Plena — cli4)
 const CLIENT_ID = "cli4";

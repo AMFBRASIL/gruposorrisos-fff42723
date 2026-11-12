@@ -12,3 +12,11 @@
 - [x] Pedidos e telas de estoque modernizadas (indicadores, gráficos, botão Novo + wizard grande com imagem)
 - [x] Inventário em wizard; movimentação multi-itens
 - [ ] Migrar demais modais antigos (Compras, Filiais) para o WizardShell
+- [x] Estoque avançado — reposição com pedidos/compras e prevenção de duplicados
+- [x] Leitura de códigos por câmera e leitor em movimentações, inventários e recebimento (câmera física não verificada)
+- [x] Separação FEFO e baixa de lotes na expedição, preservando lotes no recebimento
+- [x] Consumo por procedimento com ficha de materiais e baixa agrupada
+- [x] Previsão de cobertura, itens sem giro e classificação ABC
+- [x] Aprovação de ajustes elevados com histórico e limite configurável (R$ 500 inicial demonstrativo)
+- [x] Alertas por filial e resumo de e-mail simulado (sem envio real, conforme escopo demo)
+- [x] Testes das regras e verificação de consumo, reposição, inventário aprovado, códigos e resumo no navegador

@@ -11,8 +11,8 @@ export function StockStat({ label, value, icon: Icon, tone = "primary", hint }: 
       <div className="flex items-center gap-3">
         <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${tones[tone]}`}><Icon className="h-5 w-5" /></div>
         <div className="min-w-0">
-          <div className="text-xs text-muted-foreground truncate">{label}</div>
-          <div className="text-xl font-semibold truncate">{value}</div>
+          <div className="text-xs text-muted-foreground break-words" title={label}>{label}</div>
+          <div className="text-lg font-semibold break-words" title={String(value)}>{value}</div>
           {hint && <div className="text-[11px] text-muted-foreground truncate">{hint}</div>}
         </div>
       </div>

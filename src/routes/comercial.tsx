@@ -10,7 +10,7 @@ import { CreateDealWizard } from "@/components/create-deal-wizard";
 import { Plus, TrendingUp, Trophy, Target, Calendar, GripVertical } from "lucide-react";
 import { useMemo, useState } from "react";
 
-export const Route = createFileRoute("/comercial")({ component: ComercialPage });
+export const Route = createFileRoute("/comercial")({ head: () => ({ meta: [{ title: 'Comercial | Grupo Sorrisos' }, { name: 'description', content: 'Gestão de oportunidades e negociações do Grupo Sorrisos.' }, { property: 'og:title', content: 'Comercial | Grupo Sorrisos' }, { property: 'og:description', content: 'Oportunidades e negociações comerciais.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: ComercialPage });
 
 function ComercialPage() {
   const deals = useDeals();
