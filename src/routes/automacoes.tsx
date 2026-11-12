@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAutomations, automationsStore } from "@/lib/store";
 import { Plus, Zap, Clock, AlertTriangle, ArrowRight, Bell, Mail, Trash2, Play, GitBranch } from "lucide-react";
 import { CreateAutomationWizard } from "@/components/create-automation-wizard";
+import { ConfirmActionDialog } from '@/components/confirm-action-dialog';
 import type { TriggerType, ActionType } from "@/lib/mock-data";
 
 const triggerMeta: Record<TriggerType, { label: string; icon: any; color: string }> = {
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/automacoes")({
 function AutomacoesPage() {
   const rules = useAutomations();
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
   const active = rules.filter(r => r.enabled).length;
   const totalRuns = rules.reduce((s, r) => s + r.runs, 0);
 
@@ -86,7 +88,7 @@ function AutomacoesPage() {
                       <div className="flex items-center gap-3 shrink-0">
                         <Switch checked={r.enabled} onCheckedChange={() => automationsStore.toggleRule(r.id)} />
                         <button
-                          onClick={() => { if (confirm(`Remover regra "${r.name}"?`)) automationsStore.removeRule(r.id); }}
+                          onClick={() => setRemoving({ id: r.id, name: r.name })}
                           className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -132,6 +134,7 @@ function AutomacoesPage() {
         </div>
       </div>
       <CreateAutomationWizard open={open} onClose={() => setOpen(false)} />
+      <ConfirmActionDialog name={removing?.name ?? null} onClose={() => setRemoving(null)} onConfirm={() => { if (removing) automationsStore.removeRule(removing.id); }} />
     </AppShell>
   );
 }

@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { WizardShell, WizardFooter, ReviewGrid } from "@/components/erp-wizard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useErp, useSession, saveErpUser, toggleRolePermission, branchName, userName, PERMISSIONS, type ErpUser } from "@/lib/erp";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Users, Building2, FileCheck2 } from "lucide-react";
 
 export const Route = createFileRoute("/usuarios-filiais")({
   head: () => ({ meta: [
@@ -85,28 +85,28 @@ function Page() {
 function UserDialog({ user, onClose }: { user: ErpUser; onClose: () => void }) {
   const s = useErp();
   const [u, setU] = useState(user);
+  const [step, setStep] = useState(0);
   const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
   const save = () => { const e = saveErpUser({ ...u, initials: u.initials || u.name.split(" ").map(x => x[0]).join("").slice(0, 2).toUpperCase() }); if (e) return toast.error(e); toast.success("Usuário salvo"); onClose(); };
   return (
-    <Dialog open onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>{user.name || "Novo usuário"}</DialogTitle></DialogHeader>
+    <WizardShell open onClose={onClose} badge="Usuários e filiais" headline="Equipe Grupo Sorrisos" sub={user.name || "Novo usuário"} steps={[{ title: "Identificação", desc: "Nome e contato", icon: Users }, { title: "Filiais e perfis", desc: "Vínculos de acesso", icon: Building2 }, { title: "Revisão", desc: "Conferência do cadastro", icon: FileCheck2 }]} step={step} setStep={setStep} footer={<WizardFooter step={step} last={2} setStep={setStep} onClose={onClose} onFinish={save} finishLabel="Salvar usuário" canNext={step === 0 ? !!u.name.trim() && !!u.email.trim() : u.memberships.length > 0} />}>
+        {step === 0 && <>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1"><Label>Nome</Label><Input value={u.name} onChange={e => setU({ ...u, name: e.target.value })} /></div>
           <div className="space-y-1"><Label>E-mail</Label><Input value={u.email} onChange={e => setU({ ...u, email: e.target.value })} /></div>
         </div>
-        <div className="space-y-2">
+        </>}
+        {step === 1 && <div className="space-y-2">
           <div className="flex justify-between items-center"><Label>Filiais e perfis</Label><Button size="sm" variant="outline" onClick={() => setU({ ...u, memberships: [...u.memberships, { branchId: s.branches[0].id, roleId: "colaborador" }] })}><Plus className="h-3 w-3 mr-1" />Vínculo</Button></div>
           {u.memberships.map((m, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+            <div key={i} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
               <select className={sel} value={m.branchId} onChange={e => setU({ ...u, memberships: u.memberships.map((x, j) => j === i ? { ...x, branchId: e.target.value } : x) })}>{s.branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
               <select className={sel} value={m.roleId} onChange={e => setU({ ...u, memberships: u.memberships.map((x, j) => j === i ? { ...x, roleId: e.target.value } : x) })}>{s.roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
               <Button size="icon" variant="ghost" aria-label="Remover vínculo" onClick={() => setU({ ...u, memberships: u.memberships.filter((_, j) => j !== i) })}><Trash2 className="h-4 w-4" /></Button>
             </div>
           ))}
-        </div>
-        <div className="flex justify-end gap-2"><Button variant="outline" onClick={onClose}>Cancelar</Button><Button onClick={save}>Salvar</Button></div>
-      </DialogContent>
-    </Dialog>
+        </div>}
+        {step === 2 && <><ReviewGrid items={[["Nome",u.name],["E-mail",u.email],["Vínculos",String(u.memberships.length)]]} />{u.memberships.map((m,i) => <div key={i} className="border-b border-border py-3 text-sm">{branchName(m.branchId)} · {s.roles.find(r => r.id === m.roleId)?.name}</div>)}</>}
+    </WizardShell>
   );
 }

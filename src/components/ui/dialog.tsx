@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import dialogImage from "@/assets/wizard-stock-bg.jpg";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -21,7 +22,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-foreground/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:animate-none",
       className,
     )}
     {...props}
@@ -32,25 +33,37 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => {
+  const customLayout = className?.split(/\s+/).includes("p-0");
+  return (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      data-dialog-layout={customLayout ? "custom" : "standard"}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg motion-reduce:animate-none",
         className,
+        customLayout ? "!w-[96vw] !max-w-6xl !max-h-[90dvh]" : "!w-[96vw] !max-w-5xl !h-[86dvh] !max-h-[860px] !p-0 !gap-0 !overflow-hidden",
       )}
       {...props}
     >
-      {children}
+      {customLayout ? children : <div className="grid h-full min-h-0 md:grid-cols-[260px_1fr]">
+        <aside className="relative hidden md:flex flex-col justify-between overflow-hidden bg-sidebar text-sidebar-foreground p-7">
+          <img src={dialogImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20" />
+          <div className="relative"><span className="inline-flex h-11 w-11 items-center justify-center rounded-md bg-sidebar-accent font-semibold">GS</span><div className="mt-6 text-xl font-semibold">Grupo | Sorrisos</div><div className="mt-2 text-sm text-sidebar-foreground/70">Plataforma Gestão</div></div>
+          <div className="relative border-t border-sidebar-border pt-4 text-xs text-sidebar-foreground/70">Grupo Sorrisos</div>
+        </aside>
+        <div className="min-h-0 overflow-y-auto px-5 py-7 sm:px-8"><div className="space-y-5 pr-4">{children}</div></div>
+      </div>}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
+        <span className="sr-only">Fechar</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
-));
+);
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

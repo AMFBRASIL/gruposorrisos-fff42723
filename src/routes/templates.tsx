@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTemplates, templatesStore } from "@/lib/store";
 import { Plus, ListChecks, Clock, Sparkles, Trash2 } from "lucide-react";
 import { CreateTemplateWizard } from "@/components/create-template-wizard";
+import { ConfirmActionDialog } from '@/components/confirm-action-dialog';
 import type { ProjectTemplate } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/templates")({
@@ -24,6 +25,7 @@ function TemplatesPage() {
   const templates = useTemplates();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ProjectTemplate | null>(null);
+  const [removing, setRemoving] = useState<ProjectTemplate | null>(null);
 
   return (
     <AppShell
@@ -65,7 +67,7 @@ function TemplatesPage() {
                     <Sparkles className="h-3 w-3" /> Editar / Usar
                   </span>
                   <button
-                    onClick={(e) => { e.stopPropagation(); if (confirm(`Remover template "${t.name}"?`)) templatesStore.removeTemplate(t.id); }}
+                    onClick={(e) => { e.stopPropagation(); setRemoving(t); }}
                     className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -89,6 +91,7 @@ function TemplatesPage() {
         template={editing}
         onClose={() => { setOpen(false); setEditing(null); }}
       />
+      <ConfirmActionDialog name={removing?.name ?? null} onClose={() => setRemoving(null)} onConfirm={() => { if (removing) templatesStore.removeTemplate(removing.id); }} />
     </AppShell>
   );
 }

@@ -13,6 +13,7 @@ import { materials, getMaterial, brl } from "@/lib/stock";
 import { usePurchasing, poLabels, addQuote, approvePo, sendPo, receivePo, addSupplier, createRequisition } from "@/lib/purchasing";
 import { Star, Plus } from "lucide-react";
 import { PurchaseReceivingWizard } from '@/components/purchase-receiving-wizard';
+import { PurchaseCreationWizard } from '@/components/purchase-creation-wizard';
 import type { PurchaseOrder } from '@/lib/purchasing';
 
 export const Route = createFileRoute("/compras")({
@@ -31,6 +32,7 @@ function ComprasPage() {
   const { pos, sup } = usePurchasing(); const ses = useSession();
   const canBuy = ses.can("compras.gerenciar");
   const [receiving, setReceiving] = useState<PurchaseOrder | null>(null);
+  const [creating, setCreating] = useState<'requisition' | 'supplier' | null>(null);
   const [quote, setQuote] = useState<{ supplierId: string; price: number | ''; days: string }>({ supplierId: "s1", price: "", days: "5" });
   const [reqMat, setReqMat] = useState(materials[0].id); const [reqQty, setReqQty] = useState(50);
   const [ns, setNs] = useState({ name: "", cnpj: "", contact: "", email: "" });
@@ -42,12 +44,7 @@ function ComprasPage() {
         <Tabs defaultValue="oc">
           <TabsList><TabsTrigger value="oc">Ordens de compra</TabsTrigger><TabsTrigger value="forn">Fornecedores</TabsTrigger></TabsList>
           <TabsContent value="oc" className="space-y-4">
-            {canBuy && <Card className="p-4 flex flex-wrap items-end gap-2">
-              <div className="text-sm font-medium w-full">Nova requisição para o Centro de Distribuição</div>
-              <select className={sel} value={reqMat} onChange={e => setReqMat(e.target.value)}>{materials.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
-              <Input type="number" className="w-28 h-9" value={reqQty} onChange={e => setReqQty(Number(e.target.value))} />
-              <Button size="sm" onClick={() => t(createRequisition("cd", [{ materialId: reqMat, qty: reqQty }]), "Requisição criada")}><Plus className="h-4 w-4 mr-1" />Criar requisição</Button>
-            </Card>}
+            {canBuy && <div className="flex justify-end"><Button size="sm" onClick={() => setCreating('requisition')}><Plus className="h-4 w-4 mr-1" />Nova requisição</Button></div>}
             {pos.map(p => (
               <Card key={p.id} className="p-5 space-y-3">
                 <div className="flex flex-wrap justify-between gap-2"><div><span className="font-mono text-sm">{p.number}</span> <span className="text-sm text-muted-foreground">· {branchName(p.branchId)} · {p.createdAt.split("-").reverse().join("/")}</span></div><Badge variant="outline">{poLabels[p.status]}</Badge></div>
@@ -73,10 +70,7 @@ function ComprasPage() {
             ))}
           </TabsContent>
           <TabsContent value="forn" className="space-y-4">
-            {canBuy && <Card className="p-4 flex flex-wrap gap-2 items-end">
-              {(["name", "cnpj", "contact", "email"] as const).map(k => <Input key={k} className="w-48 h-9" placeholder={{ name: "Nome", cnpj: "CNPJ", contact: "Contato", email: "E-mail" }[k]} value={ns[k]} onChange={e => setNs({ ...ns, [k]: e.target.value })} />)}
-              <Button size="sm" onClick={() => { const e = addSupplier({ ...ns, leadDays: 5, rating: 4, categories: [] }); t(e, "Fornecedor cadastrado"); if (!e) setNs({ name: "", cnpj: "", contact: "", email: "" }); }}><Plus className="h-4 w-4 mr-1" />Cadastrar</Button>
-            </Card>}
+            {canBuy && <div className="flex justify-end"><Button size="sm" onClick={() => setCreating('supplier')}><Plus className="h-4 w-4 mr-1" />Novo fornecedor</Button></div>}
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
               {sup.map(s => <Card key={s.id} className="p-5 space-y-1 text-sm">
                 <div className="font-semibold">{s.name}</div><div className="text-muted-foreground">{s.cnpj}</div>
@@ -89,6 +83,7 @@ function ComprasPage() {
         </Tabs>
       </div>
       {receiving && <PurchaseReceivingWizard order={receiving} onClose={() => setReceiving(null)} />}
+      {creating && <PurchaseCreationWizard kind={creating} onClose={() => setCreating(null)} />}
     </AppShell>
   );
 }

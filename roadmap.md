@@ -1,4 +1,6 @@
 # Roadmap — Grupo Sorrisos ERP Multifiliais (dados de demonstração)
+- [x] Modernizar Filiais com indicadores, distribuição regional, filtros e cadastro em etapas; cadastro verificado em desktop e celular
+- [x] Padronizar apresentação de todos os diálogos, confirmações e modernizar vínculos de usuários; moldura global compartilhada
 - [x] Novo processo de pedidos — manual/CSV, conciliação, revisão e fornecedor definido; fluxo demonstrativo verificado no navegador
 - [x] Área interna por fornecedor e respostas de preços versionadas, conferência e aprovação de compra
 - [ ] Área externa real de fornecedores — Cloud e estrutura de acesso preparados; depende de autorização da fase real e contas vinculadas a fornecedores; não disponível nesta entrega
@@ -15,7 +17,7 @@
 
 - [x] Pedidos e telas de estoque modernizadas (indicadores, gráficos, botão Novo + wizard grande com imagem)
 - [x] Inventário em wizard; movimentação multi-itens
-- [ ] Migrar demais modais antigos (Compras, Filiais) para o WizardShell
+- [x] Migrar cadastros de Compras e Filiais para o WizardShell
 - [x] Estoque avançado — reposição com pedidos/compras e prevenção de duplicados
 - [x] Leitura de códigos por câmera e leitor em movimentações, inventários e recebimento (câmera física não verificada)
 - [x] Separação FEFO e baixa de lotes na expedição, preservando lotes no recebimento
