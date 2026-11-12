@@ -1,4 +1,7 @@
 # Roadmap — Grupo Sorrisos ERP Multifiliais (dados de demonstração)
+- [ ] Novo processo de pedidos — manual/CSV, conciliação, revisão e fornecedor definido (plano em aprovação)
+- [ ] Área interna por fornecedor e respostas de preços versionadas
+- [ ] Área externa real de fornecedores — depende da migração aprovada para Lovable Cloud e acessos individuais
 - [x] Padronizar todos os campos monetários com máscara de reais brasileira e validar digitação/salvamento
 - [x] Onda 1 — Estoque básico
 - [x] Fase 2 — Filiais, depósitos, usuários por filial, perfis e permissões, seletor de filial
