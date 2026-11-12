@@ -10,4 +10,5 @@
 - [ ] Futuro — dados reais (Lovable Cloud), dashboards por perfil, cartões de pedido no Kanban
 
 - [x] Pedidos e telas de estoque modernizadas (indicadores, gráficos, botão Novo + wizard grande com imagem)
-- [ ] Migrar demais modais antigos (Compras, Inventários, Filiais) para o WizardShell
+- [x] Inventário em wizard; movimentação multi-itens
+- [ ] Migrar demais modais antigos (Compras, Filiais) para o WizardShell

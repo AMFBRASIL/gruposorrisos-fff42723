@@ -21,3 +21,18 @@ describe("stock wizards rules", () => {
     expect(addLot({ materialId: materials[0].id, clinicId: "cd", lot: "L1", expires: "2027-01-01", qty: 0 })).toBe("Quantidade deve ser maior que zero");
   });
 });
+
+import { registerMovements, applyInventory } from "./stock";
+describe("multi-item movement and inventory", () => {
+  it("rejects the whole batch when one line lacks balance", () => {
+    const [a, b] = materials; const before = balanceOf(getState(), a.id, "c1");
+    expect(registerMovements([{ type: "saida", reason: "Consumo", materialId: a.id, clinicId: "c1", qty: 1, user: "t" }, { type: "saida", reason: "Consumo", materialId: b.id, clinicId: "c1", qty: 999999, user: "t" }])).toMatch(/Saldo insuficiente/);
+    expect(balanceOf(getState(), a.id, "c1")).toBe(before);
+  });
+  it("inventory sets balance to counted quantity", () => {
+    const m = materials[1];
+    const rec = applyInventory({ branchId: "c2", scope: "Completo", blind: true, counts: { [m.id]: 3 }, user: "t" });
+    expect(balanceOf(getState(), m.id, "c2")).toBe(3);
+    expect(rec.counted).toBe(1);
+  });
+});

@@ -76,8 +76,13 @@ const seedTransfers: Transfer[] = [
   { id: "t5", number: "TRF-0440", fromId: "cd", toId: "c4", items: [{ materialId: "m8", qty: 20 }], status: "concluida", date: day(-5) },
 ];
 
-type State = { balances: Balance[]; lots: Lot[]; movements: Movement[]; transfers: Transfer[] };
-let state: State = { balances: seedBalances(), lots: seedLots, movements: seedMovements, transfers: seedTransfers };
+export type InventoryRecord = { id: string; number: string; branchId: string; scope: string; blind: boolean; counted: number; divergences: number; valueIn: number; valueOut: number; user: string; date: string };
+type State = { balances: Balance[]; lots: Lot[]; movements: Movement[]; transfers: Transfer[]; inventories: InventoryRecord[] };
+let state: State = { balances: seedBalances(), lots: seedLots, movements: seedMovements, transfers: seedTransfers, inventories: [
+  { id: "inv1", number: "INV-0031", branchId: "c1", scope: "Completo", blind: true, counted: 12, divergences: 3, valueIn: 89.9, valueOut: 290, user: "Ana Souza", date: day(-20) },
+  { id: "inv2", number: "INV-0032", branchId: "c2", scope: "EPIs", blind: false, counted: 2, divergences: 1, valueIn: 0, valueOut: 65, user: "Carlos Lima", date: day(-9) },
+  { id: "inv3", number: "INV-0033", branchId: "cd", scope: "Completo", blind: true, counted: 12, divergences: 2, valueIn: 145, valueOut: 37.2, user: "Bruna Reis", date: day(-3) },
+] };
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach(l => l());
 const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.delete(l); };
@@ -175,4 +180,36 @@ export function addLot(l: Omit<Lot, "id">): string | null {
   state = { ...state, lots: [{ ...l, id: `l${Date.now()}` }, ...state.lots] };
   emit();
   return null;
+}
+
+/** Registers several movements at once; validates all lines before changing any balance. */
+export function registerMovements(lines: Omit<Movement, "id" | "number" | "date">[]): string | null {
+  if (lines.length === 0) return "Adicione ao menos um material";
+  const need: Record<string, number> = {};
+  for (const l of lines) {
+    if (l.qty <= 0) return `Quantidade inválida para ${getMaterial(l.materialId).name}`;
+    if (l.type === "transferencia" && (!l.toClinicId || l.toClinicId === l.clinicId)) return "Escolha um destino diferente da origem";
+    if (l.type !== "entrada") need[l.materialId] = (need[l.materialId] ?? 0) + l.qty;
+  }
+  for (const [mid, q] of Object.entries(need)) if (balanceOf(state, mid, lines[0].clinicId) < q) return `Saldo insuficiente de ${getMaterial(mid).name} na origem`;
+  for (const l of lines) { const e = registerMovement(l); if (e) return e; }
+  return null;
+}
+
+/** Closes an inventory: every counted difference becomes an adjustment movement. */
+export function applyInventory(input: { branchId: string; scope: string; blind: boolean; counts: Record<string, number>; user: string }): InventoryRecord {
+  let valueIn = 0, valueOut = 0, divergences = 0;
+  for (const [mid, cnt] of Object.entries(input.counts)) {
+    const diff = cnt - balanceOf(state, mid, input.branchId);
+    if (diff === 0) continue;
+    divergences++;
+    const cost = getMaterial(mid).cost * Math.abs(diff);
+    if (diff > 0) valueIn += cost; else valueOut += cost;
+    applyDelta(mid, input.branchId, diff);
+    logMovement({ type: diff > 0 ? "entrada" : "saida", reason: "Ajuste de inventário", materialId: mid, clinicId: input.branchId, qty: Math.abs(diff), user: input.user });
+  }
+  const rec: InventoryRecord = { id: `inv${Date.now()}`, number: `INV-${String(34 + state.inventories.length - 3).padStart(4, "0")}`, branchId: input.branchId, scope: input.scope, blind: input.blind, counted: Object.keys(input.counts).length, divergences, valueIn, valueOut, user: input.user, date: new Date().toISOString().slice(0, 10) };
+  state = { ...state, inventories: [rec, ...state.inventories] };
+  emit();
+  return rec;
 }

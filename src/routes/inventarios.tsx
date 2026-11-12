@@ -1,19 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useErp, useSession } from "@/lib/erp";
-import { StockStat } from "@/components/stock-ui";
-import { ClipboardCheck, Scale, TrendingDown, TrendingUp } from "lucide-react";
-import { useStock, materials, balanceOf, applyDelta, logMovement, brl } from "@/lib/stock";
+import { StockStat, ChartCard, tooltipStyle, axisProps } from "@/components/stock-ui";
+import { NewInventoryWizard } from "@/components/stock-wizards";
+import { useSession } from "@/lib/erp";
+import { useStock, getClinic, brl, daysUntil, clinics } from "@/lib/stock";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { Plus, ClipboardCheck, Target, TrendingDown, TrendingUp, CalendarClock } from "lucide-react";
 
 export const Route = createFileRoute("/inventarios")({
   head: () => ({ meta: [
     { title: "Inventários | Grupo Sorrisos" },
-    { name: "description", content: "Contagem física de estoque por filial com conciliação de diferenças." },
+    { name: "description", content: "Inventário completo ou cíclico por filial, com contagem cega e conciliação automática." },
     { property: "og:title", content: "Inventários | Grupo Sorrisos" },
     { property: "og:description", content: "Inventário por filial com ajuste de diferenças." },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
@@ -22,43 +23,43 @@ export const Route = createFileRoute("/inventarios")({
 });
 
 function InvPage() {
-  const erp = useErp(); const ses = useSession(); const st = useStock();
-  const branches = erp.branches.filter(b => b.type !== "administracao" && ses.visible.includes(b.id));
-  const [branchId, setBranch] = useState(ses.filter !== "all" ? ses.filter : branches[0]?.id ?? "");
-  const [count, setCount] = useState<Record<string, string>>({});
-  const allowed = ses.can("inventario.realizar", branchId);
-  const diffs = materials.map(m => ({ m, sys: balanceOf(st, m.id, branchId), cnt: count[m.id] === undefined || count[m.id] === "" ? null : Number(count[m.id]) })).map(r => ({ ...r, diff: r.cnt === null ? 0 : r.cnt - r.sys }));
-  const changed = diffs.filter(d => d.diff !== 0);
-  const apply = () => {
-    if (!allowed) return toast.error("Sem permissão para inventariar esta filial");
-    for (const d of changed) { applyDelta(d.m.id, branchId, d.diff); logMovement({ type: d.diff > 0 ? "entrada" : "saida", reason: "Ajuste de inventário", materialId: d.m.id, clinicId: branchId, qty: Math.abs(d.diff), user: ses.user.name }); }
-    toast.success(`${changed.length} ajuste(s) lançados`); setCount({});
-  };
+  const st = useStock(); const ses = useSession();
+  const [open, setOpen] = useState(false);
+  const list = st.inventories.filter(i => ses.scope.includes(i.branchId)).sort((a, b) => b.date.localeCompare(a.date) || b.number.localeCompare(a.number));
+  const counted = list.reduce((a, i) => a + i.counted, 0);
+  const divs = list.reduce((a, i) => a + i.divergences, 0);
+  const accuracy = counted ? Math.round(((counted - divs) / counted) * 100) : 100;
+  const chart = list.slice().reverse().map(i => ({ name: i.number, Sobras: Math.round(i.valueIn), Faltas: Math.round(i.valueOut) }));
+  const overdue = clinics.filter(c => ses.visible.includes(c.id) && !list.some(i => i.branchId === c.id && daysUntil(i.date) > -30));
   return (
-    <AppShell title="Inventários" subtitle="Informe a contagem física; as diferenças viram ajustes de estoque" primaryAction={allowed && changed.length > 0 ? <Button size="sm" onClick={apply}>Concluir inventário ({changed.length})</Button> : null}>
-      <div className="p-4 md:p-8 space-y-4">
-        <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={branchId} onChange={e => { setBranch(e.target.value); setCount({}); }}>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
+    <AppShell title="Inventários" subtitle="Contagem completa ou cíclica com conciliação automática" primaryAction={ses.can("inventario.realizar") ? <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Novo Inventário</Button> : null}>
+      <div className="p-4 md:p-8 space-y-5">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StockStat label="Itens contados" value={`${diffs.filter(d => d.cnt !== null).length}/${materials.length}`} icon={ClipboardCheck} hint={`${Math.round(diffs.filter(d => d.cnt !== null).length / materials.length * 100)}% concluído`} />
-          <StockStat label="Divergências" value={changed.length} icon={Scale} tone="warning" />
-          <StockStat label="Sobras (valor)" value={brl(changed.filter(d => d.diff > 0).reduce((a, d) => a + d.diff * d.m.cost, 0))} icon={TrendingUp} tone="success" />
-          <StockStat label="Faltas (valor)" value={brl(-changed.filter(d => d.diff < 0).reduce((a, d) => a + d.diff * d.m.cost, 0))} icon={TrendingDown} tone="destructive" />
+          <StockStat label="Inventários realizados" value={list.length} icon={ClipboardCheck} hint={`${counted} itens contados`} />
+          <StockStat label="Acurácia de estoque" value={`${accuracy}%`} icon={Target} tone="success" hint="itens sem divergência" />
+          <StockStat label="Sobras ajustadas" value={brl(list.reduce((a, i) => a + i.valueIn, 0))} icon={TrendingUp} tone="info" />
+          <StockStat label="Faltas ajustadas" value={brl(list.reduce((a, i) => a + i.valueOut, 0))} icon={TrendingDown} tone="destructive" />
         </div>
-        {!allowed && <div className="rounded-md border border-warning/30 bg-warning/10 text-sm p-3">Seu perfil não pode inventariar esta filial (somente consulta).</div>}
+        {overdue.length > 0 && <Card className="p-4 border-warning/30 bg-warning/5 flex flex-wrap items-center gap-2 text-sm"><CalendarClock className="h-4 w-4 text-warning" /><span className="font-semibold">Sem inventário nos últimos 30 dias:</span>{overdue.map(c => <Badge key={c.id} variant="outline">{c.name}</Badge>)}</Card>}
+        <ChartCard title="Impacto financeiro por inventário" desc="Valor de sobras e faltas ajustadas">
+          <ResponsiveContainer><BarChart data={chart}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" {...axisProps} /><YAxis {...axisProps} width={50} /><Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)" }} formatter={(v: number) => brl(v)} /><Legend wrapperStyle={{ fontSize: 12 }} /><Bar dataKey="Sobras" fill="var(--success)" radius={[6, 6, 0, 0]} /><Bar dataKey="Faltas" fill="var(--destructive)" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer>
+        </ChartCard>
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs text-muted-foreground uppercase tracking-wide"><tr>{["Material", "Saldo do sistema", "Contagem", "Diferença", "Impacto"].map(h => <th key={h} className="text-left font-medium px-4 py-3">{h}</th>)}</tr></thead>
+            <thead className="bg-muted/50 text-xs text-muted-foreground uppercase tracking-wide"><tr>{["Número", "Filial", "Escopo", "Itens", "Divergências", "Sobras", "Faltas", "Responsável", "Data"].map(h => <th key={h} className="text-left font-medium px-4 py-3">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-border">
-              {diffs.map(d => <tr key={d.m.id}>
-                <td className="px-4 py-2 font-medium">{d.m.name}</td><td className="px-4 py-2">{d.sys} {d.m.unit}</td>
-                <td className="px-4 py-2"><Input type="number" min={0} disabled={!allowed} className="h-8 w-24" value={count[d.m.id] ?? ""} onChange={e => setCount({ ...count, [d.m.id]: e.target.value })} /></td>
-                <td className={`px-4 py-2 font-medium ${d.diff < 0 ? "text-destructive" : d.diff > 0 ? "text-success" : ""}`}>{d.diff > 0 ? "+" : ""}{d.diff}</td>
-                <td className="px-4 py-2 text-muted-foreground">{brl(d.diff * d.m.cost)}</td>
+              {list.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">Nenhum inventário ainda.</td></tr>}
+              {list.map(i => <tr key={i.id} className="hover:bg-muted/30">
+                <td className="px-4 py-3 font-mono text-xs font-semibold">{i.number}</td><td className="px-4 py-3 font-medium">{getClinic(i.branchId).name}</td>
+                <td className="px-4 py-3"><Badge variant="outline">{i.scope}{i.blind ? " · cega" : ""}</Badge></td><td className="px-4 py-3">{i.counted}</td>
+                <td className="px-4 py-3">{i.divergences}</td><td className="px-4 py-3 text-success">{brl(i.valueIn)}</td><td className="px-4 py-3 text-destructive">{brl(i.valueOut)}</td>
+                <td className="px-4 py-3">{i.user}</td><td className="px-4 py-3 text-muted-foreground">{i.date.split("-").reverse().join("/")}</td>
               </tr>)}
             </tbody>
           </table>
         </Card>
       </div>
+      {open && <NewInventoryWizard open onClose={() => setOpen(false)} />}
     </AppShell>
   );
 }

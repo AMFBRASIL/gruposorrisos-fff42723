@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { WizardShell, WizardFooter, OptionCard, FieldLabel, ReviewGrid, selectCls } from "@/components/erp-wizard";
-import { useStock, materials, categories, clinics, getMaterial, getClinic, balanceOf, brl, addMaterial, registerMovement, createTransfer, addLot, type MovementType } from "@/lib/stock";
+import { useStock, materials, categories, clinics, getMaterial, getClinic, balanceOf, brl, addMaterial, registerMovements, applyInventory, createTransfer, addLot, type MovementType } from "@/lib/stock";
 import { useSession } from "@/lib/erp";
 import { Package, Tag, Boxes, FileCheck2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, MapPin, Hash, Route as RouteIcon, ListChecks, CalendarClock, Stethoscope, Trash2, Wrench, Scissors, Sparkles, ShieldCheck, Briefcase, FileText, Shapes, Search } from "lucide-react";
 
@@ -67,30 +67,98 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
   const s = useStock(); const ses = useSession(); const vis = useVisibleClinics();
   const [step, setStep] = useState(0);
   const [type, setType] = useState<MovementType>("entrada");
-  const [materialId, setMaterial] = useState(materials[0].id);
   const [clinicId, setClinic] = useState(vis[0]?.id ?? "cd");
   const [toClinicId, setTo] = useState(clinics.find(c => c.id !== clinicId)?.id ?? "c1");
-  const [qty, setQty] = useState(1); const [reason, setReason] = useState("Compra"); const [doc, setDoc] = useState("");
-  const m = getMaterial(materialId); const bal = balanceOf(s, materialId, clinicId);
-  const after = type === "entrada" ? bal + qty : bal - qty;
-  const steps = [{ title: "Tipo", desc: "Natureza da movimentação", icon: ArrowLeftRight }, { title: "Material", desc: "Item movimentado", icon: Package }, { title: "Local e quantidade", desc: "Filiais, motivo e documento", icon: MapPin }, { title: "Revisão", desc: "Impacto no saldo", icon: FileCheck2 }];
-  const finish = () => { const e = registerMovement({ type, materialId, clinicId, toClinicId: type === "transferencia" ? toClinicId : undefined, qty, reason: doc ? `${reason} · ${doc}` : reason, user: ses.user.name }); if (e) return toast.error(e); toast.success("Movimentação registrada"); onClose(); };
+  const [reason, setReason] = useState("Compra"); const [doc, setDoc] = useState("");
+  const [items, setItems] = useState<{ materialId: string; qty: number }[]>([]);
+  const [pick, setPick] = useState(materials[0].id);
+  const after = (i: { materialId: string; qty: number }) => balanceOf(s, i.materialId, clinicId) + (type === "entrada" ? i.qty : -i.qty);
+  const invalid = items.length === 0 || items.some(i => i.qty <= 0 || (type !== "entrada" && after(i) < 0));
+  const total = items.reduce((a, i) => a + i.qty * getMaterial(i.materialId).cost, 0);
+  const steps = [{ title: "Tipo", desc: "Natureza da movimentação", icon: ArrowLeftRight }, { title: "Local e motivo", desc: "Filiais, motivo e documento", icon: MapPin }, { title: "Materiais", desc: "Um ou vários itens", icon: ListChecks }, { title: "Revisão", desc: "Impacto no saldo", icon: FileCheck2 }];
+  const finish = () => {
+    const e = registerMovements(items.map(i => ({ type, materialId: i.materialId, clinicId, toClinicId: type === "transferencia" ? toClinicId : undefined, qty: i.qty, reason: doc ? `${reason} · ${doc}` : reason, user: ses.user.name })));
+    if (e) return toast.error(e); toast.success(`${items.length} movimentação(ões) registrada(s)`); onClose();
+  };
   return (
-    <WizardShell open={open} onClose={onClose} badge="Nova movimentação" headline={<>Cada unidade<br /><span className="opacity-60">rastreada.</span></>} sub="Entradas, saídas e transferências com trilha de auditoria." steps={steps} step={step} setStep={setStep}
-      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel="Registrar" canNext={step !== 2 || (qty > 0 && (type === "entrada" || after >= 0))} />}>
+    <WizardShell open={open} onClose={onClose} badge="Nova movimentação" headline={<>Cada unidade<br /><span className="opacity-60">rastreada.</span></>} sub="Lance vários materiais de uma vez, com trilha de auditoria." steps={steps} step={step} setStep={setStep}
+      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel={`Registrar ${items.length} item(ns)`} canNext={step < 2 || !invalid} />}>
       {step === 0 && <div className="grid md:grid-cols-3 gap-3">{(Object.keys(moveMeta) as MovementType[]).map(k => <OptionCard key={k} selected={type === k} onClick={() => { setType(k); setReason(moveMeta[k].reasons[0]); }} icon={moveMeta[k].icon} title={moveMeta[k].label} desc={moveMeta[k].desc} />)}</div>}
-      {step === 1 && <MaterialPicker value={materialId} onChange={setMaterial} clinicId={clinicId} />}
-      {step === 2 && <>
+      {step === 1 && <>
         <div className="grid md:grid-cols-2 gap-4">
-          <div className="space-y-1"><Label>{type === "transferencia" ? "Origem" : "Filial"}</Label><select className={selectCls} value={clinicId} onChange={e => setClinic(e.target.value)}>{vis.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><div className="text-xs text-muted-foreground">Saldo atual: {bal} {m.unit}</div></div>
+          <div className="space-y-1"><Label>{type === "transferencia" ? "Origem" : "Filial"}</Label><select className={selectCls} value={clinicId} onChange={e => setClinic(e.target.value)}>{vis.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
           {type === "transferencia" && <div className="space-y-1"><Label>Destino</Label><select className={selectCls} value={toClinicId} onChange={e => setTo(e.target.value)}>{clinics.filter(c => c.id !== clinicId).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>}
-          <div className="space-y-1"><Label>Quantidade ({m.unit})</Label><Input type="number" min={1} value={qty} onChange={e => setQty(Number(e.target.value))} /></div>
           <div className="space-y-1"><Label>Documento (NF, OS…)</Label><Input value={doc} onChange={e => setDoc(e.target.value)} placeholder="Opcional" /></div>
         </div>
         <div><FieldLabel>Motivo</FieldLabel><div className="grid grid-cols-2 md:grid-cols-4 gap-2">{moveMeta[type].reasons.map(r => <OptionCard compact key={r} selected={reason === r} onClick={() => setReason(r)} title={r} />)}</div></div>
-        {type !== "entrada" && after < 0 && <div className="rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-sm p-3">Saldo insuficiente na origem.</div>}
       </>}
-      {step === 3 && <ReviewGrid items={[["Tipo", moveMeta[type].label], ["Material", m.name], ["Quantidade", `${qty} ${m.unit}`], [type === "transferencia" ? "Origem → Destino" : "Filial", type === "transferencia" ? `${getClinic(clinicId).name} → ${getClinic(toClinicId).name}` : getClinic(clinicId).name], ["Saldo após", `${after} ${m.unit}`], ["Valor", brl(qty * m.cost)]]} />}
+      {step === 2 && <>
+        <MaterialPicker value={pick} onChange={id => { setPick(id); if (!items.some(i => i.materialId === id)) setItems([...items, { materialId: id, qty: 1 }]); }} clinicId={clinicId} />
+        <div className="rounded-xl border border-border divide-y divide-border">
+          <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/40 flex justify-between"><span>{items.length} material(is) selecionado(s) — clique nos cards para adicionar</span><span>{brl(total)}</span></div>
+          {items.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">Nenhum material adicionado.</div>}
+          {items.map(i => { const m = getMaterial(i.materialId); const a = after(i); return <div key={i.materialId} className="flex items-center gap-3 p-3"><div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{m.name}</div><div className={`text-xs ${a < 0 ? "text-destructive" : "text-muted-foreground"}`}>Saldo {balanceOf(s, i.materialId, clinicId)} → {a} {m.unit}</div></div><Input type="number" min={1} className="h-8 w-24" value={i.qty} onChange={e => setItems(items.map(x => x.materialId === i.materialId ? { ...x, qty: Number(e.target.value) } : x))} /><Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setItems(items.filter(x => x.materialId !== i.materialId))}><Trash2 className="h-4 w-4" /></Button></div>; })}
+        </div>
+      </>}
+      {step === 3 && <>
+        <ReviewGrid items={[["Tipo", moveMeta[type].label], [type === "transferencia" ? "Origem → Destino" : "Filial", type === "transferencia" ? `${getClinic(clinicId).name} → ${getClinic(toClinicId).name}` : getClinic(clinicId).name], ["Motivo", reason], ["Itens", String(items.length)], ["Unidades", String(items.reduce((a, i) => a + i.qty, 0))], ["Valor", brl(total)]]} />
+        <div className="rounded-xl border border-border divide-y divide-border">{items.map(i => <div key={i.materialId} className="flex justify-between p-3 text-sm"><span>{getMaterial(i.materialId).name}</span><span className="font-medium">{i.qty} {getMaterial(i.materialId).unit}</span></div>)}</div>
+      </>}
+    </WizardShell>
+  );
+}
+
+export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const s = useStock(); const ses = useSession(); const vis = useVisibleClinics();
+  const allowedBranches = vis.filter(c => ses.can("inventario.realizar", c.id));
+  const [step, setStep] = useState(0);
+  const [branchId, setBranch] = useState(allowedBranches[0]?.id ?? "");
+  const [scope, setScope] = useState("Completo");
+  const [blind, setBlind] = useState(true);
+  const [counts, setCounts] = useState<Record<string, string>>({});
+  const [q, setQ] = useState("");
+  const items = materials.filter(m => scope === "Completo" || m.category === scope);
+  const rows = items.map(m => { const sys = balanceOf(s, m.id, branchId); const raw = counts[m.id]; const cnt = raw === undefined || raw === "" ? null : Number(raw); return { m, sys, cnt, diff: cnt === null ? 0 : cnt - sys }; });
+  const counted = rows.filter(r => r.cnt !== null).length;
+  const divs = rows.filter(r => r.diff !== 0);
+  const vIn = divs.filter(r => r.diff > 0).reduce((a, r) => a + r.diff * r.m.cost, 0);
+  const vOut = -divs.filter(r => r.diff < 0).reduce((a, r) => a + r.diff * r.m.cost, 0);
+  const accuracy = counted ? Math.round(((counted - divs.length) / counted) * 100) : 100;
+  const steps = [{ title: "Filial", desc: "Onde será a contagem", icon: MapPin }, { title: "Escopo", desc: "Completo ou por categoria", icon: Boxes }, { title: "Contagem", desc: "Quantidade física por item", icon: ListChecks }, { title: "Conciliação", desc: "Divergências e ajustes", icon: FileCheck2 }];
+  const finish = () => { const r = applyInventory({ branchId, scope, blind, user: ses.user.name, counts: Object.fromEntries(rows.filter(x => x.cnt !== null).map(x => [x.m.id, x.cnt as number])) }); toast.success(`${r.number} concluído · ${r.divergences} ajuste(s)`); onClose(); };
+  if (allowedBranches.length === 0) return <WizardShell open={open} onClose={onClose} badge="Novo inventário" headline="Sem permissão" steps={[{ title: "Acesso", desc: "Seu perfil não pode inventariar nenhuma filial", icon: MapPin }]} step={0} setStep={() => {}} footer={<Button variant="outline" onClick={onClose}>Fechar</Button>}><p className="text-sm text-muted-foreground">Peça a um administrador a permissão de inventário.</p></WizardShell>;
+  const shown = rows.filter(r => r.m.name.toLowerCase().includes(q.toLowerCase()) && true);
+  return (
+    <WizardShell open={open} onClose={onClose} badge="Novo inventário" headline={<>Estoque físico<br /><span className="opacity-60">igual ao sistema.</span></>} sub="Contagem completa ou cíclica, com conciliação automática das diferenças." steps={steps} step={step} setStep={setStep}
+      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel={`Concluir e ajustar (${divs.length})`} canNext={step !== 2 || counted > 0} extra={step === 2 ? <Button variant="outline" onClick={() => setCounts(Object.fromEntries(rows.map(r => [r.m.id, counts[r.m.id] ?? String(r.sys)])))}>Preencher não contados com saldo</Button> : undefined} />}>
+      {step === 0 && <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{allowedBranches.map(c => <OptionCard key={c.id} selected={branchId === c.id} onClick={() => { setBranch(c.id); setCounts({}); }} icon={MapPin} title={c.name} desc={`${c.city} · ${materials.reduce((a, m) => a + balanceOf(s, m.id, c.id), 0)} un em estoque`} />)}</div>}
+      {step === 1 && <>
+        <div><FieldLabel>Tipo de inventário</FieldLabel><div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <OptionCard selected={scope === "Completo"} onClick={() => { setScope("Completo"); setCounts({}); }} icon={Boxes} title="Inventário completo" desc={`Todos os ${materials.length} itens da filial`} />
+          {categories.filter(c => materials.some(m => m.category === c)).map(c => <OptionCard key={c} selected={scope === c} onClick={() => { setScope(c); setCounts({}); }} icon={catIcons[c] ?? Shapes} title={`Cíclico · ${c}`} desc={`${materials.filter(m => m.category === c).length} itens`} />)}
+        </div></div>
+        <div className="rounded-xl border border-border p-4 flex items-center justify-between"><div><div className="text-sm font-medium">Contagem cega</div><div className="text-xs text-muted-foreground">Esconde o saldo do sistema durante a contagem para evitar viés</div></div><Switch checked={blind} onCheckedChange={setBlind} /></div>
+      </>}
+      {step === 2 && <>
+        <div className="flex flex-col md:flex-row gap-3 md:items-center">
+          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Buscar item" value={q} onChange={e => setQ(e.target.value)} /></div>
+          <div className="text-sm text-muted-foreground whitespace-nowrap">{counted}/{items.length} contados</div>
+        </div>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full bg-primary transition-all" style={{ width: `${(counted / Math.max(1, items.length)) * 100}%` }} /></div>
+        <div className="rounded-xl border border-border divide-y divide-border">{shown.map(r => <div key={r.m.id} className="flex items-center gap-3 p-3">
+          <div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{r.m.name}</div><div className="text-xs text-muted-foreground">{r.m.code} · {r.m.unit}{!blind && ` · sistema: ${r.sys}`}</div></div>
+          {!blind && r.cnt !== null && <span className={`text-xs font-semibold w-14 text-right ${r.diff < 0 ? "text-destructive" : r.diff > 0 ? "text-success" : "text-muted-foreground"}`}>{r.diff > 0 ? "+" : ""}{r.diff}</span>}
+          <Input type="number" min={0} className="h-9 w-28" placeholder="Contagem" value={counts[r.m.id] ?? ""} onChange={e => setCounts({ ...counts, [r.m.id]: e.target.value })} />
+        </div>)}</div>
+      </>}
+      {step === 3 && <>
+        <ReviewGrid items={[["Filial", getClinic(branchId).name], ["Escopo", scope], ["Itens contados", `${counted}/${items.length}`], ["Acurácia", `${accuracy}%`], ["Sobras", brl(vIn)], ["Faltas", brl(vOut)]]} />
+        <FieldLabel>Divergências ({divs.length})</FieldLabel>
+        <div className="rounded-xl border border-border divide-y divide-border">
+          {divs.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">Sem divergências — estoque conferido.</div>}
+          {divs.map(r => <div key={r.m.id} className="flex justify-between p-3 text-sm"><span>{r.m.name}</span><span className="text-muted-foreground">{r.sys} → {r.cnt}</span><span className={`font-semibold ${r.diff < 0 ? "text-destructive" : "text-success"}`}>{r.diff > 0 ? "+" : ""}{r.diff} · {brl(r.diff * r.m.cost)}</span></div>)}
+        </div>
+      </>}
     </WizardShell>
   );
 }
