@@ -3,7 +3,9 @@
 - [x] Padronizar apresentação de todos os diálogos, confirmações e modernizar vínculos de usuários; moldura global compartilhada
 - [x] Novo processo de pedidos — manual/CSV, conciliação, revisão e fornecedor definido; fluxo demonstrativo verificado no navegador
 - [x] Área interna por fornecedor e respostas de preços versionadas, conferência e aprovação de compra
-- [ ] Área externa real de fornecedores — Cloud e estrutura de acesso preparados; depende de autorização da fase real e contas vinculadas a fornecedores; não disponível nesta entrega
+- [x] Corrigir modais de Configuração: 15 wizards compartilhados verificados, centralização e fundo escuro; celular verificado
+- [x] Portal externo implementado: login, vínculo no convite, publicação explícita, CSV, observações, preços e situação; envio persistente e isolamento verificados com contas temporárias
+- [ ] Ativação operacional do portal: aguarda a primeira conta real com perfil de Compras; entrega de convite e recuperação por e-mail ainda não verificada
 - [x] Padronizar todos os campos monetários com máscara de reais brasileira e validar digitação/salvamento
 - [x] Onda 1 — Estoque básico
 - [x] Fase 2 — Filiais, depósitos, usuários por filial, perfis e permissões, seletor de filial

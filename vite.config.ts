@@ -7,6 +7,19 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  vite: {
+    plugins: [{
+      name: 'vite7-start-build-compatibility',
+      enforce: 'post',
+      configResolved(config) {
+        // Current Start emits Vite 8's option name; Vite 7 still reads rollupOptions.
+        for (const environment of Object.values(config.environments)) {
+          const build = environment.build as typeof environment.build & { rolldownOptions?: typeof environment.build.rollupOptions };
+          if (build.rolldownOptions) build.rollupOptions = { ...build.rollupOptions, ...build.rolldownOptions };
+        }
+      },
+    }],
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

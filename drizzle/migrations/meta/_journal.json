@@ -8,6 +8,13 @@
       "when": 1794449199757,
       "tag": "0000_supplier_portal_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794450185304,
+      "tag": "0001_supplier_portal_response_workflow",
+      "breakpoints": true
     }
   ]
 }

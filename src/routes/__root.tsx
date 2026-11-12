@@ -8,10 +8,11 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -118,11 +119,30 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  const [identityRevision, setIdentityRevision] = useState(0);
+  useEffect(() => {
+    const linkType = new URLSearchParams(window.location.hash.slice(1)).get('type');
+    if (linkType === 'invite' || linkType === 'recovery') sessionStorage.setItem('supplier-password-link', 'yes');
+    const { data } = supabase.auth.onAuthStateChange(event => {
+      if (!["SIGNED_IN", "SIGNED_OUT", "USER_UPDATED"].includes(event)) return;
+      setIdentityRevision(v => v + 1);
+      if (event === "SIGNED_OUT") {
+        if (router.state.location.pathname.startsWith('/portal-fornecedor')) void router.navigate({ to: '/portal-fornecedor', replace: true });
+        else if (router.state.location.pathname.startsWith('/auth')) void router.navigate({ to: '/auth', replace: true });
+      } else {
+        if (event === 'SIGNED_IN' && router.state.location.pathname === '/auth') void router.navigate({ to: '/fornecedores', replace: true });
+        else void router.invalidate();
+        void queryClient.invalidateQueries();
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <Outlet key={identityRevision} />
       <Toaster />
     </QueryClientProvider>
   );

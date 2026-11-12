@@ -1,0 +1,4 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { SupplierAuthForm } from '@/components/supplier-auth-form';
+export const Route = createFileRoute('/auth')({ head: () => ({ meta: [{ title: 'Acesso Compras | Grupo Sorrisos' }, { name: 'description', content: 'Acesso autorizado da equipe de Compras aos pedidos de fornecedores.' }, { property: 'og:title', content: 'Acesso Compras | Grupo Sorrisos' }, { property: 'og:description', content: 'Entre na área de Compras.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: AuthPage });
+function AuthPage() { return <main className="min-h-screen bg-background flex items-center justify-center p-6"><div className="w-full max-w-md space-y-7"><div className="text-sm font-semibold">GS · Grupo | Sorrisos</div><h1 className="text-3xl font-semibold">Acesso de Compras</h1><SupplierAuthForm destination="/fornecedores" /></div></main>; }

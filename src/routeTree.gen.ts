@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AprovacoesRouteImport } from './routes/aprovacoes'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AutomacoesRouteImport } from './routes/automacoes'
 import { Route as CalendarioRouteImport } from './routes/calendario'
 import { Route as CentroDistribuicaoRouteImport } from './routes/centro-distribuicao'
@@ -36,8 +37,10 @@ import { Route as MovimentacoesRouteImport } from './routes/movimentacoes'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PerfisRouteImport } from './routes/perfis'
 import { Route as PortalClienteRouteImport } from './routes/portal-cliente'
+import { Route as PortalFornecedorRouteImport } from './routes/portal-fornecedor'
 import { Route as ProjetosRouteImport } from './routes/projetos'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TemplatesRouteImport } from './routes/templates'
 import { Route as TimesheetRouteImport } from './routes/timesheet'
 import { Route as TransferenciasRouteImport } from './routes/transferencias'
@@ -52,6 +55,11 @@ const IndexRoute = IndexRouteImport.update({
 const AprovacoesRoute = AprovacoesRouteImport.update({
   id: '/aprovacoes',
   path: '/aprovacoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AutomacoesRoute = AutomacoesRouteImport.update({
@@ -179,6 +187,11 @@ const PortalClienteRoute = PortalClienteRouteImport.update({
   path: '/portal-cliente',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PortalFornecedorRoute = PortalFornecedorRouteImport.update({
+  id: '/portal-fornecedor',
+  path: '/portal-fornecedor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjetosRoute = ProjetosRouteImport.update({
   id: '/projetos',
   path: '/projetos',
@@ -187,6 +200,11 @@ const ProjetosRoute = ProjetosRouteImport.update({
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TemplatesRoute = TemplatesRouteImport.update({
@@ -218,6 +236,7 @@ const FilialIdRoute = FilialIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/aprovacoes': typeof AprovacoesRoute
+  '/auth': typeof AuthRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
@@ -243,8 +262,10 @@ export interface FileRoutesByFullPath {
   '/pedidos': typeof PedidosRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
+  '/portal-fornecedor': typeof PortalFornecedorRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/templates': typeof TemplatesRoute
   '/timesheet': typeof TimesheetRoute
   '/transferencias': typeof TransferenciasRoute
@@ -254,6 +275,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/aprovacoes': typeof AprovacoesRoute
+  '/auth': typeof AuthRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
@@ -279,8 +301,10 @@ export interface FileRoutesByTo {
   '/pedidos': typeof PedidosRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
+  '/portal-fornecedor': typeof PortalFornecedorRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/templates': typeof TemplatesRoute
   '/timesheet': typeof TimesheetRoute
   '/transferencias': typeof TransferenciasRoute
@@ -291,6 +315,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/aprovacoes': typeof AprovacoesRoute
+  '/auth': typeof AuthRoute
   '/automacoes': typeof AutomacoesRoute
   '/calendario': typeof CalendarioRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
@@ -316,8 +341,10 @@ export interface FileRoutesById {
   '/pedidos': typeof PedidosRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
+  '/portal-fornecedor': typeof PortalFornecedorRoute
   '/projetos': typeof ProjetosRoute
   '/relatorios': typeof RelatoriosRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/templates': typeof TemplatesRoute
   '/timesheet': typeof TimesheetRoute
   '/transferencias': typeof TransferenciasRoute
@@ -329,6 +356,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/aprovacoes'
+    | '/auth'
     | '/automacoes'
     | '/calendario'
     | '/centro-distribuicao'
@@ -354,8 +382,10 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/perfis'
     | '/portal-cliente'
+    | '/portal-fornecedor'
     | '/projetos'
     | '/relatorios'
+    | '/reset-password'
     | '/templates'
     | '/timesheet'
     | '/transferencias'
@@ -365,6 +395,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/aprovacoes'
+    | '/auth'
     | '/automacoes'
     | '/calendario'
     | '/centro-distribuicao'
@@ -390,8 +421,10 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/perfis'
     | '/portal-cliente'
+    | '/portal-fornecedor'
     | '/projetos'
     | '/relatorios'
+    | '/reset-password'
     | '/templates'
     | '/timesheet'
     | '/transferencias'
@@ -401,6 +434,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/aprovacoes'
+    | '/auth'
     | '/automacoes'
     | '/calendario'
     | '/centro-distribuicao'
@@ -426,8 +460,10 @@ export interface FileRouteTypes {
     | '/pedidos'
     | '/perfis'
     | '/portal-cliente'
+    | '/portal-fornecedor'
     | '/projetos'
     | '/relatorios'
+    | '/reset-password'
     | '/templates'
     | '/timesheet'
     | '/transferencias'
@@ -438,6 +474,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AprovacoesRoute: typeof AprovacoesRoute
+  AuthRoute: typeof AuthRoute
   AutomacoesRoute: typeof AutomacoesRoute
   CalendarioRoute: typeof CalendarioRoute
   CentroDistribuicaoRoute: typeof CentroDistribuicaoRoute
@@ -463,8 +500,10 @@ export interface RootRouteChildren {
   PedidosRoute: typeof PedidosRoute
   PerfisRoute: typeof PerfisRoute
   PortalClienteRoute: typeof PortalClienteRoute
+  PortalFornecedorRoute: typeof PortalFornecedorRoute
   ProjetosRoute: typeof ProjetosRoute
   RelatoriosRoute: typeof RelatoriosRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TemplatesRoute: typeof TemplatesRoute
   TimesheetRoute: typeof TimesheetRoute
   TransferenciasRoute: typeof TransferenciasRoute
@@ -486,6 +525,13 @@ declare module '@tanstack/react-router' {
       path: '/aprovacoes'
       fullPath: '/aprovacoes'
       preLoaderRoute: typeof AprovacoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/automacoes': {
@@ -663,6 +709,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalClienteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/portal-fornecedor': {
+      id: '/portal-fornecedor'
+      path: '/portal-fornecedor'
+      fullPath: '/portal-fornecedor'
+      preLoaderRoute: typeof PortalFornecedorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projetos': {
       id: '/projetos'
       path: '/projetos'
@@ -675,6 +728,13 @@ declare module '@tanstack/react-router' {
       path: '/relatorios'
       fullPath: '/relatorios'
       preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/templates': {
@@ -718,6 +778,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AprovacoesRoute: AprovacoesRoute,
+  AuthRoute: AuthRoute,
   AutomacoesRoute: AutomacoesRoute,
   CalendarioRoute: CalendarioRoute,
   CentroDistribuicaoRoute: CentroDistribuicaoRoute,
@@ -743,8 +804,10 @@ const rootRouteChildren: RootRouteChildren = {
   PedidosRoute: PedidosRoute,
   PerfisRoute: PerfisRoute,
   PortalClienteRoute: PortalClienteRoute,
+  PortalFornecedorRoute: PortalFornecedorRoute,
   ProjetosRoute: ProjetosRoute,
   RelatoriosRoute: RelatoriosRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TemplatesRoute: TemplatesRoute,
   TimesheetRoute: TimesheetRoute,
   TransferenciasRoute: TransferenciasRoute,

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { WizardShell } from "@/components/erp-wizard";
 import {
   CalendarDays, CheckCircle2, Sparkles, ArrowRight, ArrowLeft, X, Check,
   User, Palette, Bell, Mail, Plug, Activity, LayoutGrid, Zap, Users, Shield,
@@ -49,218 +49,19 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
     { kind: "review" as const, id: "__review", nav: "Revisão", navDesc: "Confirme e salve", icon: CheckCircle2, title: "Tudo certo?", subtitle: "Revise as configurações antes de salvar." },
   ];
 
-  const prettyDate = new Date().toLocaleDateString("pt-BR", {
-    weekday: "long", day: "2-digit", month: "long", year: "numeric",
-  });
-
-  const fieldsOf = (s: WizardStep & { kind: "fields" }) =>
-    typeof s.fields === "function" ? s.fields(selMap()) : s.fields;
+  const fieldsOf = (s: WizardStep & { kind: "fields" }) => typeof s.fields === "function" ? s.fields(selMap()) : s.fields;
   const valueOf = (f: WizardField) => values[f.id] ?? f.defaultValue ?? "";
   const toggleOf = (t: WizardToggle) => toggles[t.id] ?? t.defaultChecked ?? false;
-
-  const close = () => { setStep(0); setSelections({}); setValues({}); setToggles({}); onClose(); };
-
-  const current = allSteps[step];
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden gap-0 border-0 [&>button]:hidden">
-        <div className="grid grid-cols-1 md:grid-cols-[340px_1fr] min-h-[600px]">
-          <aside
-            className="relative hidden md:flex flex-col justify-between p-7 text-white overflow-hidden"
-            style={{ backgroundImage: `url(${wizardBg})`, backgroundSize: "cover", backgroundPosition: "center" }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-black/55 via-black/40 to-black/70" />
-            <div className="relative">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-[11px] font-medium border border-white/20">
-                <SlidersHorizontal className="h-3 w-3" /> Configurações · {config.title}
-              </div>
-              <h2 className="mt-5 text-2xl font-semibold leading-tight whitespace-pre-line">{config.heading}</h2>
-              <p className="mt-2 text-sm text-white/75 capitalize">{prettyDate}</p>
-            </div>
-
-            <ol className="relative space-y-1">
-              {allSteps.map((s, i) => {
-                const Icon = s.icon;
-                const active = i === step;
-                const done = i < step;
-                return (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      onClick={() => { if (i <= step) setStep(i); }}
-                      className={`relative w-full flex items-start gap-3 rounded-xl p-3 text-left transition-all ${
-                        active ? "bg-white/15 backdrop-blur border border-white/25" : "hover:bg-white/5 border border-transparent"
-                      }`}
-                    >
-                      <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
-                        done ? "bg-emerald-400/90 border-emerald-300 text-emerald-950"
-                        : active ? "bg-white text-primary border-white"
-                        : "bg-white/10 border-white/20 text-white/70"
-                      }`}>
-                        {done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                      </span>
-                      <div className="min-w-0">
-                        <div className={`text-sm font-medium ${active ? "text-white" : "text-white/85"}`}>{s.nav}</div>
-                        <div className="text-[11px] text-white/60 leading-tight mt-0.5">{s.navDesc}</div>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-
-            <div className="relative text-[11px] text-white/60">
-              Passo {step + 1} de {allSteps.length}
-              <div className="mt-2 h-1 w-full rounded-full bg-white/15 overflow-hidden">
-                <div className="h-full bg-white transition-all" style={{ width: `${((step + 1) / allSteps.length) * 100}%` }} />
-              </div>
-            </div>
-          </aside>
-
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between px-7 pt-6">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CalendarDays className="h-4 w-4" />
-                <span className="capitalize">{prettyDate}</span>
-              </div>
-              <Button variant="ghost" size="icon" onClick={close}><X className="h-4 w-4" /></Button>
-            </div>
-
-            <div className="flex-1 px-7 py-6 overflow-y-auto">
-              <div key={step} className="animate-fade-in">
-                <div className="mb-5">
-                  <h3 className="text-xl font-semibold">{current.title}</h3>
-                  <p className="text-sm text-muted-foreground mt-1">{current.subtitle}</p>
-                </div>
-
-                {current.kind === "cards" && (
-                  <div className={current.compact
-                    ? "grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[360px] overflow-y-auto pr-1"
-                    : "grid grid-cols-1 sm:grid-cols-2 gap-3"
-                  }>
-                    {current.options.map(o => {
-                      const Icon = o.icon ?? Sparkles;
-                      const selected = selectedOf(current) === o.id;
-                      return (
-                        <button
-                          key={o.id} type="button"
-                          onClick={() => setSelections(s => ({ ...s, [current.id]: o.id }))}
-                          className={`rounded-xl border text-left transition-all ${current.compact ? "p-3.5" : "p-5"} ${
-                            selected ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <span className={`flex items-center justify-center rounded-lg ${current.compact ? "h-9 w-9" : "h-11 w-11"} ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                            <Icon className={current.compact ? "h-4 w-4" : "h-5 w-5"} />
-                          </span>
-                          <div className={current.compact ? "mt-2 text-sm font-semibold" : "mt-3 text-base font-semibold"}>{o.label}</div>
-                          {o.desc && <div className={`text-muted-foreground leading-relaxed ${current.compact ? "text-[11px] mt-0.5 line-clamp-2" : "text-xs mt-1"}`}>{o.desc}</div>}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {current.kind === "fields" && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {fieldsOf(current).map(f => (
-                      <div key={f.id} className={f.full ? "sm:col-span-2" : ""}>
-                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">{f.label}</Label>
-                        <Input
-                          type={f.type ?? "text"}
-                          value={valueOf(f)}
-                          placeholder={f.placeholder}
-                          onChange={(e) => setValues(v => ({ ...v, [f.id]: e.target.value }))}
-                          className="mt-1.5 h-11"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {current.kind === "toggles" && (
-                  <div className="space-y-2">
-                    {current.toggles.map(t => {
-                      const enabled = toggleOf(t);
-                      return (
-                        <div key={t.id} className={`flex items-center gap-3 rounded-xl border p-4 transition-colors ${enabled ? "border-primary/40 bg-primary/5" : "border-border"}`}>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium">{t.label}</div>
-                            {t.desc && <div className="text-[11px] text-muted-foreground mt-0.5">{t.desc}</div>}
-                          </div>
-                          <Switch checked={enabled} onCheckedChange={(v) => setToggles(s => ({ ...s, [t.id]: v }))} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {current.kind === "review" && (
-                  <div className="rounded-xl border bg-card/40 p-5 space-y-4">
-                    {visibleSteps.map((s, i) => (
-                      <div key={s.id} className={i > 0 ? "pt-4 border-t border-border" : ""}>
-                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">{s.nav}</div>
-                        {s.kind === "cards" && (() => {
-                          const sel = s.options.find(o => o.id === selectedOf(s));
-                          const Icon = sel?.icon ?? Sparkles;
-                          return (
-                            <div className="flex items-center gap-2 text-sm">
-                              <span className="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-primary"><Icon className="h-3.5 w-3.5" /></span>
-                              <span className="font-medium">{sel?.label}</span>
-                            </div>
-                          );
-                        })()}
-                        {s.kind === "fields" && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                            {fieldsOf(s).map(f => (
-                              <div key={f.id} className="flex items-baseline gap-2 min-w-0">
-                                <span className="text-xs text-muted-foreground shrink-0">{f.label}:</span>
-                                <span className="font-medium truncate">
-                                  {f.type === "password" ? "••••••••" : (valueOf(f) || "—")}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {s.kind === "toggles" && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {s.toggles.map(t => {
-                              const on = toggleOf(t);
-                              return (
-                                <span key={t.id} className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] ${on ? "border-primary/40 bg-primary/10 text-foreground" : "border-border text-muted-foreground opacity-60"}`}>
-                                  {on ? <Check className="h-3 w-3 text-primary" /> : <X className="h-3 w-3" />}
-                                  {t.label}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between border-t px-7 py-4">
-              <Button variant="ghost" onClick={step === 0 ? close : () => setStep(s => s - 1)}>
-                {step === 0 ? "Cancelar" : (<><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</>)}
-              </Button>
-              {step < allSteps.length - 1 ? (
-                <Button onClick={() => setStep(s => s + 1)}>
-                  Continuar <ArrowRight className="h-4 w-4 ml-1" />
-                </Button>
-              ) : (
-                <Button onClick={close}>
-                  <Check className="h-4 w-4 mr-1" /> Salvar configurações
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  const current = allSteps[Math.min(step, allSteps.length - 1)];
+  return <WizardShell open={open} onClose={onClose} badge={`Configurações · ${config.title}`} headline={config.heading} bg={wizardBg}
+    steps={allSteps.map(s => ({ title: s.nav, desc: s.navDesc, icon: s.icon }))} step={Math.min(step, allSteps.length - 1)} setStep={setStep}
+    footer={<><Button variant="outline" onClick={step === 0 ? onClose : () => setStep(step - 1)}>{step === 0 ? "Cancelar" : "Voltar"}</Button><Button onClick={step < allSteps.length - 1 ? () => setStep(step + 1) : onClose}>{step < allSteps.length - 1 ? "Continuar" : "Salvar configurações"}</Button></>}>
+    <h3 className="text-lg font-semibold">{current.title}</h3>
+    {current.kind === "cards" && <div className="grid sm:grid-cols-2 gap-3">{current.options.map(o => { const Icon = o.icon ?? Sparkles; return <Button key={o.id} variant="outline" onClick={() => setSelections(s => ({ ...s, [current.id]: o.id }))} className={`h-auto whitespace-normal text-left justify-start p-5 gap-3 ${selectedOf(current) === o.id ? "border-primary bg-primary/5 ring-1 ring-primary" : ""}`}><Icon className="h-5 w-5 shrink-0" /><span><span className="block font-semibold">{o.label}</span><span className="block text-xs text-muted-foreground mt-1">{o.desc}</span></span></Button>; })}</div>}
+    {current.kind === "fields" && <div className="grid sm:grid-cols-2 gap-4">{fieldsOf(current).map(f => <div key={f.id} className={f.full ? "sm:col-span-2" : ""}><Label htmlFor={`setting-${f.id}`}>{f.label}</Label><Input id={`setting-${f.id}`} className="mt-2 h-11" type={f.type ?? "text"} placeholder={f.placeholder} value={valueOf(f)} onChange={e => setValues(v => ({ ...v, [f.id]: e.target.value }))} /></div>)}</div>}
+    {current.kind === "toggles" && <div className="divide-y divide-border">{current.toggles.map(t => <label key={t.id} className="flex items-center justify-between gap-4 py-4"><span><span className="block font-medium">{t.label}</span><span className="text-sm text-muted-foreground">{t.desc}</span></span><Switch checked={toggleOf(t)} onCheckedChange={v => setToggles(s => ({ ...s, [t.id]: v }))} /></label>)}</div>}
+    {current.kind === "review" && <div className="divide-y divide-border">{visibleSteps.map(s => <section key={s.id} className="py-4 space-y-2"><h4 className="font-semibold">{s.nav}</h4>{s.kind === "cards" && <p>{s.options.find(o => o.id === selectedOf(s))?.label}</p>}{s.kind === "fields" && fieldsOf(s).map(f => <div key={f.id} className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{f.label}</span><span className="break-all">{f.type === "password" ? "••••••••" : valueOf(f) || "—"}</span></div>)}{s.kind === "toggles" && s.toggles.map(t => <div key={t.id} className="flex justify-between gap-3 text-sm"><span>{t.label}</span><span>{toggleOf(t) ? "Ativado" : "Desativado"}</span></div>)}</section>)}</div>}
+  </WizardShell>;
 }
 
 // ----------------------------------------------------------------------------

@@ -59,22 +59,28 @@ export type Database = {
       supplier_portal_responses: {
         Row: {
           created_at: string
+          file_name: string | null
           id: string
           items: Json
+          notes: string
           request_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          file_name?: string | null
           id?: string
           items: Json
+          notes?: string
           request_id: string
           user_id: string
         }
         Update: {
           created_at?: string
+          file_name?: string | null
           id?: string
           items?: Json
+          notes?: string
           request_id?: string
           user_id?: string
         }
@@ -112,6 +118,19 @@ export type Database = {
     }
     Functions: {
       is_procurement_user: { Args: never; Returns: boolean }
+      review_supplier_response: {
+        Args: { p_request_id: string; p_status: string }
+        Returns: undefined
+      }
+      submit_supplier_prices: {
+        Args: {
+          p_file?: string
+          p_items: Json
+          p_notes?: string
+          p_request_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

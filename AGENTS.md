@@ -4,8 +4,10 @@
 - MovementReview derives pre/post quantities and stock valuations from the live stock snapshot without mutating inventory; quantities are grouped by unit to avoid adding incompatible volumes.
 - CSV parsing uses PapaParse with explicit column mapping and pure reconciliation in order-csv.ts; ambiguous names require human confirmation to prevent catalog substitutions.
 - Supplier requests and versioned prices live in supplier-orders.ts, separate from CD orders; approval creates one purchasing record and never changes stock before receiving.
-- External supplier access remains disabled until authenticated server-side supplier isolation is implemented; demo supplier selection is not an authorization boundary.
-- Cloud supplier tables are a dormant foundation with role and membership-scoped reads; demo requests do not sync to them, keeping external access separate until its real workflow is authorized and verified.
+- Supplier portal access uses authenticated Cloud membership-scoped reads and an atomic SQL response function; demo supplier selection never authorizes access.
+- Procurement explicitly publishes demo requests as immutable Cloud snapshots; Cloud responses and status are read independently so demo refreshes cannot discard supplier submissions.
+- Supplier access invitations require a server-validated procurement role and create only a company membership; no user-facing profile fields or supplier privileges come from editable metadata.
+- Current Start bundler options are mirrored into Vite 7 rollupOptions by a compatibility plugin because generated client entries otherwise fall back to index.html.
 - Monetary form controls use CurrencyInput backed by react-number-format; callbacks retain numeric amounts so masks cannot corrupt calculations or saved values.
 - ERP domain rules (orders state machine, branch access `can`/`visibleBranchIds`) live as pure functions in src/lib/orders.ts and src/lib/erp.ts, tested in src/lib/*.test.ts; UI calls store wrappers only — so rules can move to a real backend later.
 - Demo data is in-memory (src/lib/stock.ts, erp.ts, orders.ts, purchasing.ts); only the simulated user and branch filter persist in localStorage.
