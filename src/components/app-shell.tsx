@@ -1,5 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown, Warehouse, Package, ArrowLeftRight, Truck, CalendarClock } from "lucide-react";
+import { useSession, useErp } from "@/lib/erp";
+import { BranchSwitcher, NotificationsBell } from "@/components/erp-header";
+import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown, Warehouse, Package, ArrowLeftRight, Truck, CalendarClock, ClipboardCheck, ShoppingCart, Boxes, ShoppingBag, Network, KeyRound } from "lucide-react";
 import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,15 @@ const navGroups = [
       { to: "/movimentacoes", label: "Movimentações", icon: ArrowLeftRight },
       { to: "/transferencias", label: "Transferências", icon: Truck },
       { to: "/lotes-validades", label: "Lotes e Validades", icon: CalendarClock },
+      { to: "/inventarios", label: "Inventários", icon: ClipboardCheck },
+    ],
+  },
+  {
+    label: "Pedidos & Compras",
+    items: [
+      { to: "/pedidos", label: "Pedidos de Materiais", icon: ShoppingCart },
+      { to: "/centro-distribuicao", label: "Centro de Distribuição", icon: Boxes },
+      { to: "/compras", label: "Compras e Fornecedores", icon: ShoppingBag },
     ],
   },
   {
@@ -60,6 +71,8 @@ const navGroups = [
   {
     label: "Gestão",
     items: [
+      { to: "/filiais", label: "Filiais", icon: Network },
+      { to: "/usuarios-filiais", label: "Usuários e Permissões", icon: KeyRound },
       { to: "/equipe", label: "Equipe", icon: Users },
       { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
       { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
@@ -124,7 +137,9 @@ function NavLink({ item, active, collapsed, onNavigate }: {
 }
 
 function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; pathname: string; onNavigate?: () => void }) {
-  const me = users[0];
+  const ses = useSession();
+  const erp = useErp();
+  const me = { ...ses.user, role: erp.roles.find(r => r.id === ses.user.memberships[0]?.roleId)?.name ?? "" };
   const navRef = useRef<HTMLElement>(null);
   const [canScrollDown, setCanScrollDown] = useState(false);
 
@@ -265,19 +280,17 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
             <h1 className="text-sm md:text-lg font-semibold truncate">{title}</h1>
             {subtitle && <p className="text-xs text-muted-foreground truncate hidden sm:block">{subtitle}</p>}
           </div>
-          <div className="hidden xl:flex items-center relative">
+          <div className="hidden 2xl:flex items-center relative">
             <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar tarefas, projetos..." className="pl-9 w-64 h-9 bg-muted/50 border-transparent focus-visible:bg-card" />
           </div>
+          <BranchSwitcher />
           <TimerChip />
           <div className="hidden sm:contents">{actions}</div>
           <Button size="icon" variant="ghost" onClick={() => themeStore.toggle()} aria-label="Alternar tema">
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>
-          <Button size="icon" variant="ghost" className="relative hidden sm:inline-flex" aria-label="Notificações">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-destructive" />
-          </Button>
+          <NotificationsBell />
           {primaryAction !== undefined ? primaryAction : <Button size="sm" className="hidden sm:inline-flex" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>}
         </header>
         <div className="flex-1 min-w-0 overflow-auto">{children}</div>

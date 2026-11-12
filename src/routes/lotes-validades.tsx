@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StockStat } from "@/components/stock-ui";
 import { useStock, getMaterial, getClinic, daysUntil } from "@/lib/stock";
+import { useSession } from "@/lib/erp";
 import { CalendarX, CalendarClock, CalendarCheck } from "lucide-react";
 
 export const Route = createFileRoute("/lotes-validades")({
@@ -25,7 +26,8 @@ function status(d: number) {
 
 function LotesPage() {
   const s = useStock();
-  const lots = [...s.lots].sort((a, b) => a.expires.localeCompare(b.expires));
+  const ses = useSession();
+  const lots = s.lots.filter(l => ses.scope.includes(l.clinicId)).sort((a, b) => a.expires.localeCompare(b.expires));
   const exp = lots.filter(l => daysUntil(l.expires) < 0).length;
   const soon = lots.filter(l => { const d = daysUntil(l.expires); return d >= 0 && d <= 60; }).length;
   return (

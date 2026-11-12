@@ -88,6 +88,29 @@ export const getClinic = (id: string) => clinics.find(x => x.id === id)!;
 export const balanceOf = (s: State, materialId: string, clinicId?: string) =>
   s.balances.filter(b => b.materialId === materialId && (!clinicId || b.clinicId === clinicId)).reduce((a, b) => a + b.qty, 0);
 
+/** Low-level balance change used by orders, purchases and inventory. Never lets qty go below zero. */
+export function applyDelta(materialId: string, clinicId: string, dQty: number, dReserved = 0): string | null {
+  const b = state.balances.find(x => x.materialId === materialId && x.clinicId === clinicId);
+  const cur = b ?? { materialId, clinicId, qty: 0, reserved: 0 };
+  if (cur.qty + dQty < 0) return "Saldo insuficiente";
+  const next = { ...cur, qty: cur.qty + dQty, reserved: Math.max(0, cur.reserved + dReserved) };
+  state = { ...state, balances: b ? state.balances.map(x => x === b ? next : x) : [...state.balances, next] };
+  emit();
+  return null;
+}
+export function logMovement(mv: Omit<Movement, "id" | "number" | "date">) {
+  const full: Movement = { ...mv, id: `mv${Date.now()}${Math.random()}`, number: `MOV-${1200 + state.movements.length}`, date: new Date().toISOString().slice(0, 10) };
+  state = { ...state, movements: [full, ...state.movements] };
+  emit();
+}
+export function getState() { return state; }
+export function addClinic(c: Clinic) {
+  if (clinics.some(x => x.id === c.id)) return;
+  clinics.push(c);
+  state = { ...state, balances: [...state.balances, ...materials.map(mt => ({ materialId: mt.id, clinicId: c.id, qty: 0, reserved: 0 }))] };
+  emit();
+}
+
 /** Applies a movement. Returns an error message when it would leave negative stock. */
 export function registerMovement(input: Omit<Movement, "id" | "number" | "date">): string | null {
   if (input.qty <= 0) return "Quantidade deve ser maior que zero";
@@ -116,6 +139,10 @@ export function advanceTransfer(id: string) {
     return { ...t, status: next };
   }) };
   emit();
+  const t = state.transfers.find(x => x.id === id)!;
+  // Stock leaves origin when shipped and enters destination when received — each happens once because status only moves forward.
+  if (t.status === "transito") for (const i of t.items) { applyDelta(i.materialId, t.fromId, -Math.min(i.qty, balanceOf(state, i.materialId, t.fromId))); }
+  if (t.status === "recebida") for (const i of t.items) { applyDelta(i.materialId, t.toId, i.qty); logMovement({ type: "transferencia", reason: `Transferência ${t.number}`, materialId: i.materialId, clinicId: t.fromId, toClinicId: t.toId, qty: i.qty, user: "Sistema" }); }
 }
 
 export const daysUntil = (iso: string) => Math.round((Date.parse(iso) - Date.UTC(2026, 10, 11)) / 86400000);

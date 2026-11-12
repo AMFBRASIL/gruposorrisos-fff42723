@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useStock, materials, categories, clinics, balanceOf, brl } from "@/lib/stock";
 import { Search } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useSession } from "@/lib/erp";
 
 export const Route = createFileRoute("/materiais")({
   head: () => ({ meta: [
@@ -22,7 +23,9 @@ function MateriaisPage() {
   const s = useStock();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("Todas");
-  const [clinic, setClinic] = useState("all");
+  const ses = useSession();
+  const [localClinic, setClinic] = useState("all");
+  const clinic = ses.filter !== "all" ? ses.filter : localClinic;
   const rows = useMemo(() => materials.filter(mt =>
     (cat === "Todas" || mt.category === cat) && `${mt.name} ${mt.code} ${mt.sku} ${mt.brand}`.toLowerCase().includes(q.toLowerCase())), [q, cat]);
 
@@ -38,7 +41,7 @@ function MateriaisPage() {
             <option>Todas</option>{categories.map(c => <option key={c}>{c}</option>)}
           </select>
           <select value={clinic} onChange={e => setClinic(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm">
-            <option value="all">Todas as unidades</option>{clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="all">Todas as unidades</option>{clinics.filter(c => ses.visible.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <Card className="overflow-x-auto">

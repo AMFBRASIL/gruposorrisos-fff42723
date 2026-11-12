@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StockStat } from "@/components/stock-ui";
 import { useStock, materials, clinics, balanceOf, brl, daysUntil, getMaterial, getClinic } from "@/lib/stock";
+import { useSession } from "@/lib/erp";
 import { Package, Wallet, AlertTriangle, CalendarX, PackageX, Truck } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts";
 
@@ -19,20 +20,22 @@ export const Route = createFileRoute("/estoque")({
 });
 
 function EstoquePage() {
-  const s = useStock();
+  const st = useStock();
+  const ses = useSession();
+  const s = { ...st, balances: st.balances.filter(b => ses.scope.includes(b.clinicId)), lots: st.lots.filter(l => ses.scope.includes(l.clinicId)), movements: st.movements.filter(m => ses.scope.includes(m.clinicId) || (!!m.toClinicId && ses.scope.includes(m.toClinicId))), transfers: st.transfers.filter(t => ses.scope.includes(t.fromId) || ses.scope.includes(t.toId)) };
   const value = s.balances.reduce((a, b) => a + b.qty * getMaterial(b.materialId).cost, 0);
-  const below = materials.filter(mt => clinics.some(c => balanceOf(s, mt.id, c.id) < mt.min / 2 && c.id !== "cd"));
+  const below = materials.filter(mt => clinics.some(c => ses.scope.includes(c.id) && balanceOf(s, mt.id, c.id) < mt.min / 2 && c.id !== "cd"));
   const zero = s.balances.filter(b => b.qty === 0).length;
   const expiring = s.lots.filter(l => { const d = daysUntil(l.expires); return d >= 0 && d <= 60; });
   const pending = s.transfers.filter(t => t.status !== "concluida").length;
-  const byClinic = clinics.filter(c => c.id !== "cd").map(c => ({
+  const byClinic = clinics.filter(c => c.id !== "cd" && ses.scope.includes(c.id)).map(c => ({
     name: c.name.replace("Sorrisos ", ""),
     Entradas: s.movements.filter(mv => (mv.type === "entrada" && mv.clinicId === c.id) || mv.toClinicId === c.id).reduce((a, mv) => a + mv.qty, 0),
     Saídas: s.movements.filter(mv => mv.type === "saida" && mv.clinicId === c.id).reduce((a, mv) => a + mv.qty, 0),
   }));
 
   return (
-    <AppShell title="Visão Geral do Estoque" subtitle="Consolidado de todas as unidades" primaryAction={null}>
+    <AppShell title="Visão Geral do Estoque" subtitle={ses.filter === "all" ? "Consolidado das filiais permitidas" : "Filial selecionada no topo"} primaryAction={null}>
       <div className="p-4 md:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-6 gap-3">
           <StockStat label="Materiais" value={materials.length} icon={Package} />

@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useStock, materials, clinics, getMaterial, getClinic, registerMovement, balanceOf, type MovementType } from "@/lib/stock";
 import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, Plus } from "lucide-react";
 import { useState } from "react";
+import { useSession } from "@/lib/erp";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/movimentacoes")({
@@ -32,9 +33,10 @@ function MovPage() {
   const s = useStock();
   const [filter, setFilter] = useState<MovementType | "todas">("todas");
   const [open, setOpen] = useState(false);
-  const rows = s.movements.filter(mv => filter === "todas" || mv.type === filter);
+  const ses = useSession();
+  const rows = s.movements.filter(mv => (filter === "todas" || mv.type === filter) && (ses.scope.includes(mv.clinicId) || (mv.toClinicId !== undefined && ses.scope.includes(mv.toClinicId))));
   return (
-    <AppShell title="Movimentações" subtitle="Entradas, saídas e transferências" primaryAction={<Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Movimentação</Button>}>
+    <AppShell title="Movimentações" subtitle="Entradas, saídas e transferências" primaryAction={ses.can("estoque.movimentar") && <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Movimentação</Button> || null}>
       <div className="p-4 md:p-8 space-y-4">
         <div className="flex gap-1 p-1 rounded-lg bg-muted w-fit">
           {(["todas", "entrada", "saida", "transferencia"] as const).map(f => (
