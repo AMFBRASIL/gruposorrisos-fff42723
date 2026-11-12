@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { applyDelta, logMovement } from "./stock";
 import { can, currentUser, getErp } from "./erp";
 
-export type Supplier = { id: string; name: string; cnpj: string; contact: string; email: string; leadDays: number; rating: number; categories: string[] };
+export type Supplier = { id: string; name: string; cnpj: string; contact: string; email: string; leadDays: number; rating: number; categories: string[]; phone?: string; address?: string; city?: string; state?: string; notes?: string };
 export type PoStatus = "requisicao" | "cotacao" | "aprovado" | "enviado" | "recebido_parcial" | "recebido" | "cancelado";
 export type Quote = { supplierId: string; unitPrice: number; days: number };
 export type PoItem = { materialId: string; qty: number; received: number; quotes: Quote[]; chosen?: string };
@@ -31,6 +31,7 @@ const set = (p: PurchaseOrder[], s = sup) => { pos = p; sup = s; cache = { pos, 
 const guard = () => can(currentUser(), getErp().roles, "compras.gerenciar") ? null : "Sem permissão para gerenciar compras";
 
 export function addSupplier(s: Omit<Supplier, "id">) { const g = guard(); if (g) return g; if (!s.name.trim()) return "Informe o nome"; set(pos, [...sup, { ...s, id: `s${Date.now()}` }]); return null; }
+export function updateSupplier(s: Supplier) { const g = guard(); if (g) return g; if (!s.name.trim()) return "Informe o nome"; if (!sup.some(x => x.id === s.id)) return "Fornecedor não encontrado"; set(pos, sup.map(x => x.id === s.id ? { ...s } : x)); return null; }
 export function createRequisition(branchId: string, items: { materialId: string; qty: number }[], confirmed?: { supplierId: string; prices: Record<string, number> }) {
   const g = guard(); if (g) return g; if (!items.length) return "Adicione itens";
   if (confirmed && (!sup.some(s => s.id === confirmed.supplierId) || items.some(i => !Number.isFinite(confirmed.prices[i.materialId]) || confirmed.prices[i.materialId] < 0))) return "Fornecedor ou preços confirmados inválidos";

@@ -73,6 +73,8 @@ const navGroups = [
   {
     label: "Gestão",
     items: [
+      { to: "/cadastros", label: "Central de Cadastros", icon: FileStack },
+      { to: "/cadastro-fornecedores", label: "Cadastro de Fornecedores", icon: Building2 },
       { to: "/filiais", label: "Filiais", icon: Network },
       { to: "/usuarios-filiais", label: "Usuários e Permissões", icon: KeyRound },
       { to: "/equipe", label: "Equipe", icon: Users },
