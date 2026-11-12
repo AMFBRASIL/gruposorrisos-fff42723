@@ -1,4 +1,12 @@
 # Roadmap — Grupo Sorrisos ERP Multifiliais (dados de demonstração)
+- [x] Central de pendências por usuário e filial
+- [x] Aprovação condicional por valor, filial e categoria
+- [x] Orçamentos por centro de custo e impacto antes da aprovação
+- [x] Recebimento parcial com danos e divergências de preço
+- [x] Comparação de fornecedores por custo total, prazo e desempenho
+- [x] Consulta integrada da solicitação até a movimentação de estoque
+- [x] Alertas de pedidos duplicados por material e filial
+- [x] Indicadores de aprovação, atrasos, economia e qualidade das entregas
 - [x] Pedidos: etapas de aprovação configuráveis por usuário/perfil, fluxo por pedido, observações e histórico; CD e fornecedores verificados sem backend, 46 testes passaram
 - [x] Fornecedores com etapa de acesso demonstrativo, usuário/login, situação e filtro do portal, contagens e consulta de pedidos vinculados; edição e leitura verificadas
 - [x] Cadastro de fornecedores em Gestão com formulário por etapas e central dos cadastros existentes; criação e edição verificadas, sem backend

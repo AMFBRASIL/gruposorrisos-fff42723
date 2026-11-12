@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ApprovalTimeline } from './order-workflow';
+import { ProcurementContext } from './procurement-context';
 import { OrderActivity } from './order-activity';
 import { workflowAssignee } from '@/lib/order-workflow';
 import { useErp, useSession, branchName, userName } from "@/lib/erp";
@@ -120,7 +121,7 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
                   {[["Filial", branchName(branchId)], ["Prioridade", priority], ["Data desejada", desiredDate.split("-").reverse().join("/")], ["Itens", String(cart.length)]].map(([k, v]) => <div key={k} className="rounded-lg border border-border p-3"><div className="text-xs text-muted-foreground">{k}</div><div className="font-medium capitalize">{v}</div></div>)}
                 </div>
                 <div className="flex gap-2 items-center text-muted-foreground"><Store className="h-4 w-4" />{target === 'supplier' ? sup.find(supplier => supplier.id === supplierId)?.name : 'Centro de Distribuição'}{file && <Badge variant="outline">{file}</Badge>}</div>
-                <OrderReview items={cart} branchId={branchId} external={target === 'supplier'} />
+                <ProcurementContext branchId={branchId} items={cart} excludeId={initial?.id} /><OrderReview items={cart} branchId={branchId} external={target === 'supplier'} />
                 {notes && <div className="text-muted-foreground">Obs.: {notes}</div>}
               </div>
             )}
@@ -149,7 +150,7 @@ export function OrderSheet({ order, onClose, onEdit }: { order: Order | null; on
           <div className="grid grid-cols-2 gap-2">
             {[["Filial", branchName(o.branchId)], ["Atendimento", branchName(o.sourceId)], ["Solicitante", userName(o.requesterId)], ["Data desejada", o.desiredDate.split("-").reverse().join("/")]].map(([k, v]) => <div key={k} className="rounded-md bg-muted/50 p-2"><div className="text-xs text-muted-foreground">{k}</div><div className="font-medium">{v}</div></div>)}
           </div>
-          <ApprovalTimeline workflow={o.workflow} active={o.status === 'enviado'} />
+          <ProcurementContext branchId={o.branchId} items={o.items} excludeId={o.id} /><ApprovalTimeline workflow={o.workflow} active={o.status === 'enviado'} />
           <div className="grid grid-cols-2 gap-3 border-y border-border py-3"><div><div className="text-xs text-muted-foreground">Materiais solicitados</div><div className="text-xl font-semibold">{o.items.length}</div></div><div><div className="text-xs text-muted-foreground">Valor de referência</div><div className="text-xl font-semibold">{brl(o.items.reduce((sum, i) => sum + i.requested * getMaterial(i.materialId).cost, 0))}</div></div></div>
           <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
             <thead className="text-xs text-muted-foreground"><tr>{["Material", "Solic.", "Aprov.", "Separ.", "Exped.", "Receb.", qcol ? "Agora" : ""].map(h => <th key={h} className="text-left py-1">{h}</th>)}</tr></thead>
@@ -171,7 +172,7 @@ export function OrderSheet({ order, onClose, onEdit }: { order: Order | null; on
             {(o.status === "aprovado" || o.status === "separacao") && ses.can("pedidos.separar", o.sourceId) && <Button onClick={() => done(actions.pick(o.id, all()), "Separação registrada")}>Registrar separação</Button>}
             {o.status === "separacao" && ses.can("pedidos.expedir", o.sourceId) && <Button onClick={() => done(actions.ship(o.id), "Pedido expedido")}>Expedir</Button>}
             {(o.status === "transporte" || o.status === "recebido_parcial") && ses.can("pedidos.receber", o.branchId) && <Button onClick={() => done(actions.receive(o.id, all(), note), "Recebimento registrado")}>Confirmar recebimento</Button>}
-            {o.status === "recebido_parcial" && ses.can("pedidos.receber", o.branchId) && <Button variant="outline" onClick={() => done(actions.close(o.id, note || "Divergência"), "Pedido encerrado com divergência")}>Encerrar com divergência</Button>}
+            {o.status === "recebido_parcial" && ses.can("pedidos.receber", o.branchId) && <Button variant="outline" onClick={() => done(actions.close(o.id, note), "Pedido encerrado com divergência")}>Encerrar com divergência</Button>}
             {["rascunho", "enviado", "correcao", "aprovado"].includes(o.status) && <Button variant="ghost" className="text-destructive" onClick={() => done(actions.cancel(o.id, note), "Pedido cancelado")}>Cancelar</Button>}
             <Button variant="ghost" onClick={() => { const r = actions.duplicate(o.id); if (r.ok) toast.success(`Rascunho ${r.order.number} criado`); else toast.error(r.error); }}>Duplicar</Button>
             <Button variant="ghost" onClick={() => window.print()}>Imprimir</Button>

@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from "react";
 import { applyDelta, balanceOf, getState as getStock, logMovement, materials, consumeLots, addLot } from "./stock";
+import { budgetCheck, commitBudget, releaseBudget } from './procurement-budget';
 import { fefo } from './stock-intelligence';
 import { can, currentUser, getErp, type ErpRole, type ErpUser } from "./erp";
-import { approveWorkflow, commentEvent, resetWorkflow, snapshotWorkflow, workflowAssignee, type Workflow } from './order-workflow';
+import { activateWorkflow, approveWorkflow, commentEvent, resetWorkflow, snapshotWorkflow, workflowAssignee, type Workflow } from './order-workflow';
 
 export type OrderStatus = "rascunho" | "enviado" | "correcao" | "rejeitado" | "aprovado" | "separacao" | "transporte" | "recebido_parcial" | "concluido" | "cancelado";
 export type Priority = "baixa" | "normal" | "alta" | "urgente";
@@ -30,7 +31,7 @@ export function submitOrder(o: Order, c: Ctx): Result {
   if (o.status !== "rascunho" && o.status !== "correcao") return fail("Só é possível enviar rascunhos ou pedidos em correção");
   if (!can(c.user, c.roles, "pedidos.criar", o.branchId)) return fail("Sem permissão para criar pedidos nesta filial");
   if (o.items.length === 0 || o.items.some(i => i.requested <= 0)) return fail("Adicione materiais com quantidade maior que zero");
-  return { ok: true, order: { ...o, workflow: o.status === 'correcao' && o.workflow ? resetWorkflow(o.workflow) : o.workflow, status: "enviado", events: ev(o, c, "Pedido enviado") } };
+  return { ok: true, order: { ...o, workflow: o.workflow ? activateWorkflow(o.workflow, { value: o.items.reduce((sum, i) => sum + i.requested * (materials.find(m => m.id === i.materialId)?.cost ?? 0), 0), branchId: o.branchId, categories: o.items.flatMap(i => { const m = materials.find(m => m.id === i.materialId); return m ? [m.category] : []; }) }) : undefined, status: "enviado", events: ev(o, c, "Pedido enviado") } };
 }
 /** approvedQty: optional per-item approved quantities (defaults to requested). */
 export function approveOrder(o: Order, c: Ctx, approvedQty?: Record<string, number>, note = ''): Result {
@@ -76,7 +77,9 @@ export function shipOrder(o: Order, c: Ctx): Result {
 export function receiveOrder(o: Order, c: Ctx, received: Record<string, number>, note?: string): Result {
   if (o.status !== "transporte" && o.status !== "recebido_parcial") return fail("Pedido não está em transporte");
   if (!can(c.user, c.roles, "pedidos.receber", o.branchId)) return fail("Sem permissão para receber nesta filial");
-  for (const i of o.items) { const r = received[i.materialId] ?? 0; if (r < 0 || i.received + r > i.shipped) return fail("Quantidade recebida acima da expedida"); }
+  if (Object.keys(received).some(id => !o.items.some(i => i.materialId === id))) return fail("Material não pertence ao pedido");
+  if (!Object.values(received).some(n => n > 0)) return fail("Informe ao menos uma quantidade recebida");
+  for (const i of o.items) { const r = received[i.materialId] ?? 0; if (!Number.isFinite(r) || r < 0 || i.received + r > i.shipped) return fail("Quantidade recebida acima da expedida"); }
   const items = o.items.map(i => ({ ...i, received: i.received + (received[i.materialId] ?? 0) }));
   const complete = items.every(i => i.received === i.shipped);
   return { ok: true, order: { ...o, items, status: complete ? "concluido" : "recebido_parcial", events: ev(o, c, complete ? "Recebimento concluído" : "Recebimento parcial", note) } };
@@ -85,6 +88,7 @@ export function receiveOrder(o: Order, c: Ctx, received: Record<string, number>,
 export function closeWithDivergence(o: Order, c: Ctx, note: string): Result {
   if (o.status !== "recebido_parcial") return fail("Só pedidos parcialmente recebidos");
   if (!can(c.user, c.roles, "pedidos.receber", o.branchId)) return fail("Sem permissão");
+  if (!note.trim()) return fail("Informe a divergência para encerrar");
   return { ok: true, order: { ...o, status: "concluido", events: ev(o, c, "Encerrado com divergência", note) } };
 }
 const cancellable: OrderStatus[] = ["rascunho", "enviado", "correcao", "aprovado"];
@@ -119,10 +123,12 @@ const available = (sourceId: string) => (mid: string) => {
 export function saveDraft(input: Pick<Order, "branchId" | "priority" | "desiredDate" | "notes"> & { items: { materialId: string; requested: number }[] }, id?: string): Result {
   const c = ctx();
   if (!can(c.user, c.roles, "pedidos.criar", input.branchId)) return fail("Sem permissão para criar pedidos nesta filial");
+  if (!input.items.length || new Set(input.items.map(i => i.materialId)).size !== input.items.length || input.items.some(i => !materials.some(m => m.id === i.materialId) || !Number.isFinite(i.requested) || i.requested <= 0)) return fail("Confira os materiais e quantidades");
   const prev = id ? orders.find(o => o.id === id) : undefined;
+  if (prev && !["rascunho", "correcao"].includes(prev.status)) return fail("Somente rascunhos ou correções podem ser editados");
   const o: Order = prev ? { ...prev, ...input, items: input.items.map(i => it(i.materialId, i.requested)) } : {
     id: `o${Date.now()}`, number: `PED-${1004 + orders.length}`, sourceId: "cd", requesterId: c.user.id, createdAt: new Date().toISOString(),
-    status: "rascunho", workflow: snapshotWorkflow('cd'), events: [{ at: new Date().toISOString(), userId: c.user.id, action: 'Pedido criado' }], ...input, items: input.items.map(i => it(i.materialId, i.requested)),
+    status: "rascunho", workflow: snapshotWorkflow('cd', new Date().toISOString(), { value: input.items.reduce((a, i) => a + i.requested * (materials.find(m => m.id === i.materialId)?.cost ?? 0), 0), branchId: input.branchId, categories: input.items.flatMap(i => { const m = materials.find(m => m.id === i.materialId); return m ? [m.category] : []; }) }), events: [{ at: new Date().toISOString(), userId: c.user.id, action: 'Pedido criado' }], ...input, items: input.items.map(i => it(i.materialId, i.requested)),
   };
   put(o); return { ok: true, order: o };
 }
@@ -133,7 +139,11 @@ function run(id: string, fn: (o: Order, c: Ctx) => Result, effect?: (before: Ord
 }
 export const actions = {
   submit: (id: string) => run(id, submitOrder),
-  approve: (id: string, q?: Record<string, number>, note = '') => run(id, (o, c) => approveOrder(o, c, q, note), (_, a) => { if (a.status === 'aprovado') for (const i of a.items) applyDelta(i.materialId, a.sourceId, 0, i.approved); }),
+  approve: (id: string, q?: Record<string, number>, note = '') => run(id, (o, c) => {
+    const result = approveOrder(o, c, q, note); if (!result.ok || result.order.status !== 'aprovado') return result;
+    const value = result.order.items.reduce((a, i) => a + i.approved * (materials.find(m => m.id === i.materialId)?.cost ?? 0), 0);
+    const error = budgetCheck(o.branchId, value, o.id); return error ? fail(error) : result;
+  }, (_, a) => { if (a.status === 'aprovado') { commitBudget(a.id, a.branchId, a.items.reduce((sum, i) => sum + i.approved * (materials.find(m => m.id === i.materialId)?.cost ?? 0), 0)); for (const i of a.items) applyDelta(i.materialId, a.sourceId, 0, i.approved); } }),
   comment: (id: string, note: string) => run(id, (o, c) => {
     if (!can(c.user, c.roles, 'pedidos.visualizar', o.branchId) && !can(c.user, c.roles, 'pedidos.visualizar', o.sourceId)) return fail('Sem acesso ao pedido');
     const event = commentEvent(note, c.user.id); if (!event) return fail('Informe uma observação de até 2.000 caracteres');
@@ -153,7 +163,7 @@ export const actions = {
   }, (_, a) => { consumeLots(a.items.flatMap(i => i.allocations ?? [])); for (const i of a.items) { applyDelta(i.materialId, a.sourceId, -i.shipped, -i.approved); if (i.shipped) logMovement({ type: "saida", reason: `Expedição ${a.number} · ${(i.allocations ?? []).map(l => `${l.lot}: ${l.qty}`).join(', ')}`, materialId: i.materialId, clinicId: a.sourceId, qty: i.shipped, user: currentUser().name }); } }),
   receive: (id: string, r: Record<string, number>, note?: string) => run(id, (o, c) => receiveOrder(o, c, r, note), (before, a) => { for (const [mid, q] of Object.entries(r)) if (q > 0) { applyDelta(mid, a.branchId, q); let skip = before.items.find(i => i.materialId === mid)?.received ?? 0; let remaining = q; for (const l of a.items.find(i => i.materialId === mid)?.allocations ?? []) { const skipped = Math.min(skip, l.qty); skip -= skipped; const portion = Math.min(remaining, l.qty - skipped); if (portion > 0) addLot({ materialId: mid, clinicId: a.branchId, lot: l.lot, expires: l.expires, qty: portion }); remaining -= portion; } logMovement({ type: "entrada", reason: `Recebimento ${a.number}`, materialId: mid, clinicId: a.branchId, qty: q, user: currentUser().name }); } }),
   close: (id: string, note: string) => run(id, (o, c) => closeWithDivergence(o, c, note)),
-  cancel: (id: string, reason: string) => run(id, (o, c) => cancelOrder(o, c, reason), (b) => { if (b.status === "aprovado") for (const i of b.items) applyDelta(i.materialId, b.sourceId, 0, -i.approved); }),
+  cancel: (id: string, reason: string) => run(id, (o, c) => cancelOrder(o, c, reason), (b) => { releaseBudget(b.id); if (b.status === "aprovado") for (const i of b.items) applyDelta(i.materialId, b.sourceId, 0, -i.approved); }),
   duplicate: (id: string) => { const o = orders.find(x => x.id === id); if (!o) return fail('Pedido não encontrado'); return saveDraft({ branchId: o.branchId, priority: o.priority, desiredDate: o.desiredDate, notes: o.notes, items: o.items.map(i => ({ materialId: i.materialId, requested: i.requested })) }); },
 };
 export const isLate = (o: Order) => !["concluido", "cancelado", "rejeitado"].includes(o.status) && o.desiredDate < "2026-11-11";

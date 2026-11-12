@@ -1,5 +1,5 @@
 # Project rules
-- Order approval workflows use immutable per-order template snapshots and pure sequential assignee checks in order-workflow.ts; store actions gate final approval and stock reservation so configuration cannot bypass operational inventory rules.
+- Order approval workflows snapshot all candidate steps per order; conditional activation uses that snapshot and confirmed prices, never a changed template, while sequential assignee checks and store actions protect inventory and budget approval.
 - Supplier registration and purchasing share the purchasing.ts in-memory supplier list; the registration route is distinct from supplier orders to keep master data and transactions separate.
 - Supplier summary derives scoped request and confirmed purchase counts without double-counting converted requests; portal access fields are presentation-only demo settings, never real credentials.
 - DialogContent owns the shared modal frame and overlay; custom wizard layouts retain their contents while global frame constraints normalize scrolling and dimensions, and simple dialogs receive a shared image rail without artificial steps.
@@ -15,3 +15,6 @@
 - Stock intelligence rules are pure functions in stock-intelligence.ts; stock-advanced.ts owns demo orchestration and enforces branch permissions, independent adjustment review and stale-count checks so UI cannot bypass these rules.
 - Camera scanning dynamically imports @zxing/browser after user action and stops streams on close; shared scanner accepts keyboard readers and manual codes when a camera is unavailable.
 - Development builds use scripts/build-development.mjs to pin vite.config.ts; preview-injected SPA configs must not replace TanStack Start's generated client/server entries.
+
+- Procurement rules and analytics are pure functions in procurement-rules.ts and procurement-overview.ts; in-memory budget commitments gate final approval and receipt validation before any stock mutation, so partial/damaged deliveries cannot inflate inventory.
+- Procurement pages derive scoped live data from existing stores; linked purchase traces use supplier purchaseId and exact movement reasons to avoid unrelated stock entries.

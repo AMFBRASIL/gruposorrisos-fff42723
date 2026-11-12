@@ -1,0 +1,21 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { useState } from 'react';
+import { Plus, Wallet, Pencil } from 'lucide-react';
+import { AppShell } from '@/components/app-shell';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { BudgetWizard } from '@/components/budget-wizard';
+import { budgetImpact, useBudgets, type Budget } from '@/lib/procurement-budget';
+import { branchName, useErp, useSession } from '@/lib/erp';
+import { brl } from '@/lib/stock';
+
+export const Route = createFileRoute('/orcamentos-compras')({ head: () => ({ meta: [{ title: 'Orçamentos de Compras | Grupo Sorrisos' }, { name: 'description', content: 'Controle mensal por filial e centro de custo com compromissos e bloqueios de aprovação.' }, { property: 'og:title', content: 'Orçamentos de Compras | Grupo Sorrisos' }, { property: 'og:description', content: 'Limites, compromissos e realização por centro de custo.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: BudgetPage });
+function BudgetPage() {
+  const state = useBudgets(), ses = useSession(), erp = useErp();
+  const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
+  const [editing, setEditing] = useState<Budget | null | undefined>();
+  const rows = state.budgets.filter(b => b.period === period && ses.scope.includes(b.branchId));
+  const limits = rows.reduce((s, b) => s + b.limit, 0), committed = rows.reduce((s, b) => s + budgetImpact(b, state.commitments, 0).committed, 0);
+  return <AppShell title="Orçamentos de Compras" subtitle="Centros de custo · limites e compromissos" primaryAction={ses.can('compras.gerenciar') ? <Button size="sm" onClick={() => setEditing(null)}><Plus className="h-4 w-4 mr-2" />Novo orçamento</Button> : null}><div className="p-4 md:p-8 space-y-6"><div className="flex flex-wrap gap-3 justify-between items-center"><h2 className="font-semibold flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" />Planejamento mensal</h2><Input aria-label="Filtrar mês" className="w-44" type="month" value={period} onChange={e => setPeriod(e.target.value)} /></div><div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-y border-border py-5">{[['Orçamento', limits], ['Comprometido', committed], ['Disponível', limits - committed]].map(([label, value]) => <div key={String(label)}><div className="text-sm text-muted-foreground">{label}</div><div className="text-2xl font-semibold">{brl(Number(value))}</div></div>)}</div><div className="overflow-x-auto"><table className="w-full text-sm min-w-[720px]"><thead className="bg-muted/50"><tr>{['Filial / centro de custo', 'Limite', 'Comprometido', 'Realizado', 'Disponível', 'Controle', ''].map(h => <th key={h} className="text-left p-3">{h}</th>)}</tr></thead><tbody>{rows.map(b => { const i = budgetImpact(b, state.commitments, 0); return <tr key={b.branchId} className="border-b border-border"><td className="p-3 font-medium">{branchName(b.branchId)}<div className="text-xs text-muted-foreground">{erp.branches.find(x => x.id === b.branchId)?.costCenter}</div></td><td>{brl(b.limit)}</td><td>{brl(i.committed)}</td><td>{brl(i.spent)}</td><td className={i.available < 0 ? 'text-destructive' : 'text-success'}>{brl(i.available)}</td><td><Badge variant="outline">{b.block ? 'Bloqueio' : 'Alerta'}</Badge></td><td>{ses.can('compras.gerenciar', b.branchId) && <Button variant="ghost" size="icon" aria-label={`Editar orçamento ${branchName(b.branchId)}`} onClick={() => setEditing(b)}><Pencil className="h-4 w-4" /></Button>}</td></tr>; })}</tbody></table>{!rows.length && <p className="py-8 text-center text-sm text-muted-foreground">Nenhum orçamento neste mês.</p>}</div><h2 className="font-semibold">Compromissos do mês</h2><div className="divide-y divide-border">{state.commitments.filter(c => c.period === period && ses.scope.includes(c.branchId)).map(c => <div key={c.id} className="py-3 text-sm flex flex-wrap gap-3 justify-between"><span>{branchName(c.branchId)} · {c.id}</span><span>{brl(c.value)} · realizado {brl(c.spent)}</span></div>)}</div></div>{editing !== undefined && <BudgetWizard initial={editing ?? undefined} onClose={() => setEditing(undefined)} />}</AppShell>;
+}

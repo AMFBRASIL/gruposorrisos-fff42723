@@ -1,0 +1,27 @@
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { useState } from 'react';
+import { ClipboardCheck, Search, ArrowRight } from 'lucide-react';
+import { AppShell } from '@/components/app-shell';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { useOrders } from '@/lib/orders';
+import { usePurchasing } from '@/lib/purchasing';
+import { useSupplierRequests } from '@/lib/supplier-orders';
+import { useAdvancedStock } from '@/lib/stock-advanced';
+import { useErp, useSession, branchName } from '@/lib/erp';
+import { pendingActions } from '@/lib/procurement-overview';
+import { OrderSheet } from '@/components/order-dialogs';
+import { SupplierOrderDetail } from '@/components/supplier-order-detail';
+import { PurchaseTrace } from '@/components/purchase-trace';
+
+export const Route = createFileRoute('/central-pendencias')({ head: () => ({ meta: [{ title: 'Central de Pendências | Grupo Sorrisos' }, { name: 'description', content: 'Aprovações, respostas, compras e ajustes de inventário por responsável e filial.' }, { property: 'og:title', content: 'Central de Pendências | Grupo Sorrisos' }, { property: 'og:description', content: 'Ações do usuário e acompanhamento das pendências de operação.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: PendingPage });
+function PendingPage() {
+  const orders = useOrders(), requests = useSupplierRequests(), { pos } = usePurchasing(), advanced = useAdvancedStock(), ses = useSession(), erp = useErp();
+  const [mine, setMine] = useState(true), [q, setQ] = useState(''), [kind, setKind] = useState('all');
+  const [selected, setSelected] = useState<{ target: string; id: string }>();
+  const all = pendingActions(orders, requests, pos, advanced.adjustments, ses.user, erp.roles, ses.scope);
+  const now = new Date().toISOString();
+  const rows = all.filter(p => (!mine || p.mine) && (kind === 'all' || p.target === kind) && `${p.number} ${p.action} ${branchName(p.branchId)}`.toLowerCase().includes(q.toLowerCase())).sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999'));
+  return <AppShell title="Central de Pendências" subtitle={ses.user.name} primaryAction={null}><div className="p-4 md:p-8 space-y-6"><div className="grid grid-cols-2 lg:grid-cols-4 gap-4 border-b border-border pb-5">{[['Minhas ações', all.filter(p => p.mine).length], ['Pendências da equipe', all.length], ['Prazo excedido', all.filter(p => p.due && p.due < (p.due.length === 10 ? now.slice(0, 10) : now)).length], ['Ajustes de inventário', all.filter(p => p.target === 'inventory').length]].map(([label, value]) => <div key={String(label)}><div className="text-sm text-muted-foreground">{label}</div><div className="text-3xl font-semibold mt-1">{value}</div></div>)}</div><div className="flex flex-wrap gap-3"><div className="flex gap-1"><Button size="sm" variant={mine ? 'default' : 'outline'} onClick={() => setMine(true)}>Minhas ações</Button><Button size="sm" variant={!mine ? 'default' : 'outline'} onClick={() => setMine(false)}>Equipe</Button></div><div className="relative flex-1 min-w-48"><Search className="h-4 w-4 absolute left-3 top-3 text-muted-foreground" /><Input aria-label="Buscar pendência" className="pl-9" placeholder="Pedido, filial ou ação" value={q} onChange={e => setQ(e.target.value)} /></div><select aria-label="Tipo de pendência" className="h-10 border border-input rounded-md bg-background px-3 text-sm" value={kind} onChange={e => setKind(e.target.value)}><option value="all">Todos os processos</option><option value="cd">Pedidos / CD</option><option value="supplier">Fornecedores</option><option value="purchase">Compras</option><option value="inventory">Inventários</option></select></div><div className="divide-y divide-border">{rows.map(p => <div key={`${p.target}-${p.id}`} className="py-4 flex flex-wrap items-center gap-4"><div className="flex h-10 w-10 items-center justify-center bg-primary/10 text-primary rounded-md"><ClipboardCheck className="h-5 w-5" /></div><div className="flex-1 min-w-48"><div className="font-semibold text-sm">{p.number} · {p.action}</div><div className="text-xs text-muted-foreground mt-1">{branchName(p.branchId)} · {p.kind}{p.due && ` · ${new Date(p.due).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}`}</div></div><Badge variant="outline" className={p.due && p.due < now.slice(0, p.due.length === 10 ? 10 : undefined) ? 'text-destructive border-destructive/30' : ''}>{p.mine ? 'Sua ação' : 'Equipe'}</Badge>{p.target === 'inventory' || p.target === 'purchase' ? <Button variant="outline" size="sm" asChild><Link to={p.target === 'inventory' ? '/estoque-avancado' : '/compras'}>Resolver <ArrowRight className="h-4 w-4 ml-2" /></Link></Button> : <Button variant="outline" size="sm" onClick={() => setSelected(p)}>Abrir <ArrowRight className="h-4 w-4 ml-2" /></Button>}</div>)}{!rows.length && <p className="py-12 text-center text-muted-foreground text-sm">Nenhuma pendência neste filtro.</p>}</div></div>{selected?.target === 'cd' && <OrderSheet key={selected.id} order={orders.find(o => o.id === selected.id) ?? null} onClose={() => setSelected(undefined)} onEdit={() => setSelected(undefined)} />}{selected?.target === 'supplier' && <SupplierOrderDetail id={selected.id} onClose={() => setSelected(undefined)} />}{selected?.target === 'purchase' && <PurchaseTrace id={selected.id} onClose={() => setSelected(undefined)} />}</AppShell>;
+}

@@ -16,11 +16,13 @@ import { Route as AutomacoesRouteImport } from './routes/automacoes'
 import { Route as CadastroFornecedoresRouteImport } from './routes/cadastro-fornecedores'
 import { Route as CadastrosRouteImport } from './routes/cadastros'
 import { Route as CalendarioRouteImport } from './routes/calendario'
+import { Route as CentralPendenciasRouteImport } from './routes/central-pendencias'
 import { Route as CentroDistribuicaoRouteImport } from './routes/centro-distribuicao'
 import { Route as ClientesRouteImport } from './routes/clientes'
 import { Route as ComercialRouteImport } from './routes/comercial'
 import { Route as ComprasRouteImport } from './routes/compras'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
+import { Route as DesempenhoComprasRouteImport } from './routes/desempenho-compras'
 import { Route as DocumentosRouteImport } from './routes/documentos'
 import { Route as EquipeRouteImport } from './routes/equipe'
 import { Route as EstoqueRouteImport } from './routes/estoque'
@@ -36,6 +38,7 @@ import { Route as LotesValidadesRouteImport } from './routes/lotes-validades'
 import { Route as MateriaisRouteImport } from './routes/materiais'
 import { Route as MinhasTarefasRouteImport } from './routes/minhas-tarefas'
 import { Route as MovimentacoesRouteImport } from './routes/movimentacoes'
+import { Route as OrcamentosComprasRouteImport } from './routes/orcamentos-compras'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PerfisRouteImport } from './routes/perfis'
 import { Route as PortalClienteRouteImport } from './routes/portal-cliente'
@@ -84,6 +87,11 @@ const CalendarioRoute = CalendarioRouteImport.update({
   path: '/calendario',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CentralPendenciasRoute = CentralPendenciasRouteImport.update({
+  id: '/central-pendencias',
+  path: '/central-pendencias',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CentroDistribuicaoRoute = CentroDistribuicaoRouteImport.update({
   id: '/centro-distribuicao',
   path: '/centro-distribuicao',
@@ -107,6 +115,11 @@ const ComprasRoute = ComprasRouteImport.update({
 const ConfiguracoesRoute = ConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesempenhoComprasRoute = DesempenhoComprasRouteImport.update({
+  id: '/desempenho-compras',
+  path: '/desempenho-compras',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocumentosRoute = DocumentosRouteImport.update({
@@ -184,6 +197,11 @@ const MovimentacoesRoute = MovimentacoesRouteImport.update({
   path: '/movimentacoes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrcamentosComprasRoute = OrcamentosComprasRouteImport.update({
+  id: '/orcamentos-compras',
+  path: '/orcamentos-compras',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PedidosRoute = PedidosRouteImport.update({
   id: '/pedidos',
   path: '/pedidos',
@@ -253,11 +271,13 @@ export interface FileRoutesByFullPath {
   '/cadastro-fornecedores': typeof CadastroFornecedoresRoute
   '/cadastros': typeof CadastrosRoute
   '/calendario': typeof CalendarioRoute
+  '/central-pendencias': typeof CentralPendenciasRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
   '/clientes': typeof ClientesRoute
   '/comercial': typeof ComercialRoute
   '/compras': typeof ComprasRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/desempenho-compras': typeof DesempenhoComprasRoute
   '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
   '/estoque': typeof EstoqueRoute
@@ -273,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/movimentacoes': typeof MovimentacoesRoute
+  '/orcamentos-compras': typeof OrcamentosComprasRoute
   '/pedidos': typeof PedidosRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
@@ -294,11 +315,13 @@ export interface FileRoutesByTo {
   '/cadastro-fornecedores': typeof CadastroFornecedoresRoute
   '/cadastros': typeof CadastrosRoute
   '/calendario': typeof CalendarioRoute
+  '/central-pendencias': typeof CentralPendenciasRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
   '/clientes': typeof ClientesRoute
   '/comercial': typeof ComercialRoute
   '/compras': typeof ComprasRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/desempenho-compras': typeof DesempenhoComprasRoute
   '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
   '/estoque': typeof EstoqueRoute
@@ -314,6 +337,7 @@ export interface FileRoutesByTo {
   '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/movimentacoes': typeof MovimentacoesRoute
+  '/orcamentos-compras': typeof OrcamentosComprasRoute
   '/pedidos': typeof PedidosRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
@@ -336,11 +360,13 @@ export interface FileRoutesById {
   '/cadastro-fornecedores': typeof CadastroFornecedoresRoute
   '/cadastros': typeof CadastrosRoute
   '/calendario': typeof CalendarioRoute
+  '/central-pendencias': typeof CentralPendenciasRoute
   '/centro-distribuicao': typeof CentroDistribuicaoRoute
   '/clientes': typeof ClientesRoute
   '/comercial': typeof ComercialRoute
   '/compras': typeof ComprasRoute
   '/configuracoes': typeof ConfiguracoesRoute
+  '/desempenho-compras': typeof DesempenhoComprasRoute
   '/documentos': typeof DocumentosRoute
   '/equipe': typeof EquipeRoute
   '/estoque': typeof EstoqueRoute
@@ -356,6 +382,7 @@ export interface FileRoutesById {
   '/materiais': typeof MateriaisRoute
   '/minhas-tarefas': typeof MinhasTarefasRoute
   '/movimentacoes': typeof MovimentacoesRoute
+  '/orcamentos-compras': typeof OrcamentosComprasRoute
   '/pedidos': typeof PedidosRoute
   '/perfis': typeof PerfisRoute
   '/portal-cliente': typeof PortalClienteRoute
@@ -379,11 +406,13 @@ export interface FileRouteTypes {
     | '/cadastro-fornecedores'
     | '/cadastros'
     | '/calendario'
+    | '/central-pendencias'
     | '/centro-distribuicao'
     | '/clientes'
     | '/comercial'
     | '/compras'
     | '/configuracoes'
+    | '/desempenho-compras'
     | '/documentos'
     | '/equipe'
     | '/estoque'
@@ -399,6 +428,7 @@ export interface FileRouteTypes {
     | '/materiais'
     | '/minhas-tarefas'
     | '/movimentacoes'
+    | '/orcamentos-compras'
     | '/pedidos'
     | '/perfis'
     | '/portal-cliente'
@@ -420,11 +450,13 @@ export interface FileRouteTypes {
     | '/cadastro-fornecedores'
     | '/cadastros'
     | '/calendario'
+    | '/central-pendencias'
     | '/centro-distribuicao'
     | '/clientes'
     | '/comercial'
     | '/compras'
     | '/configuracoes'
+    | '/desempenho-compras'
     | '/documentos'
     | '/equipe'
     | '/estoque'
@@ -440,6 +472,7 @@ export interface FileRouteTypes {
     | '/materiais'
     | '/minhas-tarefas'
     | '/movimentacoes'
+    | '/orcamentos-compras'
     | '/pedidos'
     | '/perfis'
     | '/portal-cliente'
@@ -461,11 +494,13 @@ export interface FileRouteTypes {
     | '/cadastro-fornecedores'
     | '/cadastros'
     | '/calendario'
+    | '/central-pendencias'
     | '/centro-distribuicao'
     | '/clientes'
     | '/comercial'
     | '/compras'
     | '/configuracoes'
+    | '/desempenho-compras'
     | '/documentos'
     | '/equipe'
     | '/estoque'
@@ -481,6 +516,7 @@ export interface FileRouteTypes {
     | '/materiais'
     | '/minhas-tarefas'
     | '/movimentacoes'
+    | '/orcamentos-compras'
     | '/pedidos'
     | '/perfis'
     | '/portal-cliente'
@@ -503,11 +539,13 @@ export interface RootRouteChildren {
   CadastroFornecedoresRoute: typeof CadastroFornecedoresRoute
   CadastrosRoute: typeof CadastrosRoute
   CalendarioRoute: typeof CalendarioRoute
+  CentralPendenciasRoute: typeof CentralPendenciasRoute
   CentroDistribuicaoRoute: typeof CentroDistribuicaoRoute
   ClientesRoute: typeof ClientesRoute
   ComercialRoute: typeof ComercialRoute
   ComprasRoute: typeof ComprasRoute
   ConfiguracoesRoute: typeof ConfiguracoesRoute
+  DesempenhoComprasRoute: typeof DesempenhoComprasRoute
   DocumentosRoute: typeof DocumentosRoute
   EquipeRoute: typeof EquipeRoute
   EstoqueRoute: typeof EstoqueRoute
@@ -523,6 +561,7 @@ export interface RootRouteChildren {
   MateriaisRoute: typeof MateriaisRoute
   MinhasTarefasRoute: typeof MinhasTarefasRoute
   MovimentacoesRoute: typeof MovimentacoesRoute
+  OrcamentosComprasRoute: typeof OrcamentosComprasRoute
   PedidosRoute: typeof PedidosRoute
   PerfisRoute: typeof PerfisRoute
   PortalClienteRoute: typeof PortalClienteRoute
@@ -588,6 +627,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CalendarioRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/central-pendencias': {
+      id: '/central-pendencias'
+      path: '/central-pendencias'
+      fullPath: '/central-pendencias'
+      preLoaderRoute: typeof CentralPendenciasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/centro-distribuicao': {
       id: '/centro-distribuicao'
       path: '/centro-distribuicao'
@@ -621,6 +667,13 @@ declare module '@tanstack/react-router' {
       path: '/configuracoes'
       fullPath: '/configuracoes'
       preLoaderRoute: typeof ConfiguracoesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desempenho-compras': {
+      id: '/desempenho-compras'
+      path: '/desempenho-compras'
+      fullPath: '/desempenho-compras'
+      preLoaderRoute: typeof DesempenhoComprasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/documentos': {
@@ -728,6 +781,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MovimentacoesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orcamentos-compras': {
+      id: '/orcamentos-compras'
+      path: '/orcamentos-compras'
+      fullPath: '/orcamentos-compras'
+      preLoaderRoute: typeof OrcamentosComprasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pedidos': {
       id: '/pedidos'
       path: '/pedidos'
@@ -823,11 +883,13 @@ const rootRouteChildren: RootRouteChildren = {
   CadastroFornecedoresRoute: CadastroFornecedoresRoute,
   CadastrosRoute: CadastrosRoute,
   CalendarioRoute: CalendarioRoute,
+  CentralPendenciasRoute: CentralPendenciasRoute,
   CentroDistribuicaoRoute: CentroDistribuicaoRoute,
   ClientesRoute: ClientesRoute,
   ComercialRoute: ComercialRoute,
   ComprasRoute: ComprasRoute,
   ConfiguracoesRoute: ConfiguracoesRoute,
+  DesempenhoComprasRoute: DesempenhoComprasRoute,
   DocumentosRoute: DocumentosRoute,
   EquipeRoute: EquipeRoute,
   EstoqueRoute: EstoqueRoute,
@@ -843,6 +905,7 @@ const rootRouteChildren: RootRouteChildren = {
   MateriaisRoute: MateriaisRoute,
   MinhasTarefasRoute: MinhasTarefasRoute,
   MovimentacoesRoute: MovimentacoesRoute,
+  OrcamentosComprasRoute: OrcamentosComprasRoute,
   PedidosRoute: PedidosRoute,
   PerfisRoute: PerfisRoute,
   PortalClienteRoute: PortalClienteRoute,

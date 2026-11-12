@@ -41,6 +41,9 @@ const navGroups = [
   {
     label: "Pedidos & Compras",
     items: [
+      { to: "/central-pendencias", label: "Central de Pendências", icon: ClipboardCheck },
+      { to: "/orcamentos-compras", label: "Orçamentos de Compras", icon: DollarSign },
+      { to: "/desempenho-compras", label: "Desempenho de Compras", icon: TrendingUp },
       { to: "/pedidos", label: "Pedidos de Materiais", icon: ShoppingCart },
       { to: "/centro-distribuicao", label: "Centro de Distribuição", icon: Boxes },
       { to: "/compras", label: "Compras e Fornecedores", icon: ShoppingBag },

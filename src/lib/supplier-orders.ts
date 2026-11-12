@@ -4,7 +4,7 @@ import { can, currentUser, getErp } from './erp';
 import { createRequisition, getPurchasing } from './purchasing';
 import { materials } from './stock';
 import type { ImportItem } from './order-csv';
-import { approveWorkflow, commentEvent, resetWorkflow, snapshotWorkflow, type Workflow, type WorkflowEvent } from './order-workflow';
+import { activateWorkflow, approveWorkflow, commentEvent, resetWorkflow, snapshotWorkflow, type Workflow, type WorkflowEvent } from './order-workflow';
 
 export type SupplierRequest = { id: string; number: string; branchId: string; supplierId: string; desiredDate: string; priority: string; notes: string; status: 'rascunho' | 'aguardando' | 'resposta' | 'aprovado' | 'correcao'; items: ImportItem[]; file?: string; createdAt: string; purchaseId?: string; workflow?: Workflow; events?: WorkflowEvent[]; versions: { at: string; user: string; file?: string; notes?: string; items: ImportItem[] }[] };
 const event = (action: string, note?: string): WorkflowEvent => ({ at: new Date().toISOString(), userId: currentUser().id, action, note });
@@ -28,7 +28,7 @@ export function saveSupplierRequest(input: z.input<typeof schema>, send: boolean
   if (!can(currentUser(), getErp().roles, 'pedidos.criar', d.branchId) && !can(currentUser(), getErp().roles, 'compras.gerenciar', d.branchId)) return { error: 'Sem permissão nesta filial' };
   if (!getPurchasing().sup.some(s => s.id === d.supplierId) || !getErp().branches.some(b => b.id === d.branchId && b.active)) return { error: 'Filial ou fornecedor inválido' };
   if (new Set(d.items.map(i => i.materialId)).size !== d.items.length || d.items.some(i => !materials.some(m => m.id === i.materialId))) return { error: 'Materiais inválidos ou duplicados' };
-  const request: SupplierRequest = { ...d, id: crypto.randomUUID(), number: `FOR-${String(1001 + requests.length)}`, createdAt: new Date().toISOString(), status: send ? 'aguardando' : 'rascunho', workflow: snapshotWorkflow('supplier'), events: [event(send ? 'Pedido criado e enviado ao fornecedor' : 'Rascunho criado')], versions: [] };
+  const request: SupplierRequest = { ...d, id: crypto.randomUUID(), number: `FOR-${String(1001 + requests.length)}`, createdAt: new Date().toISOString(), status: send ? 'aguardando' : 'rascunho', workflow: snapshotWorkflow('supplier', new Date().toISOString(), { value: d.items.reduce((sum, i) => sum + i.requested * (i.unitPrice ?? materials.find(m => m.id === i.materialId)?.cost ?? 0), 0), branchId: d.branchId, categories: d.items.flatMap(i => { const m = materials.find(m => m.id === i.materialId); return m ? [m.category] : []; }) }), events: [event(send ? 'Pedido criado e enviado ao fornecedor' : 'Rascunho criado')], versions: [] };
   requests = [request, ...requests]; emit(); return { request };
 }
 export function respondSupplierRequest(id: string, items: ImportItem[], file?: string) {
@@ -36,7 +36,7 @@ export function respondSupplierRequest(id: string, items: ImportItem[], file?: s
   if (!can(currentUser(), getErp().roles, 'compras.gerenciar', r.branchId)) return 'Sem permissão para conferir preços';
   const error = validateResponse(r, items); if (error) return error;
   const safe = schema.shape.items.safeParse(items); if (!safe.success) return 'Dados de resposta inválidos';
-  requests = requests.map(x => x.id === id ? { ...x, status: 'resposta', workflow: x.workflow ? resetWorkflow(x.workflow) : undefined, events: [...(x.events ?? []), event('Preços registrados', file)], versions: [...x.versions, { at: new Date().toISOString(), user: currentUser().name, file, items: safe.data }] } : x);
+  requests = requests.map(x => x.id === id ? { ...x, status: 'resposta', workflow: x.workflow ? activateWorkflow(x.workflow, { value: items.reduce((sum, i) => sum + i.requested * (i.unitPrice ?? 0), 0), branchId: x.branchId, categories: items.flatMap(i => { const m = materials.find(m => m.id === i.materialId); return m ? [m.category] : []; }) }) : undefined, events: [...(x.events ?? []), event('Preços registrados', file)], versions: [...x.versions, { at: new Date().toISOString(), user: currentUser().name, file, items: safe.data }] } : x);
   links = { ...links, [r.supplierId]: { ...links[r.supplierId], ...Object.fromEntries(items.filter(i => i.supplierCode).map(i => [i.supplierCode ?? '', i.materialId])) } };
   emit(); return null;
 }
@@ -45,7 +45,7 @@ export function respondDemoSupplierRequest(id: string, items: ImportItem[], note
   if (!request) return 'Pedido não encontrado';
   const error = validateResponse(request, items);
   if (error) return error;
-  requests = requests.map(r => r.id === id ? { ...r, status: 'resposta', workflow: r.workflow ? resetWorkflow(r.workflow) : undefined, events: [...(r.events ?? []), { at: new Date().toISOString(), userId: 'Fornecedor demonstrativo', action: 'Fornecedor respondeu com preços', note: notes }], versions: [...r.versions, { at: new Date().toISOString(), user: 'Fornecedor demonstrativo', notes, file, items: items.map(i => ({ ...i })) }] } : r);
+  requests = requests.map(r => r.id === id ? { ...r, status: 'resposta', workflow: r.workflow ? activateWorkflow(r.workflow, { value: items.reduce((sum, i) => sum + i.requested * (i.unitPrice ?? 0), 0), branchId: r.branchId, categories: items.flatMap(i => { const m = materials.find(m => m.id === i.materialId); return m ? [m.category] : []; }) }) : undefined, events: [...(r.events ?? []), { at: new Date().toISOString(), userId: 'Fornecedor demonstrativo', action: 'Fornecedor respondeu com preços', note: notes }], versions: [...r.versions, { at: new Date().toISOString(), user: 'Fornecedor demonstrativo', notes, file, items: items.map(i => ({ ...i })) }] } : r);
   emit(); return null;
 }
 export function supplierAction(id: string, action: 'send' | 'correction' | 'approve', note = '') {
