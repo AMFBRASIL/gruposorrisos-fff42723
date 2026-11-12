@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { usePurchasing } from "@/lib/purchasing";
 import { WizardShell, WizardFooter, OptionCard, FieldLabel, ReviewGrid, selectCls } from "@/components/erp-wizard";
 import { useStock, materials, categories, clinics, getMaterial, getClinic, balanceOf, brl, addMaterial, registerMovements, applyInventory, createTransfer, addLot, type MovementType } from "@/lib/stock";
 import { useSession } from "@/lib/erp";
@@ -18,21 +20,28 @@ function useVisibleClinics() { const ses = useSession(); return clinics.filter(c
 
 export function NewMaterialWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [step, setStep] = useState(0);
-  const [f, setF] = useState({ name: "", code: `MAT-${String(materials.length + 1).padStart(4, "0")}`, sku: "", brand: "", category: categories[0], unit: "un", cost: 0, min: 10, max: 50, lotControl: true });
+  const { sup } = usePurchasing();
+  const manufacturers = [...new Set(materials.flatMap(m => [m.manufacturer || m.brand]).filter(Boolean))];
+  const [f, setF] = useState({ name: "", code: `MAT-${String(materials.length + 1).padStart(4, "0")}`, sku: "", barcode: "", approvalCertificate: "", supplierId: "", manufacturer: "", description: "", brand: "", category: categories[0], unit: "un", cost: 0, min: 10, max: 50, lotControl: true });
   const [initial, setInitial] = useState<Record<string, number>>({});
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF({ ...f, [k]: v });
   const steps = [{ title: "Categoria", desc: "Classifique o item no catálogo", icon: Tag }, { title: "Identificação", desc: "Nome, códigos, marca e custo", icon: Package }, { title: "Política de estoque", desc: "Mín/máx, lote e saldo inicial", icon: Boxes }, { title: "Revisão", desc: "Confirme o cadastro", icon: FileCheck2 }];
   const finish = () => { const e = addMaterial(f, Object.entries(initial).map(([clinicId, qty]) => ({ clinicId, qty }))); if (e) return toast.error(e); toast.success("Material cadastrado"); onClose(); };
   return (
     <WizardShell open={open} onClose={onClose} badge="Novo material" headline={<>Catálogo único<br /><span className="opacity-60">para todas as filiais.</span></>} sub="Padronize códigos, custos e políticas de reposição." steps={steps} step={step} setStep={setStep}
-      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel="Cadastrar material" canNext={step !== 1 || f.name.trim().length > 1} />}>
+      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel="Cadastrar material" canNext={step !== 1 || (f.name.trim().length > 1 && !!f.code.trim() && (f.category !== "EPIs" || !!f.approvalCertificate.trim()))} />}>
       {step === 0 && <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{categories.map(c => <OptionCard key={c} selected={f.category === c} onClick={() => set("category", c)} icon={catIcons[c] ?? Shapes} title={c} />)}</div>}
       {step === 1 && <div className="grid md:grid-cols-2 gap-4">
-        <div className="md:col-span-2 space-y-1"><Label>Nome do material</Label><Input autoFocus value={f.name} onChange={e => set("name", e.target.value)} placeholder="Ex.: Resina composta A2 4g" /></div>
-        <div className="space-y-1"><Label>Código interno</Label><Input value={f.code} onChange={e => set("code", e.target.value)} /></div>
-        <div className="space-y-1"><Label>SKU / código de barras</Label><Input value={f.sku} onChange={e => set("sku", e.target.value)} /></div>
-        <div className="space-y-1"><Label>Marca / fabricante</Label><Input value={f.brand} onChange={e => set("brand", e.target.value)} /></div>
+        <div className="md:col-span-2 space-y-1"><Label htmlFor="material-name">Nome do material *</Label><Input id="material-name" autoFocus required value={f.name} onChange={e => set("name", e.target.value)} placeholder="Ex.: Resina composta A2 4g" /></div>
+        <div className="space-y-1"><Label htmlFor="material-code">Código do material *</Label><Input id="material-code" required value={f.code} onChange={e => set("code", e.target.value)} /></div>
+        <div className="space-y-1"><Label htmlFor="material-barcode">Código de barras</Label><Input id="material-barcode" value={f.barcode} onChange={e => set("barcode", e.target.value)} placeholder="Ex.: 7891234567890" /></div>
+        <div className="space-y-1"><Label htmlFor="material-sku">SKU</Label><Input id="material-sku" value={f.sku} onChange={e => set("sku", e.target.value)} /></div>
+        <div className="space-y-1"><Label htmlFor="material-ca">Certificado de Aprovação (CA){f.category === "EPIs" ? " *" : ""}</Label><Input id="material-ca" required={f.category === "EPIs"} value={f.approvalCertificate} onChange={e => set("approvalCertificate", e.target.value)} placeholder="Ex.: CA-12345" /><p className="text-xs text-muted-foreground">Obrigatório para materiais EPI.</p></div>
+        <div className="space-y-1"><Label htmlFor="material-supplier">Fornecedor</Label><select id="material-supplier" className={`${selectCls} w-full`} value={f.supplierId} onChange={e => set("supplierId", e.target.value)}><option value="">Selecione um fornecedor</option>{sup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+        <div className="space-y-1"><Label htmlFor="material-manufacturer">Fabricante</Label><Input id="material-manufacturer" list="material-manufacturers" value={f.manufacturer} onChange={e => set("manufacturer", e.target.value)} placeholder="Selecione ou informe o fabricante" /><datalist id="material-manufacturers">{manufacturers.map(m => <option key={m} value={m} />)}</datalist></div>
+        <div className="space-y-1"><Label htmlFor="material-brand">Marca</Label><Input id="material-brand" value={f.brand} onChange={e => set("brand", e.target.value)} /></div>
         <div className="space-y-1"><Label>Custo unitário (R$)</Label><Input type="number" min={0} step="0.01" value={f.cost} onChange={e => set("cost", Number(e.target.value))} /></div>
+        <div className="md:col-span-2 space-y-1"><Label htmlFor="material-description">Descrição</Label><Textarea id="material-description" rows={3} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Descrição detalhada do material" /></div>
         <div className="md:col-span-2"><FieldLabel>Unidade de medida</FieldLabel><div className="grid grid-cols-4 md:grid-cols-8 gap-2">{units.map(u => <OptionCard compact key={u} selected={f.unit === u} onClick={() => set("unit", u)} title={u} />)}</div></div>
       </div>}
       {step === 2 && <>
@@ -45,7 +54,7 @@ export function NewMaterialWizard({ open, onClose }: { open: boolean; onClose: (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{clinics.map(c => <div key={c.id} className="rounded-xl border border-border p-3 flex items-center gap-3"><MapPin className="h-4 w-4 text-muted-foreground" /><div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{c.name}</div><div className="text-[11px] text-muted-foreground">{c.city}</div></div><Input type="number" min={0} className="h-8 w-20" value={initial[c.id] ?? ""} onChange={e => setInitial({ ...initial, [c.id]: Number(e.target.value) })} /></div>)}</div>
         </div>
       </>}
-      {step === 3 && <ReviewGrid items={[["Material", f.name || "—"], ["Categoria", f.category], ["Código / SKU", `${f.code} · ${f.sku || "—"}`], ["Custo", brl(f.cost)], ["Mín / Máx", `${f.min} / ${f.max} ${f.unit}`], ["Saldo inicial", `${Object.values(initial).reduce((a, b) => a + (b || 0), 0)} ${f.unit}`]]} />}
+      {step === 3 && <ReviewGrid items={[["Material", f.name || "—"], ["Categoria", f.category], ["Código / SKU", `${f.code} · ${f.sku || "—"}`], ["Código de barras", f.barcode || "—"], ["CA", f.approvalCertificate || "—"], ["Fornecedor", sup.find(s => s.id === f.supplierId)?.name || "—"], ["Fabricante", f.manufacturer || "—"], ["Marca", f.brand || "—"], ["Descrição", f.description || "—"], ["Custo", brl(f.cost)], ["Mín / Máx", `${f.min} / ${f.max} ${f.unit}`], ["Saldo inicial", `${Object.values(initial).reduce((a, b) => a + (b || 0), 0)} ${f.unit}`]]} />}
     </WizardShell>
   );
 }

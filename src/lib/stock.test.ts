@@ -1,5 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { addMaterial, createTransfer, addLot, getState, balanceOf, materials } from "./stock";
+import { resolveCode } from "./stock-intelligence";
+
+describe("material reference fields", () => {
+  const input = { code: "REF-001", sku: "REF-SKU", name: "Luva referência", category: "EPIs", brand: "Marca", unit: "cx", cost: 1, min: 1, max: 5, lotControl: false, barcode: "7891234567890", approvalCertificate: "CA-12345", supplierId: "s3", manufacturer: "Supermax", description: "Luva de proteção" };
+  it("requires CA for EPI materials", () => {
+    expect(addMaterial({ ...input, approvalCertificate: "" })).toBe("Informe o Certificado de Aprovação (CA) para EPIs");
+  });
+  it("keeps all additional fields and resolves the barcode", () => {
+    expect(addMaterial(input)).toBeNull();
+    const saved = materials.find(m => m.code === input.code);
+    expect(saved).toMatchObject(input);
+    expect(resolveCode("7891234567890", materials)?.id).toBe(saved?.id);
+  });
+  it("rejects duplicate barcodes", () => {
+    expect(addMaterial({ ...input, code: "REF-002" })).toBe("Código de barras já cadastrado");
+  });
+});
 
 describe("stock wizards rules", () => {
   it("rejects material with max below min", () => {

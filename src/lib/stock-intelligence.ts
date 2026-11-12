@@ -29,4 +29,4 @@ export function recipeLines(recipe: { materialId: string; qty: number }[], repet
   const merged = new Map<string, number>(); for (const i of recipe) merged.set(i.materialId, (merged.get(i.materialId) ?? 0) + i.qty * repetitions);
   return [...merged].map(([materialId, qty]) => ({ materialId, qty }));
 }
-export function resolveCode(code: string, materials: Material[]) { const k = code.trim().toLowerCase(); return materials.find(m => [m.code, m.sku, m.id].some(v => v.toLowerCase() === k)); }
+export function resolveCode(code: string, materials: Material[]) { const k = code.trim().toLowerCase(); if (!k) return undefined; return materials.find(m => [m.code, m.sku, m.id, m.barcode].some(v => v?.toLowerCase() === k)); }

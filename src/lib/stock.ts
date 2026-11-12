@@ -5,6 +5,7 @@ export type Clinic = { id: string; name: string; city: string };
 export type Material = {
   id: string; code: string; sku: string; name: string; category: string; brand: string;
   unit: string; cost: number; min: number; max: number; lotControl: boolean;
+  barcode?: string; approvalCertificate?: string; supplierId?: string; manufacturer?: string; description?: string;
 };
 export type Balance = { materialId: string; clinicId: string; qty: number; reserved: number };
 export type Lot = { id: string; materialId: string; clinicId: string; lot: string; expires: string; qty: number };
@@ -159,9 +160,13 @@ export const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency",
 
 export function addMaterial(m: Omit<Material, "id">, initial: { clinicId: string; qty: number }[] = []): string | null {
   if (!m.name.trim()) return "Informe o nome do material";
+  if (!m.code.trim()) return "Informe o código do material";
+  if (!m.category.trim() || !m.unit.trim()) return "Informe categoria e unidade de medida";
+  if (m.category === "EPIs" && !m.approvalCertificate?.trim()) return "Informe o Certificado de Aprovação (CA) para EPIs";
+  if (m.barcode?.trim() && materials.some(x => x.barcode === m.barcode?.trim())) return "Código de barras já cadastrado";
   if (materials.some(x => x.code === m.code)) return "Código já cadastrado";
   if (m.min < 0 || m.max < m.min) return "Estoque máximo deve ser maior ou igual ao mínimo";
-  const id = `m${Date.now()}`;
+  const id = crypto.randomUUID();
   materials.push({ ...m, id });
   state = { ...state, balances: [...state.balances, ...clinics.map(c => ({ materialId: id, clinicId: c.id, qty: Math.max(0, initial.find(i => i.clinicId === c.id)?.qty ?? 0), reserved: 0 }))] };
   emit();

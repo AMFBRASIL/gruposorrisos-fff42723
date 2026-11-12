@@ -37,7 +37,7 @@ function MateriaisPage() {
   const byCat = categories.map(c => ({ name: c.replace("Materiais odontológicos", "Odontológicos"), valor: Math.round(info.filter(r => r.mt.category === c).reduce((a, r) => a + r.qty * r.mt.cost, 0)) })).filter(x => x.valor > 0).sort((a, b) => b.valor - a.valor);
   const health = [{ name: "Normal", value: info.filter(r => r.st === 0).length }, { name: "Abaixo do mínimo", value: info.filter(r => r.st === 1).length }, { name: "Sem estoque", value: info.filter(r => r.st === 2).length }];
   const rows = useMemo(() => materials.filter(mt =>
-    (cat === "Todas" || mt.category === cat) && `${mt.name} ${mt.code} ${mt.sku} ${mt.brand}`.toLowerCase().includes(q.toLowerCase())), [q, cat]);
+    (cat === "Todas" || mt.category === cat) && `${mt.name} ${mt.code} ${mt.sku} ${mt.brand} ${mt.barcode || ""} ${mt.manufacturer || ""}`.toLowerCase().includes(q.toLowerCase())), [q, cat, s]);
 
   return (
     <AppShell title="Materiais e Produtos" subtitle={`${materials.length} itens cadastrados`} primaryAction={ses.can("estoque.movimentar") ? <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Novo Material</Button> : null}>
@@ -81,7 +81,7 @@ function MateriaisPage() {
                 return (
                   <tr key={mt.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 font-mono text-xs">{mt.code}</td>
-                    <td className="px-4 py-3"><div className="font-medium">{mt.name}</div><div className="text-xs text-muted-foreground">{mt.brand} · {mt.sku}</div></td>
+                    <td className="px-4 py-3"><div className="font-medium">{mt.name}</div><div className="text-xs text-muted-foreground">{mt.manufacturer || mt.brand} · {mt.barcode || mt.sku}</div></td>
                     <td className="px-4 py-3 text-muted-foreground">{mt.category}</td>
                     <td className="px-4 py-3">{mt.unit}</td>
                     <td className="px-4 py-3">{brl(mt.cost)}</td>
