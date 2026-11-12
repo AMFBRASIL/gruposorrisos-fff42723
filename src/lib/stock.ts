@@ -147,3 +147,32 @@ export function advanceTransfer(id: string) {
 
 export const daysUntil = (iso: string) => Math.round((Date.parse(iso) - Date.UTC(2026, 10, 11)) / 86400000);
 export const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+export function addMaterial(m: Omit<Material, "id">, initial: { clinicId: string; qty: number }[] = []): string | null {
+  if (!m.name.trim()) return "Informe o nome do material";
+  if (materials.some(x => x.code === m.code)) return "Código já cadastrado";
+  if (m.min < 0 || m.max < m.min) return "Estoque máximo deve ser maior ou igual ao mínimo";
+  const id = `m${Date.now()}`;
+  materials.push({ ...m, id });
+  state = { ...state, balances: [...state.balances, ...clinics.map(c => ({ materialId: id, clinicId: c.id, qty: Math.max(0, initial.find(i => i.clinicId === c.id)?.qty ?? 0), reserved: 0 }))] };
+  emit();
+  return null;
+}
+
+export function createTransfer(input: { fromId: string; toId: string; items: { materialId: string; qty: number }[] }): string | null {
+  if (input.fromId === input.toId) return "Origem e destino devem ser diferentes";
+  if (input.items.length === 0 || input.items.some(i => i.qty <= 0)) return "Adicione itens com quantidade maior que zero";
+  for (const i of input.items) if (balanceOf(state, i.materialId, input.fromId) < i.qty) return `Saldo insuficiente de ${getMaterial(i.materialId).name} na origem`;
+  const t: Transfer = { id: `t${Date.now()}`, number: `TRF-${String(454 + state.transfers.length).padStart(4, "0")}`, fromId: input.fromId, toId: input.toId, items: input.items, status: "solicitada", date: new Date().toISOString().slice(0, 10) };
+  state = { ...state, transfers: [t, ...state.transfers] };
+  emit();
+  return null;
+}
+
+export function addLot(l: Omit<Lot, "id">): string | null {
+  if (!l.lot.trim()) return "Informe o número do lote";
+  if (l.qty <= 0) return "Quantidade deve ser maior que zero";
+  state = { ...state, lots: [{ ...l, id: `l${Date.now()}` }, ...state.lots] };
+  emit();
+  return null;
+}

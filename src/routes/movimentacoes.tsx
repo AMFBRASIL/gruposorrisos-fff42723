@@ -3,14 +3,13 @@ import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useStock, materials, clinics, getMaterial, getClinic, registerMovement, balanceOf, type MovementType } from "@/lib/stock";
-import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, Plus } from "lucide-react";
+import { useStock, getMaterial, getClinic, brl, type MovementType } from "@/lib/stock";
+import { StockStat, ChartCard, tooltipStyle, axisProps } from "@/components/stock-ui";
+import { NewMovementWizard } from "@/components/stock-wizards";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
 import { useSession } from "@/lib/erp";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/movimentacoes")({
   head: () => ({ meta: [
@@ -35,9 +34,22 @@ function MovPage() {
   const [open, setOpen] = useState(false);
   const ses = useSession();
   const rows = s.movements.filter(mv => (filter === "todas" || mv.type === filter) && (ses.scope.includes(mv.clinicId) || (mv.toClinicId !== undefined && ses.scope.includes(mv.toClinicId))));
+  const scoped = s.movements.filter(mv => ses.scope.includes(mv.clinicId) || (mv.toClinicId !== undefined && ses.scope.includes(mv.toClinicId)));
+  const sum = (t: MovementType) => scoped.filter(m => m.type === t).reduce((a, m) => a + m.qty, 0);
+  const value = scoped.reduce((a, m) => a + m.qty * getMaterial(m.materialId).cost, 0);
+  const days = Array.from({ length: 14 }, (_, i) => { const d = new Date(Date.UTC(2026, 10, 11 - 13 + i)).toISOString().slice(0, 10); const of = (t: MovementType) => scoped.filter(m => m.date === d && m.type === t).reduce((a, m) => a + m.qty, 0); return { name: d.slice(8, 10) + "/" + d.slice(5, 7), Entradas: of("entrada"), Saídas: of("saida"), Transferências: of("transferencia") }; });
   return (
     <AppShell title="Movimentações" subtitle="Entradas, saídas e transferências" primaryAction={ses.can("estoque.movimentar") && <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Movimentação</Button> || null}>
-      <div className="p-4 md:p-8 space-y-4">
+      <div className="p-4 md:p-8 space-y-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StockStat label="Entradas (un)" value={sum("entrada")} icon={ArrowDownToLine} tone="success" />
+          <StockStat label="Saídas (un)" value={sum("saida")} icon={ArrowUpFromLine} tone="destructive" />
+          <StockStat label="Transferidas (un)" value={sum("transferencia")} icon={ArrowLeftRight} tone="info" />
+          <StockStat label="Valor movimentado" value={brl(value)} icon={Wallet} hint={`${scoped.length} lançamentos`} />
+        </div>
+        <ChartCard title="Fluxo de estoque" desc="Unidades movimentadas nos últimos 14 dias">
+          <ResponsiveContainer><BarChart data={days}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" {...axisProps} /><YAxis {...axisProps} width={30} /><Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)" }} /><Legend wrapperStyle={{ fontSize: 12 }} /><Bar dataKey="Entradas" stackId="a" fill="var(--success)" /><Bar dataKey="Saídas" stackId="a" fill="var(--destructive)" /><Bar dataKey="Transferências" stackId="a" fill="var(--info)" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer>
+        </ChartCard>
         <div className="flex gap-1 p-1 rounded-lg bg-muted w-fit">
           {(["todas", "entrada", "saida", "transferencia"] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)} className={`px-3 h-8 rounded-md text-xs transition-colors ${filter === f ? "bg-card shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"}`}>{f === "todas" ? "Todas" : typeMeta[f].label}</button>
@@ -66,50 +78,8 @@ function MovPage() {
           </table>
         </Card>
       </div>
-      <NewMovement open={open} onOpenChange={setOpen} />
+      {open && <NewMovementWizard open onClose={() => setOpen(false)} />}
     </AppShell>
   );
 }
 
-function NewMovement({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const s = useStock();
-  const [type, setType] = useState<MovementType>("entrada");
-  const [materialId, setMaterial] = useState(materials[0].id);
-  const [clinicId, setClinic] = useState("cd");
-  const [toClinicId, setTo] = useState("c1");
-  const [qty, setQty] = useState(1);
-  const [reason, setReason] = useState("Compra");
-  const submit = () => {
-    const err = registerMovement({ type, materialId, clinicId, toClinicId: type === "transferencia" ? toClinicId : undefined, qty, reason, user: "Você" });
-    if (err) return toast.error(err);
-    toast.success("Movimentação registrada");
-    onOpenChange(false);
-  };
-  const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Nova movimentação</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-3 gap-3">
-          {(Object.keys(typeMeta) as MovementType[]).map(k => { const t = typeMeta[k]; const Icon = t.icon; return (
-            <button key={k} onClick={() => { setType(k); setReason(t.reasons[0]); }} className={`rounded-lg border p-4 text-left transition-all ${type === k ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
-              <Icon className="h-5 w-5 mb-2 text-primary" /><div className="font-medium text-sm">{t.label}</div>
-            </button>
-          ); })}
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2 space-y-1"><Label>Material</Label><select className={sel} value={materialId} onChange={e => setMaterial(e.target.value)}>{materials.map(mt => <option key={mt.id} value={mt.id}>{mt.name}</option>)}</select></div>
-          <div className="space-y-1"><Label>{type === "transferencia" ? "Origem" : "Clínica"}</Label><select className={sel} value={clinicId} onChange={e => setClinic(e.target.value)}>{clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-            <div className="text-xs text-muted-foreground">Saldo atual: {balanceOf(s, materialId, clinicId)}</div></div>
-          {type === "transferencia" ? (
-            <div className="space-y-1"><Label>Destino</Label><select className={sel} value={toClinicId} onChange={e => setTo(e.target.value)}>{clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-          ) : (
-            <div className="space-y-1"><Label>Motivo</Label><select className={sel} value={reason} onChange={e => setReason(e.target.value)}>{typeMeta[type].reasons.map(r => <option key={r}>{r}</option>)}</select></div>
-          )}
-          <div className="space-y-1"><Label>Quantidade ({getMaterial(materialId).unit})</Label><Input type="number" min={1} value={qty} onChange={e => setQty(Number(e.target.value))} /></div>
-        </div>
-        <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={submit}>Registrar</Button></div>
-      </DialogContent>
-    </Dialog>
-  );
-}

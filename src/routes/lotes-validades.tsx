@@ -5,7 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { StockStat } from "@/components/stock-ui";
 import { useStock, getMaterial, getClinic, daysUntil } from "@/lib/stock";
 import { useSession } from "@/lib/erp";
-import { CalendarX, CalendarClock, CalendarCheck } from "lucide-react";
+import { CalendarX, CalendarClock, CalendarCheck, Plus } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ChartCard, tooltipStyle, axisProps } from "@/components/stock-ui";
+import { NewLotWizard } from "@/components/stock-wizards";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from "recharts";
 
 export const Route = createFileRoute("/lotes-validades")({
   head: () => ({ meta: [
@@ -30,14 +35,20 @@ function LotesPage() {
   const lots = s.lots.filter(l => ses.scope.includes(l.clinicId)).sort((a, b) => a.expires.localeCompare(b.expires));
   const exp = lots.filter(l => daysUntil(l.expires) < 0).length;
   const soon = lots.filter(l => { const d = daysUntil(l.expires); return d >= 0 && d <= 60; }).length;
+  const [open, setOpen] = useState(false);
+  const buckets = [["Vencidos", (d: number) => d < 0, "var(--destructive)"], ["0–30 dias", (d: number) => d >= 0 && d <= 30, "var(--warning)"], ["31–60", (d: number) => d > 30 && d <= 60, "var(--warning)"], ["61–90", (d: number) => d > 60 && d <= 90, "var(--info)"], ["91–180", (d: number) => d > 90 && d <= 180, "var(--chart-1)"], ["> 180", (d: number) => d > 180, "var(--success)"]] as const;
+  const curve = buckets.map(([name, f, color]) => ({ name, color, qtd: lots.filter(l => f(daysUntil(l.expires))).reduce((a, l) => a + l.qty, 0) }));
   return (
-    <AppShell title="Lotes e Validades" subtitle="Ordenado pelo vencimento mais próximo" primaryAction={null}>
+    <AppShell title="Lotes e Validades" subtitle="Ordenado pelo vencimento mais próximo" primaryAction={ses.can("estoque.movimentar") ? <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Novo Lote</Button> : null}>
       <div className="p-4 md:p-8 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StockStat label="Lotes vencidos" value={exp} icon={CalendarX} tone="destructive" />
           <StockStat label="Vencem em até 60 dias" value={soon} icon={CalendarClock} tone="warning" />
           <StockStat label="Lotes válidos" value={lots.length - exp - soon} icon={CalendarCheck} tone="success" />
         </div>
+        <ChartCard title="Curva de vencimento" desc="Unidades por faixa de validade">
+          <ResponsiveContainer><BarChart data={curve}><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" {...axisProps} /><YAxis {...axisProps} width={30} /><Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)" }} /><Bar dataKey="qtd" name="Unidades" radius={[6, 6, 0, 0]}>{curve.map(c => <Cell key={c.name} fill={c.color} />)}</Bar></BarChart></ResponsiveContainer>
+        </ChartCard>
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 text-xs text-muted-foreground uppercase tracking-wide">
@@ -58,6 +69,7 @@ function LotesPage() {
           </table>
         </Card>
       </div>
+      {open && <NewLotWizard open onClose={() => setOpen(false)} />}
     </AppShell>
   );
 }

@@ -10,10 +10,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useErp, useSession, branchName, userName } from "@/lib/erp";
 import { useStock, materials, categories, getMaterial, balanceOf } from "@/lib/stock";
 import { actions, saveDraft, statusLabels, type Order, type Priority } from "@/lib/orders";
+import { WizardShell, WizardFooter, OptionCard } from "@/components/erp-wizard";
+import { Leaf, Gauge, Flame, Siren } from "lucide-react";
 import { Check, Search, Trash2, ClipboardList, PackageSearch, FileCheck2 } from "lucide-react";
 
 const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
 export const priorityMeta: Record<Priority, string> = { baixa: "bg-muted text-muted-foreground", normal: "bg-info/10 text-info border-info/30", alta: "bg-warning/10 text-warning border-warning/30", urgente: "bg-destructive/10 text-destructive border-destructive/30" };
+
+const prioIcons = { baixa: Leaf, normal: Gauge, alta: Flame, urgente: Siren };
+const prioDesc = { baixa: "Até 10 dias", normal: "Fluxo padrão, 5 dias", alta: "Até 48 horas", urgente: "Mesmo dia, notifica o CD" };
 
 export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onClose: () => void; initial?: Order }) {
   const s = useErp(); const ses = useSession(); const st = useStock();
@@ -28,7 +33,7 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
   const found = useMemo(() => materials.filter(m => (cat === "Todas" || m.category === cat) && `${m.name} ${m.code} ${m.sku}`.toLowerCase().includes(q.toLowerCase())), [q, cat]);
   const avail = (mid: string) => balanceOf(st, mid, "cd") - (st.balances.find(b => b.materialId === mid && b.clinicId === "cd")?.reserved ?? 0);
   const suggested = (mid: string) => { const m = getMaterial(mid); return Math.max(0, m.max - balanceOf(st, mid, branchId)); };
-  const steps = [{ t: "Cabeçalho", i: ClipboardList }, { t: "Materiais", i: PackageSearch }, { t: "Revisão", i: FileCheck2 }];
+  const steps = [{ title: "Cabeçalho", desc: "Filial, prazo e prioridade", icon: ClipboardList }, { title: "Materiais", desc: "Catálogo, sugestão e disponibilidade", icon: PackageSearch }, { title: "Revisão", desc: "Confira e envie para aprovação", icon: FileCheck2 }];
   const finish = (send: boolean) => {
     const r = saveDraft({ branchId, priority, desiredDate, notes, items: cart }, initial?.id);
     if (!r.ok) return toast.error(r.error);
@@ -38,20 +43,9 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
   };
   if (allowed.length === 0) return <Dialog open={open} onOpenChange={o => !o && onClose()}><DialogContent><DialogHeader><DialogTitle>Sem permissão</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Seu perfil não pode criar pedidos em nenhuma filial.</p></DialogContent></Dialog>;
   return (
-    <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="max-w-6xl h-[90vh] p-0 overflow-hidden grid grid-cols-1 md:grid-cols-[260px_1fr]">
-        <aside className="hidden md:flex flex-col gap-2 p-6 border-r border-border text-sidebar-foreground" style={{ background: "linear-gradient(180deg, var(--sidebar) 0%, color-mix(in oklab, var(--sidebar) 80%, black) 100%)" }}>
-          <div className="text-lg font-semibold mb-1">Novo pedido</div>
-          <div className="text-xs opacity-70 mb-4">{Math.round(((step + 1) / steps.length) * 100)}% concluído</div>
-          {steps.map((x, i) => (
-            <button key={x.t} onClick={() => setStep(i)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm ${i === step ? "bg-sidebar-accent text-sidebar-accent-foreground" : "opacity-80"}`}>
-              <span className="h-7 w-7 rounded-full border border-current flex items-center justify-center">{i < step ? <Check className="h-4 w-4" /> : <x.i className="h-4 w-4" />}</span>{x.t}
-            </button>
-          ))}
-        </aside>
-        <div className="flex flex-col min-h-0">
-          <DialogHeader className="px-6 pt-6"><DialogTitle>{steps[step].t}</DialogTitle></DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+    <WizardShell open={open} onClose={onClose} badge={initial ? `Editando ${initial.number}` : "Pedido de material"} headline={<>Abasteça sua filial<br /><span className="opacity-60">sem rupturas.</span></>} sub="Solicitação ao Centro de Distribuição com sugestão de reposição e disponibilidade em tempo real."
+      steps={steps} step={step} setStep={setStep} footer={<WizardFooter step={step} last={2} onClose={onClose} setStep={setStep} onFinish={() => finish(true)} finishLabel="Enviar pedido" canNext={step !== 1 || cart.length > 0} extra={<Button variant="outline" onClick={() => finish(false)} disabled={cart.length === 0}>Salvar rascunho</Button>} />}>
+
             {step === 0 && (<>
               <div className="grid md:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label>Filial solicitante</Label><select className={sel} value={branchId} onChange={e => setBranch(e.target.value)}>{allowed.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
@@ -61,7 +55,7 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
               </div>
               <Label>Prioridade</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(Object.keys(priorityMeta) as Priority[]).map(p => <button key={p} onClick={() => setPriority(p)} className={`rounded-lg border p-4 text-left capitalize ${priority === p ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}><div className="font-medium">{p}</div></button>)}
+                {(Object.keys(priorityMeta) as Priority[]).map(p => <OptionCard key={p} selected={priority === p} onClick={() => setPriority(p)} icon={prioIcons[p]} title={p} desc={prioDesc[p]} />)}
               </div>
               <div className="space-y-1"><Label>Observações</Label><Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} /></div>
             </>)}
@@ -104,17 +98,7 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
                 {notes && <div className="text-muted-foreground">Obs.: {notes}</div>}
               </div>
             )}
-          </div>
-          <div className="flex justify-between gap-2 px-6 py-4 border-t border-border">
-            <Button variant="outline" onClick={() => step === 0 ? onClose() : setStep(step - 1)}>{step === 0 ? "Cancelar" : "Voltar"}</Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => finish(false)} disabled={cart.length === 0}>Salvar rascunho</Button>
-              {step < 2 ? <Button onClick={() => setStep(step + 1)}>Próximo</Button> : <Button onClick={() => finish(true)}>Enviar pedido</Button>}
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+    </WizardShell>
   );
 }
 

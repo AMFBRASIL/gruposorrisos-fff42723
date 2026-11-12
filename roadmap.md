@@ -8,3 +8,6 @@
 - [x] Fase 7 — Notificações de pendências no sino
 - [x] Fase 8 — Testes automáticos das regras de pedido e acesso
 - [ ] Futuro — dados reais (Lovable Cloud), dashboards por perfil, cartões de pedido no Kanban
+
+- [x] Pedidos e telas de estoque modernizadas (indicadores, gráficos, botão Novo + wizard grande com imagem)
+- [ ] Migrar demais modais antigos (Compras, Inventários, Filiais) para o WizardShell

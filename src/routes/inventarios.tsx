@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useErp, useSession } from "@/lib/erp";
+import { StockStat } from "@/components/stock-ui";
+import { ClipboardCheck, Scale, TrendingDown, TrendingUp } from "lucide-react";
 import { useStock, materials, balanceOf, applyDelta, logMovement, brl } from "@/lib/stock";
 
 export const Route = createFileRoute("/inventarios")({
@@ -36,6 +38,12 @@ function InvPage() {
     <AppShell title="Inventários" subtitle="Informe a contagem física; as diferenças viram ajustes de estoque" primaryAction={allowed && changed.length > 0 ? <Button size="sm" onClick={apply}>Concluir inventário ({changed.length})</Button> : null}>
       <div className="p-4 md:p-8 space-y-4">
         <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={branchId} onChange={e => { setBranch(e.target.value); setCount({}); }}>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StockStat label="Itens contados" value={`${diffs.filter(d => d.cnt !== null).length}/${materials.length}`} icon={ClipboardCheck} hint={`${Math.round(diffs.filter(d => d.cnt !== null).length / materials.length * 100)}% concluído`} />
+          <StockStat label="Divergências" value={changed.length} icon={Scale} tone="warning" />
+          <StockStat label="Sobras (valor)" value={brl(changed.filter(d => d.diff > 0).reduce((a, d) => a + d.diff * d.m.cost, 0))} icon={TrendingUp} tone="success" />
+          <StockStat label="Faltas (valor)" value={brl(-changed.filter(d => d.diff < 0).reduce((a, d) => a + d.diff * d.m.cost, 0))} icon={TrendingDown} tone="destructive" />
+        </div>
         {!allowed && <div className="rounded-md border border-warning/30 bg-warning/10 text-sm p-3">Seu perfil não pode inventariar esta filial (somente consulta).</div>}
         <Card className="overflow-x-auto">
           <table className="w-full text-sm">
