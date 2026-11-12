@@ -4,10 +4,7 @@
 - MovementReview derives pre/post quantities and stock valuations from the live stock snapshot without mutating inventory; quantities are grouped by unit to avoid adding incompatible volumes.
 - CSV parsing uses PapaParse with explicit column mapping and pure reconciliation in order-csv.ts; ambiguous names require human confirmation to prevent catalog substitutions.
 - Supplier requests and versioned prices live in supplier-orders.ts, separate from CD orders; approval creates one purchasing record and never changes stock before receiving.
-- Supplier portal access uses authenticated Cloud membership-scoped reads and an atomic SQL response function; demo supplier selection never authorizes access.
-- Client and supplier portals share the supplier order workspace and price wizard so authenticated request isolation and CSV reconciliation stay identical on both URLs; legacy client documents remain separate from Cloud orders.
-- Procurement explicitly publishes demo requests as immutable Cloud snapshots; Cloud responses and status are read independently so demo refreshes cannot discard supplier submissions.
-- Supplier access invitations require a server-validated procurement role and create only a company membership; no user-facing profile fields or supplier privileges come from editable metadata.
+- Client and supplier portals share the in-memory supplier portal adapter and price wizard; access is simulated and responses reuse the demo purchasing store, with no Cloud calls or persistence.
 - Current Start bundler options are mirrored into Vite 7 rollupOptions by a compatibility plugin because generated client entries otherwise fall back to index.html.
 - Monetary form controls use CurrencyInput backed by react-number-format; callbacks retain numeric amounts so masks cannot corrupt calculations or saved values.
 - ERP domain rules (orders state machine, branch access `can`/`visibleBranchIds`) live as pure functions in src/lib/orders.ts and src/lib/erp.ts, tested in src/lib/*.test.ts; UI calls store wrappers only — so rules can move to a real backend later.

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useServerFn } from '@tanstack/react-start';
 import { Upload, ClipboardList, FileCheck2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { WizardShell, WizardFooter } from './erp-wizard';
@@ -7,7 +6,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { CurrencyInput } from './ui/currency-input';
 import { OrderCsvImport } from './order-csv-import';
-import { answerPortalRequest } from '@/lib/supplier-portal.functions';
+import { answerDemoPortalRequest } from '@/lib/supplier-portal-demo';
 import { validatePortalPrices, type PortalRequest } from '@/lib/supplier-portal';
 import { downloadCsv, exportCsv, type ImportItem } from '@/lib/order-csv';
 import type { Material } from '@/lib/stock';
@@ -16,14 +15,13 @@ import { brl } from '@/lib/stock';
 export function PortalPriceWizard({ request, onClose, onSaved }: { request: PortalRequest; onClose: () => void; onSaved: () => void }) {
   const [step, setStep] = useState(0); const [mode, setMode] = useState('manual'); const [notes, setNotes] = useState(''); const [file, setFile] = useState<string>(); const [busy, setBusy] = useState(false);
   const [items, setItems] = useState<ImportItem[]>(request.payload.items.map(i => ({ materialId: i.materialId, requested: i.requested, unitPrice: request.responses.at(-1)?.items.find(x => x.materialId === i.materialId)?.unitPrice })));
-  const submit = useServerFn(answerPortalRequest);
   const catalog: Material[] = request.payload.items.map(i => ({ id: i.materialId, name: i.name, code: i.code, sku: i.code, unit: i.unit, barcode: i.barcode, category: '', brand: '', cost: 0, min: 0, max: 0, lotControl: false }));
   const valid = !validatePortalPrices(request, items);
   const total = items.reduce((a, i) => a + i.requested * (i.unitPrice ?? 0), 0);
   async function save() {
     const error = validatePortalPrices(request, items); if (error) return toast.error(error);
     setBusy(true);
-    try { await submit({ data: { id: request.id, notes, file, items: items.map(i => ({ ...i, unitPrice: i.unitPrice ?? 0 })) } }); toast.success('Resposta enviada para conferência de Compras'); onSaved(); onClose(); }
+    try { answerDemoPortalRequest(request, items.map(i => ({ ...i, unitPrice: i.unitPrice ?? 0 })), notes, file); toast.success('Resposta simulada para conferência de Compras'); onSaved(); onClose(); }
     catch (e) { toast.error(e instanceof Error ? e.message : 'Falha ao enviar resposta'); } finally { setBusy(false); }
   }
   return <WizardShell open onClose={() => !busy && onClose()} badge={request.number} headline="Resposta comercial" sub={`${request.payload.supplierName} · ${request.payload.branchName}`} steps={[{ title: 'Origem dos preços', desc: 'Preenchimento ou arquivo CSV', icon: Upload }, { title: 'Itens e condições', desc: 'Preços unitários e observações', icon: ClipboardList }, { title: 'Revisão e envio', desc: 'Confira os valores da proposta', icon: FileCheck2 }]} step={step} setStep={setStep} footer={<WizardFooter step={step} last={2} setStep={setStep} onClose={onClose} onFinish={() => void save()} finishLabel={busy ? 'Enviando...' : 'Enviar resposta'} canNext={!busy && (step === 0 || valid)} />}>

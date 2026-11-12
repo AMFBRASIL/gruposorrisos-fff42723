@@ -5,7 +5,7 @@ import { createRequisition, getPurchasing } from './purchasing';
 import { materials } from './stock';
 import type { ImportItem } from './order-csv';
 
-export type SupplierRequest = { id: string; number: string; branchId: string; supplierId: string; desiredDate: string; priority: string; notes: string; status: 'rascunho' | 'aguardando' | 'resposta' | 'aprovado' | 'correcao'; items: ImportItem[]; file?: string; createdAt: string; purchaseId?: string; versions: { at: string; user: string; file?: string; items: ImportItem[] }[] };
+export type SupplierRequest = { id: string; number: string; branchId: string; supplierId: string; desiredDate: string; priority: string; notes: string; status: 'rascunho' | 'aguardando' | 'resposta' | 'aprovado' | 'correcao'; items: ImportItem[]; file?: string; createdAt: string; purchaseId?: string; versions: { at: string; user: string; file?: string; notes?: string; items: ImportItem[] }[] };
 const schema = z.object({ branchId: z.string().min(1), supplierId: z.string().min(1), desiredDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), priority: z.enum(['baixa', 'normal', 'alta', 'urgente']), notes: z.string().max(2000), file: z.string().max(255).optional(), items: z.array(z.object({ materialId: z.string().min(1), requested: z.number().finite().positive().max(1e9), unitPrice: z.number().finite().nonnegative().max(1e9).optional(), supplierCode: z.string().max(100).optional() })).min(1).max(2000) });
 let requests: SupplierRequest[] = [];
 let links: Record<string, Record<string, string>> = {};
@@ -36,6 +36,14 @@ export function respondSupplierRequest(id: string, items: ImportItem[], file?: s
   const safe = schema.shape.items.safeParse(items); if (!safe.success) return 'Dados de resposta inválidos';
   requests = requests.map(x => x.id === id ? { ...x, status: 'resposta', versions: [...x.versions, { at: new Date().toISOString(), user: currentUser().name, file, items: safe.data }] } : x);
   links = { ...links, [r.supplierId]: { ...links[r.supplierId], ...Object.fromEntries(items.filter(i => i.supplierCode).map(i => [i.supplierCode ?? '', i.materialId])) } };
+  emit(); return null;
+}
+export function respondDemoSupplierRequest(id: string, items: ImportItem[], notes: string, file?: string) {
+  const request = requests.find(r => r.id === id);
+  if (!request) return 'Pedido não encontrado';
+  const error = validateResponse(request, items);
+  if (error) return error;
+  requests = requests.map(r => r.id === id ? { ...r, status: 'resposta', versions: [...r.versions, { at: new Date().toISOString(), user: 'Fornecedor demonstrativo', notes, file, items: items.map(i => ({ ...i })) }] } : r);
   emit(); return null;
 }
 export function supplierAction(id: string, action: 'send' | 'correction' | 'approve') {

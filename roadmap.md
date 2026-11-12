@@ -1,4 +1,5 @@
 # Roadmap — Grupo Sorrisos ERP Multifiliais (dados de demonstração)
+- [x] Portais e acesso de Compras retornados ao modo visual demonstrativo: resposta muda situação em memória, atualização apaga os dados e nenhuma chamada ao Cloud ocorre; testes de CSV passaram
 - [x] Portal do Cliente: pedidos de Compras como primeira área; CSV preenche preços, observações e histórico persistem, situação muda e isolamento verificado; projetos/documentos/faturas preservados e celular verificado
 - [x] Modernizar Filiais com indicadores, distribuição regional, filtros e cadastro em etapas; cadastro verificado em desktop e celular
 - [x] Padronizar apresentação de todos os diálogos, confirmações e modernizar vínculos de usuários; moldura global compartilhada
@@ -6,7 +7,7 @@
 - [x] Área interna por fornecedor e respostas de preços versionadas, conferência e aprovação de compra
 - [x] Corrigir modais de Configuração: 15 wizards compartilhados verificados, centralização e fundo escuro; celular verificado
 - [x] Portal externo implementado: login, vínculo no convite, publicação explícita, CSV, observações, preços e situação; envio persistente e isolamento verificados com contas temporárias
-- [ ] Ativação operacional do portal: aguarda a primeira conta real com perfil de Compras; entrega de convite e recuperação por e-mail ainda não verificada
+- Integração real do portal cancelada: o usuário desenvolverá seu próprio backend.
 - [x] Padronizar todos os campos monetários com máscara de reais brasileira e validar digitação/salvamento
 - [x] Onda 1 — Estoque básico
 - [x] Fase 2 — Filiais, depósitos, usuários por filial, perfis e permissões, seletor de filial
@@ -16,7 +17,7 @@
 - [x] Fase 6 — Compras/fornecedores/cotações, inventário por filial, reposição automática
 - [x] Fase 7 — Notificações de pendências no sino
 - [x] Fase 8 — Testes automáticos das regras de pedido e acesso
-- [ ] Futuro — dados reais (Lovable Cloud), dashboards por perfil, cartões de pedido no Kanban
+- Futuro — integração com o backend desenvolvido pelo usuário, fora do escopo visual atual
 
 - [x] Pedidos e telas de estoque modernizadas (indicadores, gráficos, botão Novo + wizard grande com imagem)
 - [x] Inventário em wizard; movimentação multi-itens
