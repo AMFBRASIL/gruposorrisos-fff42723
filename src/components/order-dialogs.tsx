@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,13 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ApprovalTimeline } from './order-workflow';
+import { OrderFigures, OrderLines, OrderStageBoard } from './order-board';
 import { ProcurementContext } from './procurement-context';
 import { OrderActivity } from './order-activity';
-import { workflowAssignee } from '@/lib/order-workflow';
-import { useErp, useSession, branchName, userName } from "@/lib/erp";
-import { useStock, materials, categories, getMaterial, balanceOf, brl } from "@/lib/stock";
-import { actions, saveDraft, statusLabels, type Order, type Priority } from "@/lib/orders";
+import { stageCursor, workflowAssignee } from '@/lib/order-workflow';
+import { useProcurementErp as useErp, useProcurementSession as useSession, branchName, userName, actions, saveDraft, statusLabels } from "@/lib/procurement-live";
+import { useStock, materials, categories, getMaterial, balanceOf, brl, distributionId } from "@/lib/stock-live";
+import type { Order, Priority } from "@/lib/orders";
 import { WizardShell, WizardFooter, OptionCard } from "@/components/erp-wizard";
 import { StockCodeScanner } from './stock-code-scanner';
 import { fefo } from '@/lib/stock-intelligence';
@@ -22,8 +22,7 @@ import { Upload, Store, ClipboardPenLine } from 'lucide-react';
 import { OrderCsvImport } from './order-csv-import';
 import { OrderReview } from './order-review';
 import { CurrencyInput } from './ui/currency-input';
-import { usePurchasing } from '@/lib/purchasing';
-import { saveSupplierRequest } from '@/lib/supplier-orders';
+import { usePurchasing, saveSupplierRequest } from '@/lib/procurement-live';
 import type { ImportItem } from '@/lib/order-csv';
 
 const sel = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
@@ -46,22 +45,26 @@ export function NewOrderDialog({ open, onClose, initial }: { open: boolean; onCl
   const [mode, setMode] = useState('manual'); const [file, setFile] = useState<string>();
   const [q, setQ] = useState(""); const [cat, setCat] = useState("Todas");
   const found = useMemo(() => materials.filter(m => (cat === "Todas" || m.category === cat) && `${m.name} ${m.code} ${m.sku}`.toLowerCase().includes(q.toLowerCase())), [q, cat]);
-  const avail = (mid: string) => balanceOf(st, mid, "cd") - (st.balances.find(b => b.materialId === mid && b.clinicId === "cd")?.reserved ?? 0);
+  const cd = distributionId();
+  const avail = (mid: string) => balanceOf(st, mid, cd) - (st.balances.find(b => b.materialId === mid && b.clinicId === cd)?.reserved ?? 0);
   const suggested = (mid: string) => { const m = getMaterial(mid); return Math.max(0, m.max - balanceOf(st, mid, branchId)); };
   const steps = [{ title: "Identificação", desc: "Filial, atendimento e prioridade", icon: ClipboardList }, { title: "Origem da lista", desc: "Catálogo manual ou arquivo CSV", icon: Upload }, { title: "Materiais", desc: "Quantidades, unidades e conciliação", icon: PackageSearch }, { title: "Condições", desc: "Prazo e observações", icon: ClipboardPenLine }, { title: "Revisão", desc: "Volumes, saldos e valores", icon: FileCheck2 }];
   const valid = !!branchId && !!desiredDate && (target === 'cd' || !!supplierId) && cart.length > 0 && cart.every(i => Number.isFinite(i.requested) && i.requested > 0);
   const finish = (send: boolean) => {
     if (!valid) return toast.error('Confira filial, prazo e quantidades');
     if (target === 'supplier') {
-      const result = saveSupplierRequest({ branchId, supplierId, priority, desiredDate, notes, items: cart, file }, send);
-      if (result.error) return toast.error(result.error);
-      toast.success(send ? `Pedido ${result.request?.number} aguardando preços` : 'Rascunho salvo'); onClose(); return;
+      void saveSupplierRequest({ branchId, supplierId, priority, desiredDate, notes, items: cart, file }, send).then(result => {
+        if (result.error) return toast.error(result.error);
+        toast.success(send ? `Pedido ${result.request?.number} aguardando preços` : 'Rascunho salvo'); onClose();
+      });
+      return;
     }
-    const r = saveDraft({ branchId, priority, desiredDate, notes, items: cart }, initial?.id);
-    if (!r.ok) return toast.error(r.error);
-    if (send) { const e = actions.submit(r.order.id); if (e) return toast.error(e); toast.success(`Pedido ${r.order.number} enviado para aprovação`); }
-    else toast.success("Rascunho salvo");
-    onClose();
+    void saveDraft({ branchId, priority, desiredDate, notes, items: cart }, initial?.id).then(async (r) => {
+      if (!r.ok) return toast.error(r.error);
+      if (send) { const e = await actions.submit(r.order.id); if (e) return toast.error(e); toast.success(`Pedido ${r.order.number} enviado para aprovação`); }
+      else toast.success("Rascunho salvo");
+      onClose();
+    });
   };
   if (allowed.length === 0) return <Dialog open={open} onOpenChange={o => !o && onClose()}><DialogContent><DialogHeader><DialogTitle>Sem permissão</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Seu perfil não pode criar pedidos em nenhuma filial.</p></DialogContent></Dialog>;
   return (
@@ -133,34 +136,39 @@ export function OrderSheet({ order, onClose, onEdit }: { order: Order | null; on
   const ses = useSession(); const erp = useErp(); const st = useStock();
   const [qty, setQty] = useState<Record<string, number>>({});
   const [note, setNote] = useState("");
+  const askStage = useRef<(() => void) | null>(null);
   if (!order) return null;
   const o = order;
   const activeStep = o.workflow?.steps[o.workflow.index];
+  const place = stageCursor(o.workflow);
+  const closed = ["cancelado", "rejeitado", "concluido"].includes(o.status);
+  const canMove = !closed && ses.can("pedidos.aprovar", o.branchId) && !!place && !place.finished;
   const mayApprove = activeStep ? workflowAssignee(activeStep, ses.user, erp.roles, o.branchId) : ses.can('pedidos.aprovar', o.branchId);
-  const done = (e: string | null, msg: string) => { if (e) return toast.error(e); toast.success(msg); setQty({}); setNote(""); };
+  const done = (e: string | null | Promise<string | null>, msg: string) => { void Promise.resolve(e).then(error => { if (error) return toast.error(error); toast.success(msg); setQty({}); setNote(""); }); };
   const qcol = o.status === "enviado" ? "approved" : o.status === "aprovado" || o.status === "separacao" ? "picked" : o.status === "transporte" || o.status === "recebido_parcial" ? "received" : null;
-  const defaultQ = (i: Order["items"][number]) => qcol === "approved" ? i.requested : qcol === "picked" ? Math.min(i.approved, balanceOf(st, i.materialId, order?.sourceId ?? "cd")) : i.shipped - i.received;
+  const defaultQ = (i: Order["items"][number]) => qcol === "approved" ? i.requested : qcol === "picked" ? Math.min(i.approved, balanceOf(st, i.materialId, order?.sourceId ?? distributionId())) : i.shipped - i.received;
   const val = (i: Order["items"][number]) => qty[i.materialId] ?? defaultQ(i);
   const all = () => Object.fromEntries(o.items.map(i => [i.materialId, val(i)]));
   return (
     <Dialog open onOpenChange={x => !x && onClose()}>
-      <DialogContent>
-        <DialogHeader><DialogTitle className="flex flex-wrap items-center gap-2">{o.number} <Badge variant="outline">{statusLabels[o.status]}</Badge></DialogTitle></DialogHeader>
-        <div className="mt-4 space-y-5 text-sm">
-          <div className="grid grid-cols-2 gap-2">
+      <DialogContent className="p-0 wide-sheet gap-0 flex flex-col overflow-hidden h-[94dvh]">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border px-6 py-5 pr-14">
+          <div>
+            <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-sm">{o.number}</span><Badge variant="outline">{statusLabels[o.status]}</Badge>{place?.current && <Badge variant="outline">Etapa atual: {place.current.name}</Badge>}</div>
+            <DialogTitle className="mt-2 text-2xl">Pedido {o.number}</DialogTitle>
+          </div>
+          {canMove && <Button onClick={() => askStage.current?.()}>{place?.next ? `Atualizar para ${place.next.name}` : "Concluir fluxo"}</Button>}
+        </div>
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
             {[["Filial", branchName(o.branchId)], ["Atendimento", branchName(o.sourceId)], ["Solicitante", userName(o.requesterId)], ["Data desejada", o.desiredDate.split("-").reverse().join("/")]].map(([k, v]) => <div key={k} className="rounded-md bg-muted/50 p-2"><div className="text-xs text-muted-foreground">{k}</div><div className="font-medium">{v}</div></div>)}
           </div>
-          <ProcurementContext branchId={o.branchId} items={o.items} excludeId={o.id} /><ApprovalTimeline workflow={o.workflow} active={o.status === 'enviado'} />
-          <div className="grid grid-cols-2 gap-3 border-y border-border py-3"><div><div className="text-xs text-muted-foreground">Materiais solicitados</div><div className="text-xl font-semibold">{o.items.length}</div></div><div><div className="text-xs text-muted-foreground">Valor de referência</div><div className="text-xl font-semibold">{brl(o.items.reduce((sum, i) => sum + i.requested * getMaterial(i.materialId).cost, 0))}</div></div></div>
-          <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
-            <thead className="text-xs text-muted-foreground"><tr>{["Material", "Solic.", "Aprov.", "Separ.", "Exped.", "Receb.", qcol ? "Agora" : ""].map(h => <th key={h} className="text-left py-1">{h}</th>)}</tr></thead>
-            <tbody className="divide-y divide-border">
-              {o.items.map(i => <tr key={i.materialId}>
-                <td className="py-2">{getMaterial(i.materialId).name}{qcol === 'picked' && <div className="text-[11px] text-muted-foreground">FEFO: {fefo(st.lots, i.materialId, o.sourceId, val(i)).allocations.map(l => `${l.lot} · ${l.qty} · ${l.expires}`).join(' / ') || 'Sem lote válido'}</div>}{i.allocations?.map(l => <div className="text-[11px] text-muted-foreground" key={l.lotId}>{l.lot} · {l.qty}</div>)}</td><td>{i.requested}</td><td>{i.approved}</td><td>{i.picked}</td><td>{i.shipped}</td><td>{i.received}</td>
-                {qcol && <td title={qcol === "picked" ? `Disponível no depósito: ${balanceOf(st, i.materialId, o.sourceId)}` : undefined}><Input type="number" min={0} className="h-8 w-20" value={val(i)} onChange={e => setQty({ ...qty, [i.materialId]: Number(e.target.value) })} /></td>}
-              </tr>)}
-            </tbody>
-          </table></div>
+          <OrderStageBoard workflow={o.workflow} canAdvance={canMove} askRef={askStage} onAdvance={(text) => done(actions.advance(o.id, text), place?.next ? `Pedido agora está em ${place.next.name}` : "Fluxo concluído")} />
+          <ProcurementContext branchId={o.branchId} items={o.items} excludeId={o.id} />
+          <OrderFigures lines={o.items.map(i => ({ qty: i.requested, price: getMaterial(i.materialId).cost }))} />
+          <OrderLines operational lines={o.items.map(i => { const material = getMaterial(i.materialId); return { id: i.materialId, name: material.name, code: material.code, qty: i.requested, unit: material.unit, available: balanceOf(st, i.materialId, o.sourceId), price: material.cost, note: i.note ?? "", approved: i.approved, picked: i.picked, shipped: i.shipped, received: i.received }; })} control={qcol ? (line) => { const item = o.items.find(i => i.materialId === line.id); return item ? <Input type="number" min={0} className="h-8 w-20" value={val(item)} onChange={e => setQty({ ...qty, [line.id]: Number(e.target.value) })} /> : null; } : undefined} />
+          {qcol === 'picked' && <div className="space-y-1 text-xs text-muted-foreground">{o.items.map(i => <p key={i.materialId}>{getMaterial(i.materialId).name}: {fefo(st.lots, i.materialId, o.sourceId, val(i)).allocations.map(l => `${l.lot} · ${l.qty} · ${l.expires}`).join(' / ') || 'Sem lote válido'}</p>)}</div>}
+          {o.items.some(i => i.allocations?.length) && <div className="space-y-1 text-xs text-muted-foreground">{o.items.flatMap(i => (i.allocations ?? []).map(l => <p key={l.lotId}>{getMaterial(i.materialId).name}: {l.lot} · {l.qty}</p>))}</div>}
           {(qcol === 'received' || qcol === 'picked') && <StockCodeScanner onMaterial={id => { const i = o.items.find(i => i.materialId === id); if (!i) return toast.error('Material não pertence ao pedido'); setQty(prev => ({ ...prev, [id]: Math.min((prev[id] ?? 0) + 1, qcol === 'received' ? i.shipped - i.received : i.approved) })); }} />}
           <Textarea aria-label="Observação da decisão" placeholder="Observação / motivo / divergência" maxLength={2000} value={note} onChange={e => setNote(e.target.value)} rows={2} />
           <div className="flex flex-wrap gap-2">
@@ -174,10 +182,10 @@ export function OrderSheet({ order, onClose, onEdit }: { order: Order | null; on
             {(o.status === "transporte" || o.status === "recebido_parcial") && ses.can("pedidos.receber", o.branchId) && <Button onClick={() => done(actions.receive(o.id, all(), note), "Recebimento registrado")}>Confirmar recebimento</Button>}
             {o.status === "recebido_parcial" && ses.can("pedidos.receber", o.branchId) && <Button variant="outline" onClick={() => done(actions.close(o.id, note), "Pedido encerrado com divergência")}>Encerrar com divergência</Button>}
             {["rascunho", "enviado", "correcao", "aprovado"].includes(o.status) && <Button variant="ghost" className="text-destructive" onClick={() => done(actions.cancel(o.id, note), "Pedido cancelado")}>Cancelar</Button>}
-            <Button variant="ghost" onClick={() => { const r = actions.duplicate(o.id); if (r.ok) toast.success(`Rascunho ${r.order.number} criado`); else toast.error(r.error); }}>Duplicar</Button>
+            <Button variant="ghost" onClick={() => { void actions.duplicate(o.id).then(r => { if (r.ok) toast.success(`Rascunho ${r.order.number} criado`); else toast.error(r.error); }); }}>Duplicar</Button>
             <Button variant="ghost" onClick={() => window.print()}>Imprimir</Button>
           </div>
-          <OrderActivity key={o.id} events={o.events} initialNotes={o.notes} onComment={text => { const error = actions.comment(o.id, text); if (error) { toast.error(error); return false; } toast.success('Observação adicionada'); return true; }} />
+          <OrderActivity key={o.id} events={o.events} initialNotes={o.notes} onComment={async text => { const error = await actions.comment(o.id, text); if (error) { toast.error(error); return false; } toast.success('Observação adicionada'); return true; }} />
         </div>
       </DialogContent>
     </Dialog>

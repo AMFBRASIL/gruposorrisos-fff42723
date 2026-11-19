@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { useTimeEntries, useTasks } from "@/lib/store";
-import { users, getProject } from "@/lib/mock-data";
+import { useTimeEntries, useTasks, useUserProfiles } from "@/lib/store";
+import { getProject } from "@/lib/mock-data";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Clock, TrendingUp, Users as UsersIcon } from "lucide-react";
 
@@ -30,10 +30,11 @@ function fmtDay(d: Date) { return d.toLocaleDateString("pt-BR", { day: "2-digit"
 function TimesheetPage() {
   const entries = useTimeEntries();
   const tasks = useTasks();
+  const users = useUserProfiles();
   const [weekOffset, setWeekOffset] = useState(0);
 
   const weekStart = useMemo(() => {
-    const s = startOfWeek(new Date("2026-06-10"));
+    const s = startOfWeek(new Date());
     s.setDate(s.getDate() + weekOffset * 7);
     return s;
   }, [weekOffset]);

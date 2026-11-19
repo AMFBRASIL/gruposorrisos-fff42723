@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,8 +9,8 @@ import {
   CalendarDays, FileText, Users as UsersIcon, Layers, Flag, CheckCircle2,
   Sparkles, ArrowRight, ArrowLeft, X, ListChecks, Plus, Trash2,
 } from "lucide-react";
-import { projects, users, COLUMNS, priorityMeta, type Priority, type ChecklistItem } from "@/lib/mock-data";
-import { tasksStore } from "@/lib/store";
+import { COLUMNS, priorityMeta, type Priority, type ChecklistItem } from "@/lib/mock-data";
+import { tasksStore, useProjects, useUserProfiles } from "@/lib/store";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
@@ -25,24 +25,36 @@ const STEPS = [
 export type CreateTaskWizardProps = {
   open: boolean;
   onClose: () => void;
-  /** ISO date (yyyy-mm-dd). Defaults to today (2026-06-10). */
+  /** ISO date (yyyy-mm-dd). Defaults to the current local day. */
   dueDate?: string | null;
   /** Pre-selected Kanban column id. */
   defaultStatus?: string;
 };
 
+const localToday = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
 export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: CreateTaskWizardProps) {
-  const iso = dueDate ?? "2026-06-10";
+  const projects = useProjects();
+  const users = useUserProfiles();
+  const iso = dueDate ?? localToday();
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [projectId, setProjectId] = useState(projects[0].id);
-  const [assigneeId, setAssigneeId] = useState(users[0].id);
+  const [projectId, setProjectId] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [priority, setPriority] = useState<Priority>("normal");
   const [status, setStatus] = useState(defaultStatus ?? COLUMNS[1].id);
   const [estimatedHours, setEstimatedHours] = useState("4");
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [newItem, setNewItem] = useState("");
+
+  useEffect(() => {
+    if (!projectId && projects[0]) setProjectId(projects[0].id);
+    if (!assigneeId && users[0]) setAssigneeId(users[0].id);
+  }, [assigneeId, projectId, projects, users]);
 
   const addChecklistItem = () => {
     const text = newItem.trim();
@@ -57,8 +69,8 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
 
   const reset = () => {
     setStep(0);
-    setTitle(""); setDescription(""); setProjectId(projects[0].id);
-    setAssigneeId(users[0].id); setPriority("normal");
+    setTitle(""); setDescription(""); setProjectId(projects[0]?.id ?? "");
+    setAssigneeId(users[0]?.id ?? ""); setPriority("normal");
     setStatus(defaultStatus ?? COLUMNS[1].id); setEstimatedHours("4");
     setChecklist([]); setNewItem("");
   };
@@ -66,14 +78,14 @@ export function CreateTaskWizard({ open, onClose, dueDate, defaultStatus }: Crea
   const close = () => { reset(); onClose(); };
 
   const submit = () => {
-    if (!title.trim()) return;
+    if (!title.trim() || !projectId || !assigneeId) return;
     const id = `t_${Date.now().toString(36)}`;
     tasksStore.addTask({
       id, title: title.trim(), description: description.trim(),
       projectId, assigneeId, participantIds: [assigneeId],
       department: users.find(u => u.id === assigneeId)?.department ?? "",
       tags: [], priority, status,
-      createdAt: "2026-06-10", startDate: "2026-06-10", dueDate: iso,
+      createdAt: localToday(), startDate: localToday(), dueDate: iso,
       checklist, comments: [], attachments: [],
       estimatedHours: Number(estimatedHours) || 0, loggedHours: 0,
     });

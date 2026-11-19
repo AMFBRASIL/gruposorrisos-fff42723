@@ -9,8 +9,8 @@ import {
   CalendarDays, Sparkles, Receipt, Building2, CheckCircle2,
   ArrowRight, ArrowLeft, X, Plus, Trash2, ListChecks,
 } from "lucide-react";
-import { invoicesStore, useClients } from "@/lib/store";
-import { projects, formatBRL, type Invoice, type InvoiceItem, type InvoiceStatus } from "@/lib/mock-data";
+import { invoicesStore, useClients, useProjects } from "@/lib/store";
+import { formatBRL, type Invoice, type InvoiceItem, type InvoiceStatus } from "@/lib/mock-data";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
@@ -31,6 +31,7 @@ const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 8)}`;
 const plusDays = (d: number) => new Date(Date.now() + d * 86400000).toISOString().slice(0, 10);
 
 export function CreateInvoiceWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const projects = useProjects();
   const clients = useClients();
   const [step, setStep] = useState(0);
   const [clientId, setClientId] = useState("");
@@ -52,6 +53,10 @@ export function CreateInvoiceWizard({ open, onClose }: { open: boolean; onClose:
     setIssueDate(todayISO()); setDueDate(plusDays(30));
     setStatus("rascunho"); setNotes("");
   }, [open]);
+
+  useEffect(() => {
+    if (open && !clientId && clients[0]) setClientId(clients[0].id);
+  }, [open, clientId, clients]);
 
   const total = useMemo(() => items.reduce((s, i) => s + i.quantity * i.unitPrice, 0), [items]);
 

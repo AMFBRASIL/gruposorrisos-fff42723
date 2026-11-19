@@ -1,4 +1,5 @@
-import { priorityMeta, type Priority, type Task, getUser, getProject, daysUntil, users } from "@/lib/mock-data";
+import { priorityMeta, type Priority, type Task, getUser, getProject, daysUntil } from "@/lib/mock-data";
+import { useAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, MessageSquare, Paperclip, CheckSquare, Clock, Play, Pause, Lock } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -26,6 +27,7 @@ export function TaskCard({ task, onClick }: { task: Task; onClick?: () => void }
   const soon = dleft >= 0 && dleft <= 3 && task.status !== "concluido";
   const checkDone = task.checklist.filter(c => c.done).length;
   const pct = task.checklist.length ? Math.round((checkDone / task.checklist.length) * 100) : 0;
+  const auth = useAuth();
   const active = useActiveTimer();
   const allTasks = useTasks();
   const running = active?.taskId === task.id;
@@ -37,7 +39,7 @@ export function TaskCard({ task, onClick }: { task: Task; onClick?: () => void }
   const toggleTimer = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (running) timerStore.stop();
-    else timerStore.start(task.id, users[0].id);
+    else if (auth.user) timerStore.start(task.id, auth.user.id);
   };
 
   return (

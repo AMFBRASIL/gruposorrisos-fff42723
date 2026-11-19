@@ -1,77 +1,50 @@
 import { useSyncExternalStore } from "react";
-import { tasks as initialTasks, projects as initialProjects, users as initialUsers, projectTemplates as initialTemplates, automationRules as initialAutomations, seedTimeEntries, clients as initialClients, deals as initialDeals, invoices as initialInvoices, documents as initialDocuments, approvals as initialApprovals, type Task, type TaskStatus, type Project, type User, type ProjectTemplate, type AutomationRule, type TimeEntry, type Client, type Deal, type DealStage, type Invoice, type Document, type DocumentStatus, type ApprovalRequest, type ApprovalStatus } from "./mock-data";
+import { toast } from "sonner";
+import { matchesRule, planAutomation, planDomain, type DomainFact } from "@/lib/automation-engine";
+import { onAutomation } from "@/lib/automation-bus";
+import { moduleById } from "@/lib/automation-catalog";
+import { apiRequest } from "@/lib/api";
+import { getAccessToken } from "@/lib/auth";
+import { bindClients, bindProjects } from "@/lib/live-lookup";
+import { loadWork } from "@/lib/work-live";
+import { type Task, type TaskStatus, type Project, type ProjectTemplate, type AutomationRule, type TimeEntry, type Client, type Deal, type DealStage, type Invoice, type Document, type DocumentStatus, type ApprovalRequest, type ApprovalStatus, type Priority } from "./mock-data";
 
-// User profiles store (with page access)
-export const ACCESS_PAGES = ["/", "/projetos", "/kanban", "/minhas-tarefas", "/calendario", "/equipe", "/relatorios", "/configuracoes", "/perfis"] as const;
-export interface UserProfile extends User { access: Record<string, boolean>; profileId?: string; }
+let acceptWrites = false;
+const recordWrites = new Map<string, Promise<void>>();
 
-const fullAccess = (): Record<string, boolean> => Object.fromEntries(ACCESS_PAGES.map(p => [p, true]));
-
-// Access profiles store (perfis de acesso — funções com permissões de páginas)
-export interface AccessProfile {
-  id: string;
-  name: string;
-  description: string;
-  color: string;
-  access: Record<string, boolean>;
+function enqueueRecord(kind: string, id: string, job: () => Promise<void>) {
+  const key = `${kind}:${id}`;
+  const previous = recordWrites.get(key) ?? Promise.resolve();
+  const next = previous.then(job, job);
+  recordWrites.set(key, next);
 }
 
-const accessOf = (allowed: string[]): Record<string, boolean> =>
-  Object.fromEntries(ACCESS_PAGES.map(p => [p, allowed.includes(p)]));
-
-let accessProfilesState: AccessProfile[] = [
-  { id: "ap_colaborador", name: "Colaborador(a)", description: "Executa tarefas e atualiza o progresso do dia a dia", color: "oklch(0.65 0.14 230)", access: accessOf(["/", "/kanban", "/minhas-tarefas", "/calendario", "/equipe"]) },
-  { id: "ap_supervisor", name: "Supervisor(a)", description: "Acompanha a equipe e garante a qualidade das entregas", color: "oklch(0.62 0.16 155)", access: accessOf(["/", "/projetos", "/kanban", "/minhas-tarefas", "/calendario", "/equipe", "/relatorios"]) },
-  { id: "ap_gerente", name: "Gerente", description: "Gerencia projetos, prazos e distribui as demandas", color: "oklch(0.7 0.15 70)", access: accessOf(["/", "/projetos", "/kanban", "/minhas-tarefas", "/calendario", "/equipe", "/relatorios", "/configuracoes"]) },
-  { id: "ap_diretor", name: "Diretor(a)", description: "Visão estratégica e decisões de alto nível", color: "oklch(0.6 0.2 295)", access: fullAccess() },
-];
-const accessProfileListeners = new Set<() => void>();
-const notifyAccessProfiles = () => accessProfileListeners.forEach(l => l());
-
-export const accessProfilesStore = {
-  getSnapshot: () => accessProfilesState,
-  subscribe: (l: () => void) => { accessProfileListeners.add(l); return () => accessProfileListeners.delete(l); },
-  addProfile(p: AccessProfile) { accessProfilesState = [...accessProfilesState, p]; notifyAccessProfiles(); },
-  updateProfile(id: string, patch: Partial<AccessProfile>) {
-    accessProfilesState = accessProfilesState.map(p => p.id === id ? { ...p, ...patch } : p);
-    notifyAccessProfiles();
-  },
-  setAccess(id: string, page: string, value: boolean) {
-    accessProfilesState = accessProfilesState.map(p => p.id === id ? { ...p, access: { ...p.access, [page]: value } } : p);
-    notifyAccessProfiles();
-  },
-};
-
-export function useAccessProfiles() {
-  return useSyncExternalStore(accessProfilesStore.subscribe, accessProfilesStore.getSnapshot, accessProfilesStore.getSnapshot);
+function saveRecord(kind: string, row: { id?: string } | null | undefined) {
+  if (!acceptWrites || !row?.id) return;
+  const id = row.id;
+  const body = JSON.stringify(row);
+  enqueueRecord(kind, id, () => apiRequest(`/api/workspace/${kind}/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body,
+  }, getAccessToken()).then(() => {
+    if (kind === "task" || kind === "project") void loadWork();
+  }).catch(() => undefined));
 }
 
-let profilesState: UserProfile[] = initialUsers.map(u => ({ ...u, access: fullAccess() }));
-const profileListeners = new Set<() => void>();
-const notifyProfiles = () => profileListeners.forEach(l => l());
-
-export const usersStore = {
-  getSnapshot: () => profilesState,
-  subscribe: (l: () => void) => { profileListeners.add(l); return () => profileListeners.delete(l); },
-  addUser(u: User & { profileId?: string }, access?: Record<string, boolean>) {
-    profilesState = [...profilesState, { ...u, access: access ?? fullAccess() }];
-    notifyProfiles();
-  },
-  updateUser(id: string, patch: Partial<UserProfile>) {
-    profilesState = profilesState.map(u => u.id === id ? { ...u, ...patch } : u);
-    notifyProfiles();
-  },
-  setAccess(id: string, page: string, value: boolean) {
-    profilesState = profilesState.map(u => u.id === id ? { ...u, access: { ...u.access, [page]: value } } : u);
-    notifyProfiles();
-  },
-};
-
-export function useUserProfiles() {
-  return useSyncExternalStore(usersStore.subscribe, usersStore.getSnapshot, usersStore.getSnapshot);
+function deleteRecord(kind: string, id: string) {
+  if (!acceptWrites) return;
+  enqueueRecord(kind, id, () => apiRequest(`/api/workspace/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" }, getAccessToken()).then(() => undefined).catch(() => undefined));
 }
 
-let state: Task[] = [...initialTasks];
+function remember<T extends { id: string }>(kind: string, list: T[], id: string) {
+  saveRecord(kind, list.find((item) => item.id === id));
+}
+
+export type { AccessProfile, UserProfile } from "./directory";
+export { ACCESS_PAGES } from "./menu-pages";
+export { accessProfilesStore, useAccessProfiles, useUserProfiles, usersStore } from "./directory";
+
+let state: Task[] = [];
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach(l => l());
 
@@ -79,14 +52,29 @@ export const tasksStore = {
   getSnapshot: () => state,
   subscribe: (l: () => void) => { listeners.add(l); return () => listeners.delete(l); },
   moveTask(id: string, newStatus: TaskStatus) {
+    const current = state.find((task) => task.id === id);
+    if (!current || current.status === newStatus) return;
+    const from = current.status;
     state = state.map(t => t.id === id ? { ...t, status: newStatus, completedAt: newStatus === "concluido" ? new Date().toISOString() : undefined } : t);
     notify();
+    remember("task", state, id);
+    const next = state.find((task) => task.id === id);
+    if (next) runAutomations(taskFact(next, "status_change", { from, to: newStatus }), true);
   },
   updateTask(id: string, patch: Partial<Task>) {
+    const current = state.find((task) => task.id === id);
     state = state.map(t => t.id === id ? { ...t, ...patch } : t);
     notify();
+    remember("task", state, id);
+    const next = state.find((task) => task.id === id);
+    if (current && next && patch.assigneeId && patch.assigneeId !== current.assigneeId) runAutomations(taskFact(next, "assigned"), true);
   },
-  addTask(t: Task) { state = [t, ...state]; notify(); },
+  addTask(t: Task) {
+    state = [t, ...state];
+    notify();
+    saveRecord("task", t);
+    runAutomations(taskFact(t, "task_created"), true);
+  },
 };
 
 export function useTasks() {
@@ -94,17 +82,18 @@ export function useTasks() {
 }
 
 // Projects store
-let projectsState: Project[] = [...initialProjects];
+let projectsState: Project[] = [];
 const projectListeners = new Set<() => void>();
-const notifyProjects = () => projectListeners.forEach(l => l());
+const notifyProjects = () => { bindProjects(projectsState); projectListeners.forEach(l => l()); };
 
 export const projectsStore = {
   getSnapshot: () => projectsState,
   subscribe: (l: () => void) => { projectListeners.add(l); return () => projectListeners.delete(l); },
-  addProject(p: Project) { projectsState = [p, ...projectsState]; notifyProjects(); },
+  addProject(p: Project) { projectsState = [p, ...projectsState]; notifyProjects(); saveRecord("project", p); },
   updateProject(id: string, patch: Partial<Project>) {
     projectsState = projectsState.map(p => p.id === id ? { ...p, ...patch } : p);
     notifyProjects();
+    remember("project", projectsState, id);
   },
 };
 
@@ -113,18 +102,19 @@ export function useProjects() {
 }
 
 // ============== Templates ==============
-let templatesState: ProjectTemplate[] = [...initialTemplates];
+let templatesState: ProjectTemplate[] = [];
 const tplListeners = new Set<() => void>();
 const notifyTpl = () => tplListeners.forEach(l => l());
 export const templatesStore = {
   getSnapshot: () => templatesState,
   subscribe: (l: () => void) => { tplListeners.add(l); return () => tplListeners.delete(l); },
-  addTemplate(t: ProjectTemplate) { templatesState = [t, ...templatesState]; notifyTpl(); },
+  addTemplate(t: ProjectTemplate) { templatesState = [t, ...templatesState]; notifyTpl(); saveRecord("template", t); },
   updateTemplate(id: string, patch: Partial<ProjectTemplate>) {
     templatesState = templatesState.map(t => t.id === id ? { ...t, ...patch } : t);
     notifyTpl();
+    remember("template", templatesState, id);
   },
-  removeTemplate(id: string) { templatesState = templatesState.filter(t => t.id !== id); notifyTpl(); },
+  removeTemplate(id: string) { templatesState = templatesState.filter(t => t.id !== id); notifyTpl(); deleteRecord("template", id); },
 };
 export function useTemplates() {
   return useSyncExternalStore(templatesStore.subscribe, templatesStore.getSnapshot, templatesStore.getSnapshot);
@@ -157,23 +147,137 @@ export function applyTemplateToProject(template: ProjectTemplate, projectId: str
 }
 
 // ============== Automações ==============
-let autoState: AutomationRule[] = [...initialAutomations];
+let autoState: AutomationRule[] = [];
 const autoListeners = new Set<() => void>();
 const notifyAuto = () => autoListeners.forEach(l => l());
 export const automationsStore = {
   getSnapshot: () => autoState,
   subscribe: (l: () => void) => { autoListeners.add(l); return () => autoListeners.delete(l); },
-  addRule(r: AutomationRule) { autoState = [r, ...autoState]; notifyAuto(); },
+  addRule(r: AutomationRule) { autoState = [r, ...autoState]; notifyAuto(); saveRecord("automation", r); },
   toggleRule(id: string) {
     autoState = autoState.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r);
     notifyAuto();
+    remember("automation", autoState, id);
   },
   updateRule(id: string, patch: Partial<AutomationRule>) {
     autoState = autoState.map(r => r.id === id ? { ...r, ...patch } : r);
     notifyAuto();
+    remember("automation", autoState, id);
   },
-  removeRule(id: string) { autoState = autoState.filter(r => r.id !== id); notifyAuto(); },
+  removeRule(id: string) { autoState = autoState.filter(r => r.id !== id); notifyAuto(); deleteRecord("automation", id); },
+  runNow(id: string) {
+    const rule = autoState.find((item) => item.id === id);
+    if (!rule) return 0;
+    if (!rule.enabled) {
+      toast.message("Ative a regra para executar.");
+      return 0;
+    }
+    if (rule.trigger !== "due_soon" && rule.trigger !== "overdue") {
+      toast.message("Essa regra dispara sozinha quando o evento do módulo acontece.");
+      return 0;
+    }
+    const before = rule.runs;
+    const today = new Date().toISOString().slice(0, 10);
+    for (const task of [...state]) runAutomations(taskFact(task, "schedule", { today }), false, id);
+    const count = (autoState.find((item) => item.id === id)?.runs ?? before) - before;
+    toast.success(count ? `“${rule.name}” executou em ${count} tarefa(s).` : `Nenhuma tarefa pendente para “${rule.name}”.`);
+    return count;
+  },
 };
+
+const scheduled = new Set<string>();
+let automationDepth = 0;
+
+function taskFact(task: Task, event: string, extra: Partial<DomainFact> = {}): DomainFact {
+  return { module: "tarefas", event, title: task.title, ref: task.id, status: task.status, dueDate: task.dueDate, priority: task.priority, assigneeId: task.assigneeId, projectId: task.projectId, task, ...extra };
+}
+
+function followUp(parent: Task, title: string, status: string, priority: Priority): Task {
+  const today = new Date().toISOString().slice(0, 10);
+  return {
+    id: `tsk_${Date.now().toString(36)}`, title, description: `Criada pela automação a partir de ${parent.title}.`,
+    projectId: parent.projectId, assigneeId: parent.assigneeId, participantIds: [], department: parent.department, tags: [],
+    priority, status, createdAt: today, startDate: today, dueDate: parent.dueDate,
+    checklist: [], comments: [], attachments: [], estimatedHours: 1, loggedHours: 0,
+  };
+}
+
+function followUpFact(fact: DomainFact, spawn: { title: string; priority: Priority; status: string }, ruleName: string, summary: string): Task {
+  const today = new Date().toISOString().slice(0, 10);
+  const due = new Date();
+  due.setDate(due.getDate() + 2);
+  return {
+    id: `tsk_${Date.now().toString(36)}`, title: spawn.title, description: `Criada pela automação “${ruleName}” a partir de ${fact.title}.`,
+    projectId: projectsState[0]?.id || fact.projectId || "geral", assigneeId: fact.assigneeId || "sistema", participantIds: [],
+    department: moduleById(fact.module).label, tags: [fact.module], priority: spawn.priority, status: spawn.status,
+    createdAt: today, startDate: today, dueDate: due.toISOString().slice(0, 10), checklist: [],
+    comments: summary ? [{ id: `auto_${Math.random().toString(36).slice(2, 10)}`, userId: "sistema", text: `Automação “${ruleName}”: ${summary}.`, at: new Date().toISOString() }] : [],
+    attachments: [], estimatedHours: 1, loggedHours: 0,
+  };
+}
+
+function rememberRun(ruleId: string) {
+  const ranAt = new Date().toISOString();
+  autoState = autoState.map((item) => item.id === ruleId ? { ...item, runs: item.runs + 1, lastRun: ranAt } : item);
+  notifyAuto();
+  remember("automation", autoState, ruleId);
+}
+
+function runAutomations(fact: DomainFact, interactive: boolean, onlyRuleId?: string, skip = new Set<string>()) {
+  if (automationDepth > 2) return;
+  automationDepth += 1;
+  const fired: string[] = [];
+  try {
+    for (const rule of [...autoState]) {
+      if ((onlyRuleId && rule.id !== onlyRuleId) || skip.has(rule.id) || !matchesRule(rule, fact)) continue;
+      const stamp = fact.event === "schedule" ? fact.today ?? "" : "";
+      const key = `${rule.id}:${fact.ref}:${fact.event}:${stamp}`;
+      if (fact.event === "schedule" && scheduled.has(key)) continue;
+      const nextSkip = new Set(skip);
+      nextSkip.add(rule.id);
+      if ((rule.module || "tarefas") === "tarefas" && fact.task) {
+        const current = state.find((task) => task.id === fact.task?.id) ?? fact.task;
+        const planned = planAutomation(rule, current, new Date().toISOString());
+        if (!planned.summary && !planned.spawn) continue;
+        if (fact.event === "schedule") scheduled.add(key);
+        const previousStatus = current.status;
+        if (Object.keys(planned.patch).length) {
+          state = state.map((task) => task.id === current.id ? { ...task, ...planned.patch } : task);
+          notify();
+          remember("task", state, current.id);
+        }
+        if (planned.spawn) {
+          const created = followUp(current, planned.spawn.title, planned.spawn.status, planned.spawn.priority);
+          state = [created, ...state];
+          notify();
+          saveRecord("task", created);
+          runAutomations(taskFact(created, "task_created"), false, undefined, nextSkip);
+        }
+        if (planned.patch.status && planned.patch.status !== previousStatus) {
+          const moved = state.find((task) => task.id === current.id);
+          if (moved) runAutomations(taskFact(moved, "status_change", { from: previousStatus, to: planned.patch.status }), false, undefined, nextSkip);
+        }
+      } else {
+        const planned = planDomain(rule, fact);
+        if (!planned.summary && !planned.spawn) continue;
+        if (planned.spawn) {
+          const created = followUpFact(fact, planned.spawn, rule.name, planned.summary);
+          state = [created, ...state];
+          notify();
+          saveRecord("task", created);
+          runAutomations(taskFact(created, "task_created"), false, undefined, nextSkip);
+        }
+      }
+      rememberRun(rule.id);
+      fired.push(rule.name);
+    }
+  } finally {
+    automationDepth -= 1;
+  }
+  if (interactive && automationDepth === 0 && fired.length) toast.success(fired.length === 1 ? `Automação “${fired[0]}” executou.` : `${fired.length} automações executaram.`);
+}
+
+onAutomation((fact) => runAutomations(fact, true));
 export function useAutomations() {
   return useSyncExternalStore(automationsStore.subscribe, automationsStore.getSnapshot, automationsStore.getSnapshot);
 }
@@ -181,7 +285,7 @@ export function useAutomations() {
 // ============== Time tracker (apenas 1 ativo por vez) ==============
 interface ActiveTimer { taskId: string; userId: string; startedAt: string; }
 let activeTimer: ActiveTimer | null = null;
-let entriesState: TimeEntry[] = [...seedTimeEntries];
+let entriesState: TimeEntry[] = [];
 const timerListeners = new Set<() => void>();
 const notifyTimer = () => timerListeners.forEach(l => l());
 
@@ -207,6 +311,7 @@ export const timerStore = {
       minutes, note,
     };
     entriesState = [entry, ...entriesState];
+    saveRecord("time_entry", entry);
     // anexa à tarefa e atualiza loggedHours
     const task = state.find(t => t.id === activeTimer!.taskId);
     if (task) {
@@ -233,22 +338,56 @@ export function useTimeEntries() {
 // Theme store
 const THEME_KEY = "gs-theme";
 type Theme = "light" | "dark";
+export type ThemeMode = "claro" | "escuro" | "auto";
 let theme: Theme = "dark";
+let themeMode: ThemeMode = "escuro";
 const themeListeners = new Set<() => void>();
-if (typeof window !== "undefined") {
-  const saved = localStorage.getItem(THEME_KEY) as Theme | null;
-  theme = saved || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  document.documentElement.classList.toggle("dark", theme === "dark");
+
+function systemTheme(): Theme {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
+
+function paintTheme(next: Theme) {
+  theme = next;
+  if (typeof document !== "undefined") document.documentElement.classList.toggle("dark", next === "dark");
+  themeListeners.forEach((listener) => listener());
+}
+
+if (typeof window !== "undefined") {
+  const saved = localStorage.getItem(THEME_KEY);
+  const system = systemTheme();
+  if (saved === "auto") themeMode = "auto";
+  else if (saved === "light") themeMode = "claro";
+  else if (saved === "dark") themeMode = "escuro";
+  else themeMode = system === "dark" ? "escuro" : "claro";
+  paintTheme(themeMode === "auto" ? system : themeMode === "claro" ? "light" : "dark");
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (themeMode === "auto") paintTheme(systemTheme());
+  });
+}
+
+export function getThemeMode() {
+  return themeMode;
+}
+
+export function applyThemePreference(mode: ThemeMode) {
+  themeMode = mode;
+  const next = mode === "auto" ? (typeof window === "undefined" ? "dark" : systemTheme()) : mode === "claro" ? "light" : "dark";
+  try { localStorage.setItem(THEME_KEY, mode === "auto" ? "auto" : next); } catch { /* ignore */ }
+  paintTheme(next);
+}
+
 export const themeStore = {
   getSnapshot: () => theme,
   subscribe: (l: () => void) => { themeListeners.add(l); return () => themeListeners.delete(l); },
   toggle() {
-    theme = theme === "dark" ? "light" : "dark";
+    const next = theme === "dark" ? "light" : "dark";
+    themeMode = next === "dark" ? "escuro" : "claro";
     if (typeof window !== "undefined") {
-      localStorage.setItem(THEME_KEY, theme);
-      document.documentElement.classList.toggle("dark", theme === "dark");
+      localStorage.setItem(THEME_KEY, next);
+      document.documentElement.classList.toggle("dark", next === "dark");
     }
+    theme = next;
     themeListeners.forEach(l => l());
   }
 };
@@ -257,16 +396,17 @@ export function useTheme() {
 }
 
 // ============== Wave 3 — Clients ==============
-let clientsState: Client[] = [...initialClients];
+let clientsState: Client[] = [];
 const clientListeners = new Set<() => void>();
-const notifyClients = () => clientListeners.forEach(l => l());
+const notifyClients = () => { bindClients(clientsState); clientListeners.forEach(l => l()); };
 export const clientsStore = {
   getSnapshot: () => clientsState,
   subscribe: (l: () => void) => { clientListeners.add(l); return () => clientListeners.delete(l); },
-  addClient(c: Client) { clientsState = [c, ...clientsState]; notifyClients(); },
+  addClient(c: Client) { clientsState = [c, ...clientsState]; notifyClients(); saveRecord("client", c); runAutomations({ module: "comercial", event: "client_created", title: c.name, ref: c.id }, true); },
   updateClient(id: string, patch: Partial<Client>) {
     clientsState = clientsState.map(c => c.id === id ? { ...c, ...patch } : c);
     notifyClients();
+    remember("client", clientsState, id);
   },
 };
 export function useClients() {
@@ -274,21 +414,25 @@ export function useClients() {
 }
 
 // ============== Wave 3 — Deals (Pipeline) ==============
-let dealsState: Deal[] = [...initialDeals];
+let dealsState: Deal[] = [];
 const dealListeners = new Set<() => void>();
 const notifyDeals = () => dealListeners.forEach(l => l());
 export const dealsStore = {
   getSnapshot: () => dealsState,
   subscribe: (l: () => void) => { dealListeners.add(l); return () => dealListeners.delete(l); },
-  addDeal(d: Deal) { dealsState = [d, ...dealsState]; notifyDeals(); },
+  addDeal(d: Deal) { dealsState = [d, ...dealsState]; notifyDeals(); saveRecord("deal", d); runAutomations({ module: "comercial", event: "deal_created", title: d.title, ref: d.id, assigneeId: d.ownerId }, true); },
   updateDeal(id: string, patch: Partial<Deal>) {
     dealsState = dealsState.map(d => d.id === id ? { ...d, ...patch } : d);
     notifyDeals();
+    remember("deal", dealsState, id);
   },
   moveStage(id: string, stage: DealStage) {
     const prob = stage === "ganho" ? 100 : stage === "perdido" ? 0 : undefined;
     dealsState = dealsState.map(d => d.id === id ? { ...d, stage, ...(prob !== undefined ? { probability: prob } : {}) } : d);
     notifyDeals();
+    remember("deal", dealsState, id);
+    const next = dealsState.find((deal) => deal.id === id);
+    if (next) runAutomations({ module: "comercial", event: "deal_moved", title: next.title, ref: id, status: stage }, true);
   },
 };
 export function useDeals() {
@@ -296,20 +440,24 @@ export function useDeals() {
 }
 
 // ============== Wave 3 — Invoices ==============
-let invoicesState: Invoice[] = [...initialInvoices];
+let invoicesState: Invoice[] = [];
 const invListeners = new Set<() => void>();
 const notifyInv = () => invListeners.forEach(l => l());
 export const invoicesStore = {
   getSnapshot: () => invoicesState,
   subscribe: (l: () => void) => { invListeners.add(l); return () => invListeners.delete(l); },
-  addInvoice(i: Invoice) { invoicesState = [i, ...invoicesState]; notifyInv(); },
+  addInvoice(i: Invoice) { invoicesState = [i, ...invoicesState]; notifyInv(); saveRecord("invoice", i); runAutomations({ module: "financeiro", event: "invoice_created", title: i.number, ref: i.id, dueDate: i.dueDate }, true); },
   updateInvoice(id: string, patch: Partial<Invoice>) {
     invoicesState = invoicesState.map(i => i.id === id ? { ...i, ...patch } : i);
     notifyInv();
+    remember("invoice", invoicesState, id);
   },
   markPaid(id: string) {
     invoicesState = invoicesState.map(i => i.id === id ? { ...i, status: "paga" as const, paidAt: new Date().toISOString().slice(0,10) } : i);
     notifyInv();
+    remember("invoice", invoicesState, id);
+    const next = invoicesState.find((invoice) => invoice.id === id);
+    if (next) runAutomations({ module: "financeiro", event: "invoice_paid", title: next.number, ref: id, status: "paga" }, true);
   },
 };
 export function useInvoices() {
@@ -317,20 +465,24 @@ export function useInvoices() {
 }
 
 // ============== Wave 4 — Documents ==============
-let documentsState: Document[] = [...initialDocuments];
+let documentsState: Document[] = [];
 const docListeners = new Set<() => void>();
 const notifyDocs = () => docListeners.forEach(l => l());
 export const documentsStore = {
   getSnapshot: () => documentsState,
   subscribe: (l: () => void) => { docListeners.add(l); return () => docListeners.delete(l); },
-  addDocument(d: Document) { documentsState = [d, ...documentsState]; notifyDocs(); },
+  addDocument(d: Document) { documentsState = [d, ...documentsState]; notifyDocs(); saveRecord("document", d); runAutomations({ module: "documentos", event: "document_created", title: d.title, ref: d.id, status: d.status, assigneeId: d.ownerId }, true); },
   updateDocument(id: string, patch: Partial<Document>) {
     documentsState = documentsState.map(d => d.id === id ? { ...d, ...patch, updatedAt: new Date().toISOString().slice(0, 10) } : d);
     notifyDocs();
+    remember("document", documentsState, id);
   },
   setStatus(id: string, status: DocumentStatus) {
     documentsState = documentsState.map(d => d.id === id ? { ...d, status, updatedAt: new Date().toISOString().slice(0, 10) } : d);
     notifyDocs();
+    remember("document", documentsState, id);
+    const next = documentsState.find((document) => document.id === id);
+    if (next) runAutomations({ module: "documentos", event: "document_status", title: next.title, ref: id, status }, true);
   },
   signBy(id: string, signatoryId: string) {
     documentsState = documentsState.map(d => {
@@ -340,6 +492,9 @@ export const documentsStore = {
       return { ...d, signatories, status: allSigned ? "assinado" as DocumentStatus : d.status, updatedAt: new Date().toISOString().slice(0, 10) };
     });
     notifyDocs();
+    remember("document", documentsState, id);
+    const next = documentsState.find((document) => document.id === id);
+    if (next) runAutomations({ module: "documentos", event: "document_signed", title: next.title, ref: id, status: next.status }, true);
   },
 };
 export function useDocuments() {
@@ -347,13 +502,13 @@ export function useDocuments() {
 }
 
 // ============== Wave 4 — Approvals ==============
-let approvalsState: ApprovalRequest[] = [...initialApprovals];
+let approvalsState: ApprovalRequest[] = [];
 const apListeners = new Set<() => void>();
 const notifyAp = () => apListeners.forEach(l => l());
 export const approvalsStore = {
   getSnapshot: () => approvalsState,
   subscribe: (l: () => void) => { apListeners.add(l); return () => apListeners.delete(l); },
-  addRequest(r: ApprovalRequest) { approvalsState = [r, ...approvalsState]; notifyAp(); },
+  addRequest(r: ApprovalRequest) { approvalsState = [r, ...approvalsState]; notifyAp(); saveRecord("approval", r); runAutomations({ module: "aprovacoes", event: "approval_created", title: r.title, ref: r.id, status: r.status, assigneeId: r.requesterId }, true); },
   decideStep(reqId: string, stepId: string, decision: "aprovado" | "rejeitado", note?: string) {
     approvalsState = approvalsState.map(r => {
       if (r.id !== reqId) return r;
@@ -366,12 +521,75 @@ export const approvalsStore = {
       return { ...r, steps, status };
     });
     notifyAp();
+    remember("approval", approvalsState, reqId);
+    const next = approvalsState.find((request) => request.id === reqId);
+    if (next) runAutomations({ module: "aprovacoes", event: "approval_decided", title: next.title, ref: reqId, status: decision }, true);
   },
   cancel(id: string) {
     approvalsState = approvalsState.map(r => r.id === id ? { ...r, status: "cancelado" as ApprovalStatus } : r);
     notifyAp();
+    remember("approval", approvalsState, id);
   },
 };
 export function useApprovals() {
   return useSyncExternalStore(approvalsStore.subscribe, approvalsStore.getSnapshot, approvalsStore.getSnapshot);
+}
+
+type WorkspaceSnapshot = {
+  projects?: Project[];
+  tasks?: Task[];
+  templates?: ProjectTemplate[];
+  automations?: AutomationRule[];
+  timeEntries?: TimeEntry[];
+  clients?: Client[];
+  deals?: Deal[];
+  invoices?: Invoice[];
+  documents?: Document[];
+  approvals?: ApprovalRequest[];
+};
+
+function publishAll() {
+  notify();
+  notifyProjects();
+  notifyTpl();
+  notifyAuto();
+  notifyTimer();
+  notifyClients();
+  notifyDeals();
+  notifyInv();
+  notifyDocs();
+  notifyAp();
+}
+
+export async function loadWorkspace() {
+  const data = await apiRequest<WorkspaceSnapshot>("/api/workspace", {}, getAccessToken());
+  acceptWrites = false;
+  state = data.tasks ?? [];
+  projectsState = data.projects ?? [];
+  templatesState = data.templates ?? [];
+  autoState = data.automations ?? [];
+  entriesState = data.timeEntries ?? [];
+  clientsState = data.clients ?? [];
+  dealsState = data.deals ?? [];
+  invoicesState = data.invoices ?? [];
+  documentsState = data.documents ?? [];
+  approvalsState = data.approvals ?? [];
+  publishAll();
+  acceptWrites = true;
+}
+
+export function resetWorkspace() {
+  acceptWrites = false;
+  state = [];
+  projectsState = [];
+  templatesState = [];
+  autoState = [];
+  entriesState = [];
+  clientsState = [];
+  dealsState = [];
+  invoicesState = [];
+  documentsState = [];
+  approvalsState = [];
+  activeTimer = null;
+  publishAll();
 }

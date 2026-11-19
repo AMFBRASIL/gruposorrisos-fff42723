@@ -1,12 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import {
   User, Bell, Mail, Plug, Activity, LayoutGrid, Shield, Palette,
-  Users, KeyRound, Database, Sparkles, ChevronRight, Zap, Eye, Languages,
+  Users, KeyRound, Database, Sparkles, ChevronRight, Zap, Eye, Languages, GitBranch,
 } from "lucide-react";
 import { SettingsWizard, SETTINGS_WIZARDS } from "@/components/settings-wizard";
+import { OrderWorkflowDialog } from "@/components/order-workflow";
+import { ApiError } from "@/lib/api";
+import { reloadSessionUser } from "@/lib/auth";
+import { saveSettings, useSettings, wizardSeed } from "@/lib/settings";
+import { useProcurementSession } from "@/lib/procurement-live";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({ meta: [
@@ -57,9 +63,31 @@ const SECTIONS: Section[] = [
 
 const GROUPS: Array<Section["group"]> = ["Conta", "Workspace", "Plataforma", "Avançado"];
 
+function badgeFor(section: Section, integrations: number | undefined) {
+  if (section.id !== "integracoes") return section.badge;
+  if (integrations == null) return section.badge;
+  return integrations === 1 ? "1 ativa" : `${integrations} ativas`;
+}
+
 function SettingsPage() {
   const [active, setActive] = useState<SectionId | null>(null);
+  const [stagesOpen, setStagesOpen] = useState(false);
+  const session = useProcurementSession();
+  const settings = useSettings();
   const config = active ? SETTINGS_WIZARDS[active] : null;
+
+  const saveModule = async (module: SectionId, payload: { selections: Record<string, string>; values: Record<string, string>; toggles: Record<string, boolean> }) => {
+    try {
+      const result = await saveSettings(module, payload);
+      if (module === "perfil") await reloadSessionUser();
+      if (result.secret) toast.success(result.notice ?? "Configuração salva.", { description: result.secret, duration: 60000 });
+      else if (result.notice) toast.success(result.notice);
+      else toast.success("Configurações salvas.");
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Não foi possível salvar.");
+      throw error;
+    }
+  };
 
   return (
     <AppShell title="Configurações" subtitle="Personalize toda a plataforma" primaryAction={null}>
@@ -71,12 +99,14 @@ function SettingsPage() {
 
         {GROUPS.map(group => {
           const items = SECTIONS.filter(s => s.group === group);
+          const extra = group === "Workspace" && session.can("usuarios.gerenciar") ? 1 : 0;
+          const count = items.length + extra;
           return (
             <section key={group} className="space-y-3">
               <div className="flex items-center gap-3">
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{group}</h3>
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-[11px] text-muted-foreground">{items.length} {items.length === 1 ? "item" : "itens"}</span>
+                <span className="text-[11px] text-muted-foreground">{count} {count === 1 ? "item" : "itens"}</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {items.map(s => {
@@ -94,7 +124,7 @@ function SettingsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h4 className="font-medium text-sm leading-tight truncate">{s.title}</h4>
-                            {s.badge && <Badge variant="secondary" className="text-[10px] font-normal">{s.badge}</Badge>}
+                            {badgeFor(s, settings?.integrations.active) && <Badge variant="secondary" className="text-[10px] font-normal">{badgeFor(s, settings?.integrations.active)}</Badge>}
                           </div>
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{s.desc}</p>
                         </div>
@@ -103,18 +133,33 @@ function SettingsPage() {
                     </button>
                   );
                 })}
+                {group === "Workspace" && session.can("usuarios.gerenciar") && (
+                  <button type="button" onClick={() => setStagesOpen(true)} className="group relative text-left rounded-lg border border-border bg-card p-5 transition-all hover:border-primary/50 hover:bg-accent/30 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40">
+                    <div className="flex items-start gap-4">
+                      <div className="h-11 w-11 shrink-0 rounded-md border border-border bg-muted/60 flex items-center justify-center text-muted-foreground group-hover:text-foreground group-hover:border-primary/40 transition-colors"><GitBranch className="h-5 w-5" /></div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm leading-tight">Etapas do pedido</h4>
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">Nomes, cores, responsáveis e ordem das etapas de compra</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
+                    </div>
+                  </button>
+                )}
               </div>
             </section>
           );
         })}
       </div>
 
-      {config && (
+      {stagesOpen && <OrderWorkflowDialog onClose={() => setStagesOpen(false)} />}
+      {config && active && (
         <SettingsWizard
           key={active}
           open={!!active}
           config={config}
+          seed={settings ? wizardSeed(active, settings) : undefined}
           onClose={() => setActive(null)}
+          onSave={(payload) => saveModule(active, payload)}
         />
       )}
     </AppShell>

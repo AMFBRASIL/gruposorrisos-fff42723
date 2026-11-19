@@ -3,8 +3,8 @@ import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { useTasks, useProjects } from "@/lib/store";
-import { users, getUser, priorityMeta } from "@/lib/mock-data";
+import { useProjects, useTasks, useUserProfiles } from "@/lib/store";
+import { getUser, priorityMeta } from "@/lib/mock-data";
 import { analyzeProject, getTopPriorityTasks, buildWeeklyDigest, RISK_META, type ProjectInsight } from "@/lib/ai-mock";
 import { UserAvatar } from "@/components/task-card";
 import { Sparkles, AlertTriangle, TrendingUp, Brain, ListChecks, Zap, Calendar, Trophy, Target, ArrowUpRight } from "lucide-react";
@@ -25,6 +25,7 @@ export const Route = createFileRoute("/insights")({
 function InsightsPage() {
   const tasks = useTasks();
   const projects = useProjects();
+  const users = useUserProfiles();
 
   const insights = useMemo(
     () => projects.map(p => analyzeProject(p, tasks)).sort((a, b) => b.riskScore - a.riskScore),

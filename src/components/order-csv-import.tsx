@@ -5,7 +5,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { selectCls } from './erp-wizard';
 import { parseCsv, reconcileCsv, downloadCsv, exportCsv, type CsvMapping, type ImportItem } from '@/lib/order-csv';
-import { brl, materials, type Material } from '@/lib/stock';
+import { brl, materials } from '@/lib/stock-live';
+import type { Material } from '@/lib/stock';
 
 const fields = { code: 'Código', barcode: 'Código de barras', name: 'Material', unit: 'Unidade', qty: 'Quantidade', price: 'Preço unitário' };
 export function OrderCsvImport({ onConfirm, catalog = materials, links = {} }: { onConfirm: (items: ImportItem[], file: string) => void; catalog?: Material[]; links?: Record<string, string> }) {

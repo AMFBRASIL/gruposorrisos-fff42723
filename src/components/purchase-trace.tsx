@@ -1,10 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { usePurchasing, poLabels } from '@/lib/purchasing';
-import { useSupplierRequests } from '@/lib/supplier-orders';
-import { useStock, brl, getMaterial } from '@/lib/stock';
-import { branchName } from '@/lib/erp';
+import { usePurchasing, poLabels, useSupplierRequests, branchName } from '@/lib/procurement-live';
+import { useStock, brl, getMaterial } from '@/lib/stock-live';
 import { quoteTotal } from '@/lib/procurement-rules';
 import { ProcurementContext } from './procurement-context';
 

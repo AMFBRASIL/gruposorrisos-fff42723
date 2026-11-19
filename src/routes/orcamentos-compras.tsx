@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { BudgetWizard } from '@/components/budget-wizard';
-import { budgetImpact, useBudgets, type Budget } from '@/lib/procurement-budget';
-import { branchName, useErp, useSession } from '@/lib/erp';
-import { brl } from '@/lib/stock';
+import { budgetImpact, type Budget } from '@/lib/procurement-budget';
+import { useBudgets, branchName, useProcurementErp as useErp, useProcurementSession as useSession } from '@/lib/procurement-live';
+import { brl } from '@/lib/stock-live';
 
 export const Route = createFileRoute('/orcamentos-compras')({ head: () => ({ meta: [{ title: 'Orçamentos de Compras | Grupo Sorrisos' }, { name: 'description', content: 'Controle mensal por filial e centro de custo com compromissos e bloqueios de aprovação.' }, { property: 'og:title', content: 'Orçamentos de Compras | Grupo Sorrisos' }, { property: 'og:description', content: 'Limites, compromissos e realização por centro de custo.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: BudgetPage });
 function BudgetPage() {

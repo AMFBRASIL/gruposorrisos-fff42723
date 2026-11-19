@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { approveWorkflow, commentEvent, snapshotWorkflow, validateTemplate, workflowAssignee, saveWorkflowTemplate, type Workflow } from './order-workflow';
+import { approveWorkflow, commentEvent, snapshotWorkflow, stageCursor, validateTemplate, workflowAssignee, saveWorkflowTemplate, type Workflow } from './order-workflow';
 import { seedErpUsers, seedRoles, setCurrentUser } from './erp';
 import { actions, getOrders, saveDraft } from './orders';
 import { getState } from './stock';
@@ -8,6 +8,7 @@ import { getPurchasing } from './purchasing';
 const user = (id: string) => { const found = seedErpUsers.find(u => u.id === id); if (!found) throw new Error(id); return found; };
 const workflow: Workflow = { name: 'Aprovação', index: 0, startedAt: '2026-11-12T00:00:00Z', decisions: [], steps: [{ id: 'gestor', name: 'Gestor', assigneeType: 'user', assigneeId: 'u-maria', hours: 24, requireNote: true }, { id: 'diretor', name: 'Diretor', assigneeType: 'user', assigneeId: 'u-carlos', hours: 48, requireNote: false }] };
 describe('etapas de aprovação personalizadas', () => {
+  it('mostra a etapa atual e só libera a seguinte', () => { expect(stageCursor(workflow)?.current?.name).toBe('Gestor'); expect(stageCursor(workflow)?.next?.name).toBe('Diretor'); expect(stageCursor({ ...workflow, situation: 1 })?.current?.name).toBe('Diretor'); expect(stageCursor({ ...workflow, situation: 2 })?.finished).toBe(true); });
   it('apenas o usuário designado aprova a etapa', () => expect(approveWorkflow(workflow, user('u-carlos'), seedRoles, 'c1', 'OK')).toEqual({ error: 'Somente o responsável da etapa pode aprovar' }));
   it('exige observação quando configurada', () => expect(approveWorkflow(workflow, user('u-maria'), seedRoles, 'c1', '')).toEqual({ error: 'Esta etapa exige uma observação' }));
   it('passa primeiro pelo gestor e depois pelo diretor mantendo autoria e observação', () => {
@@ -21,7 +22,7 @@ describe('etapas de aprovação personalizadas', () => {
   it('perfis respeitam vínculo da filial', () => { const step = { ...workflow.steps[0], assigneeType: 'role' as const, assigneeId: 'gerente' }; expect(workflowAssignee(step, user('u-maria'), seedRoles, 'c1')).toBe(true); expect(workflowAssignee(step, user('u-maria'), seedRoles, 'c2')).toBe(false); });
   it('a cópia por pedido não altera o modelo', () => { const copy = snapshotWorkflow('cd'); copy.steps[0].name = 'Alterado'; expect(snapshotWorkflow('cd').steps[0].name).toBe('Aprovação da filial'); });
   it('observações registram autor e data sem aceitar texto vazio', () => { expect(commentEvent(' ', 'u-maria')).toBeNull(); expect(commentEvent('Comprar urgente', 'u-maria', '2026-11-12')).toEqual({ at: '2026-11-12', userId: 'u-maria', action: 'Observação adicionada', note: 'Comprar urgente' }); });
-  it('configuração exige responsáveis válidos e ao menos uma etapa', () => { expect(validateTemplate({ name: 'Fluxo', steps: [] }, seedErpUsers, seedRoles)).not.toBeNull(); expect(validateTemplate({ name: 'Fluxo', steps: [{ ...workflow.steps[0], assigneeId: 'inexistente' }] }, seedErpUsers, seedRoles)).not.toBeNull(); expect(validateTemplate(workflow, seedErpUsers, seedRoles)).toBeNull(); });
+  it('configuração exige responsáveis válidos e ao menos uma etapa', () => { expect(validateTemplate({ name: 'Fluxo', steps: [] }, seedErpUsers, seedRoles)).not.toBeNull(); expect(validateTemplate({ name: 'Fluxo', steps: [{ ...workflow.steps[0], assigneeId: 'inexistente' }] }, seedErpUsers, seedRoles)).not.toBeNull(); expect(validateTemplate(workflow, seedErpUsers, seedRoles)).toBeNull(); expect(validateTemplate({ name: 'Fluxo', steps: [{ ...workflow.steps[0], color: 'azul' }] }, seedErpUsers, seedRoles)).toBe('Escolha uma cor válida para cada etapa'); });
   it('reserva estoque somente após todas as aprovações do pedido', () => {
     setCurrentUser('u-carlos');
     const original = snapshotWorkflow('cd');

@@ -1,98 +1,19 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useSession, useErp } from "@/lib/erp";
 import { BranchSwitcher, NotificationsBell } from "@/components/erp-header";
-import { LayoutDashboard, FolderKanban, Columns3, CheckSquare, Calendar, Users, BarChart3, Settings, Moon, Sun, Search, Bell, Plus, UserCog, FileStack, Zap, Clock, Pause, Brain, Building2, Target, DollarSign, FileText, ShieldCheck, Globe, PanelLeftClose, PanelLeft, Menu, ChevronDown, Warehouse, Package, ArrowLeftRight, Truck, CalendarClock, ClipboardCheck, ShoppingCart, Boxes, ShoppingBag, Network, KeyRound, TrendingUp, BookOpen } from "lucide-react";
+import { Moon, Sun, Plus, PanelLeftClose, PanelLeft, Menu, ChevronDown, Pause, LogOut, Settings } from "lucide-react";
+import { menuGroups as navGroups } from "@/lib/menu-pages";
 import { AIAssistant } from "@/components/ai-assistant";
 import { useTheme, themeStore, useActiveTimer, timerStore, useTasks } from "@/lib/store";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { users } from "@/lib/mock-data";
+import { logout, useAuth } from "@/lib/auth";
 import { CreateTaskWizard } from "@/components/create-task-wizard";
+import { AccountWizard } from "@/components/account-wizard";
+import { ScreenSearch } from "@/components/screen-search";
 import { useState, useEffect, useRef, type ReactNode } from "react";
-
-const navGroups = [
-  {
-    label: "Principal",
-    items: [
-      { to: "/", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/projetos", label: "Projetos", icon: FolderKanban },
-      { to: "/templates", label: "Templates", icon: FileStack },
-      { to: "/kanban", label: "Kanban", icon: Columns3 },
-      { to: "/minhas-tarefas", label: "Minhas Tarefas", icon: CheckSquare },
-      { to: "/calendario", label: "Calendário", icon: Calendar },
-      { to: "/timesheet", label: "Timesheet", icon: Clock },
-    ],
-  },
-  {
-    label: "Estoque",
-    items: [
-      { to: "/estoque", label: "Visão Geral", icon: Warehouse },
-      { to: "/estoque-avancado", label: "Inteligência de Estoque", icon: TrendingUp },
-      { to: "/materiais", label: "Materiais e Produtos", icon: Package },
-      { to: "/movimentacoes", label: "Movimentações", icon: ArrowLeftRight },
-      { to: "/transferencias", label: "Transferências", icon: Truck },
-      { to: "/lotes-validades", label: "Lotes e Validades", icon: CalendarClock },
-      { to: "/inventarios", label: "Inventários", icon: ClipboardCheck },
-    ],
-  },
-  {
-    label: "Pedidos & Compras",
-    items: [
-      { to: "/central-pendencias", label: "Central de Pendências", icon: ClipboardCheck },
-      { to: "/orcamentos-compras", label: "Orçamentos de Compras", icon: DollarSign },
-      { to: "/desempenho-compras", label: "Desempenho de Compras", icon: TrendingUp },
-      { to: "/pedidos", label: "Pedidos de Materiais", icon: ShoppingCart },
-      { to: "/centro-distribuicao", label: "Centro de Distribuição", icon: Boxes },
-      { to: "/compras", label: "Compras e Fornecedores", icon: ShoppingBag },
-      { to: "/fornecedores", label: "Pedidos por Fornecedor", icon: Building2 },
-    ],
-  },
-  {
-    label: "Automação & IA",
-    items: [
-      { to: "/automacoes", label: "Automações", icon: Zap },
-      { to: "/insights", label: "IA Insights", icon: Brain },
-    ],
-  },
-  {
-    label: "Negócios",
-    items: [
-      { to: "/comercial", label: "Comercial", icon: Target },
-      { to: "/clientes", label: "Clientes", icon: Building2 },
-      { to: "/financeiro", label: "Financeiro", icon: DollarSign },
-    ],
-  },
-  {
-    label: "Documentos",
-    items: [
-      { to: "/documentos", label: "Documentos", icon: FileText },
-      { to: "/aprovacoes", label: "Aprovações", icon: ShieldCheck },
-      { to: "/portal-cliente", label: "Portal do Cliente", icon: Globe },
-    ],
-  },
-  {
-    label: "Gestão",
-    items: [
-      { to: "/cadastros", label: "Central de Cadastros", icon: FileStack },
-      { to: "/cadastro-fornecedores", label: "Cadastro de Fornecedores", icon: Building2 },
-      { to: "/filiais", label: "Filiais", icon: Network },
-      { to: "/usuarios-filiais", label: "Usuários e Permissões", icon: KeyRound },
-      { to: "/equipe", label: "Equipe", icon: Users },
-      { to: "/relatorios", label: "Relatórios", icon: BarChart3 },
-      { to: "/perfis", label: "Perfis de Acesso", icon: UserCog },
-    ],
-  },
-  {
-    label: "Sistema",
-    items: [
-      { to: "/configuracoes", label: "Configurações", icon: Settings },
-      { to: "/manual-sistema", label: "Manual Sistema", icon: BookOpen },
-    ],
-  },
-] as const;
 
 function TimerChip() {
   const active = useActiveTimer();
@@ -147,9 +68,20 @@ function NavLink({ item, active, collapsed, onNavigate }: {
 function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; pathname: string; onNavigate?: () => void }) {
   const ses = useSession();
   const erp = useErp();
-  const me = { ...ses.user, role: erp.roles.find(r => r.id === ses.user.memberships[0]?.roleId)?.name ?? "" };
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const demo = { ...ses.user, role: erp.roles.find(r => r.id === ses.user.memberships[0]?.roleId)?.name ?? "" };
+  const me = auth.user
+    ? { name: auth.user.name, initials: auth.user.initials, color: auth.user.color, role: auth.user.profileName ?? auth.user.jobTitle ?? "Usuário" }
+    : demo;
+
+  async function signOut() {
+    await logout();
+    await navigate({ to: "/login" });
+  }
   const navRef = useRef<HTMLElement>(null);
   const [canScrollDown, setCanScrollDown] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const checkScroll = () => {
     const el = navRef.current;
@@ -189,7 +121,10 @@ function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; 
       <div className="relative flex-1 overflow-hidden">
         <nav ref={navRef} className={`h-full overflow-y-auto py-3 scrollbar-hide ${collapsed ? "px-2" : "px-3"}`}>
           <TooltipProvider delayDuration={0}>
-            {navGroups.map((group, gi) => (
+            {navGroups.flatMap((group) => {
+              const items = group.items.filter((item) => !auth.user?.pages || auth.user.pages.includes(item.to));
+              return items.length ? [{ ...group, items }] : [];
+            }).map((group, gi) => (
               <div key={group.label} className={gi > 0 ? (collapsed ? "mt-3" : "mt-4") : undefined}>
                 {!collapsed && (
                   <div className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
@@ -223,7 +158,7 @@ function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; 
         )}
       </div>
       <div className={`border-t border-sidebar-border ${collapsed ? "p-2" : "p-3"}`}>
-        <div className={`flex items-center gap-3 rounded-lg ${collapsed ? "justify-center" : "px-2 py-2"}`}>
+        <div className={`flex items-center rounded-lg ${collapsed ? "flex-col justify-center gap-2" : "gap-3 px-2 py-2"}`}>
           <Avatar className="h-9 w-9 shrink-0"><AvatarFallback style={{ backgroundColor: me.color, color: "white" }}>{me.initials}</AvatarFallback></Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
@@ -231,8 +166,20 @@ function SidebarBody({ collapsed, pathname, onNavigate }: { collapsed: boolean; 
               <div className="text-xs text-muted-foreground truncate">{me.role}</div>
             </div>
           )}
+          {auth.user && (
+            <button type="button" onClick={() => setAccountOpen(true)} aria-label="Editar meus dados" title="Editar meus dados" className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground">
+              <Settings className="h-4 w-4" />
+            </button>
+          )}
         </div>
+        {auth.user && (
+          <button type="button" onClick={() => void signOut()} className={`mt-1 flex items-center gap-2 rounded-lg text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground ${collapsed ? "mx-auto h-9 w-9 justify-center" : "w-full px-2 py-2"}`} aria-label="Sair">
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Sair</span>}
+          </button>
+        )}
       </div>
+      {auth.user && <AccountWizard open={accountOpen} onClose={() => setAccountOpen(false)} />}
     </div>
   );
 }
@@ -245,10 +192,15 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      const v = localStorage.getItem("sidebar-collapsed");
-      if (v === "1") setCollapsed(true);
-    } catch {}
+    const read = () => {
+      try {
+        if (localStorage.getItem("gs-sidebar-lock") === "expanded") { setCollapsed(false); return; }
+        setCollapsed(localStorage.getItem("sidebar-collapsed") === "1");
+      } catch { /* ignore */ }
+    };
+    read();
+    window.addEventListener("gs-sidebar", read);
+    return () => window.removeEventListener("gs-sidebar", read);
   }, []);
 
   const toggleCollapsed = () => {
@@ -260,7 +212,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/40 text-foreground p-0 md:p-3 md:gap-3">
+    <div data-app-shell className="flex h-dvh w-full overflow-hidden bg-muted/40 text-foreground p-0 md:p-3 md:gap-3">
       {/* Desktop sidebar — detached card */}
       <aside
         className={`hidden md:flex shrink-0 flex-col rounded-lg border border-sidebar-border text-sidebar-foreground shadow-xl shadow-primary/10 overflow-hidden sticky top-3 self-start transition-[width] duration-200 ease-out ${collapsed ? "w-[72px]" : "w-64"}`}
@@ -276,7 +228,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
         </SheetContent>
       </Sheet>
 
-      <main className="flex-1 flex flex-col min-w-0 rounded-none md:rounded-lg bg-background border-0 md:border border-border overflow-hidden">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col rounded-none md:rounded-lg bg-background border-0 md:border border-border overflow-hidden">
         <header className="sticky top-0 z-20 flex items-center gap-2 md:gap-3 border-b border-border bg-background/85 backdrop-blur px-3 md:px-6 h-16">
           <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
             <Menu className="h-5 w-5" />
@@ -288,10 +240,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
             <h1 className="text-sm md:text-lg font-semibold truncate">{title}</h1>
             {subtitle && <p className="text-xs text-muted-foreground truncate hidden sm:block">{subtitle}</p>}
           </div>
-          <div className="hidden 2xl:flex items-center relative">
-            <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar tarefas, projetos..." className="pl-9 w-64 h-9 bg-muted/50 border-transparent focus-visible:bg-card" />
-          </div>
+          <ScreenSearch />
           <BranchSwitcher />
           <TimerChip />
           <div className="hidden sm:contents">{actions}</div>
@@ -301,7 +250,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
           <NotificationsBell />
           {primaryAction !== undefined ? primaryAction : <Button size="sm" className="hidden sm:inline-flex" onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>}
         </header>
-        <div className="flex-1 min-w-0 overflow-auto">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto">{children}</div>
       </main>
       <CreateTaskWizard open={createOpen} onClose={() => setCreateOpen(false)} />
       <AIAssistant />

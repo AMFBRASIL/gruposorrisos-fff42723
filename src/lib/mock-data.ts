@@ -1,3 +1,5 @@
+import { findClientRow, findPerson, findProjectRow } from "@/lib/live-lookup";
+
 export type Priority = "baixa" | "normal" | "alta" | "urgente" | "critica";
 export type TaskStatus = string;
 
@@ -89,7 +91,8 @@ export interface AutomationRule {
   name: string;
   description: string;
   enabled: boolean;
-  trigger: TriggerType;
+  module?: string;
+  trigger: string;
   triggerConfig: Record<string, string>;
   conditions: AutomationCondition[];
   actions: AutomationAction[];
@@ -195,13 +198,15 @@ export const priorityMeta: Record<Priority, { label: string; className: string }
   critica:  { label: "Crítica",  className: "bg-destructive text-destructive-foreground" },
 };
 
-export const getUser = (id: string) => users.find(u => u.id === id);
-export const getProject = (id: string) => projects.find(p => p.id === id);
+export const getUser = (id: string) => findPerson(id) ?? users.find(u => u.id === id);
+export const getProject = (id: string) => findProjectRow(id) ?? projects.find(p => p.id === id);
 
 export function daysUntil(dateStr: string): number {
-  const d = new Date(dateStr).getTime();
-  const t = today.getTime();
-  return Math.round((d - t) / 86400000);
+  if (!dateStr) return 0;
+  const due = new Date(`${dateStr.slice(0, 10)}T00:00:00`);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - now.getTime()) / 86400000);
 }
 
 export interface Activity { id: string; user: string; action: string; target: string; at: string; }
@@ -487,7 +492,7 @@ export const costEntries: CostEntry[] = [
 ];
 
 // ===== Helpers =====
-export const getClient = (id?: string) => clients.find(c => c.id === id);
+export const getClient = (id?: string) => findClientRow(id) ?? clients.find(c => c.id === id);
 export const invoiceTotal = (inv: Invoice) => inv.items.reduce((s, it) => s + it.quantity * it.unitPrice, 0);
 export const formatBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 

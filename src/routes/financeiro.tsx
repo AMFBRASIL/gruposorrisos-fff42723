@@ -4,19 +4,20 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useInvoices, useClients, useProjects, invoicesStore } from "@/lib/store";
-import { invoiceTotal, formatBRL, costEntries, projectBudgets, invoiceStatusMeta } from "@/lib/mock-data";
+import { invoiceTotal, formatBRL, invoiceStatusMeta } from "@/lib/mock-data";
 import { CreateInvoiceWizard } from "@/components/create-invoice-wizard";
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, FileText, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/financeiro")({ head: () => ({ meta: [{ title: 'Financeiro | Grupo Sorrisos' }, { name: 'description', content: 'Faturas, custos e orçamentos do Grupo Sorrisos.' }, { property: 'og:title', content: 'Financeiro | Grupo Sorrisos' }, { property: 'og:description', content: 'Acompanhamento financeiro e orçamentário.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: FinanceiroPage });
 
-const today = new Date("2026-06-10");
-
 function FinanceiroPage() {
   const invoices = useInvoices();
   const clients = useClients();
   const projects = useProjects();
+  const costEntries: { category: string; amount: number; projectId: string }[] = [];
+  const projectBudgets: { projectId: string; budget: number }[] = [];
+  const today = useMemo(() => { const date = new Date(); date.setHours(0, 0, 0, 0); return date; }, []);
   const [wizard, setWizard] = useState(false);
 
   const totals = useMemo(() => {

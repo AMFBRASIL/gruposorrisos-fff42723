@@ -6,43 +6,53 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useApprovals, approvalsStore } from "@/lib/store";
+import { useApprovals, approvalsStore, useUserProfiles } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import { WizardFooter, WizardShell } from "@/components/erp-wizard";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { approvalTypeMeta, approvalStatusMeta, getUser, getClient, formatBRL, type ApprovalRequest, type ApprovalStatus, type ApprovalType } from "@/lib/mock-data";
-import { Plus, CheckCircle2, XCircle, Clock, AlertTriangle, FileText, ChevronRight, Paperclip } from "lucide-react";
+import { Plus, CheckCircle2, XCircle, Clock, AlertTriangle, FileText, ChevronRight, Paperclip, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/aprovacoes")({ head: () => ({ meta: [{ title: 'Aprovações | Grupo Sorrisos' }, { name: 'description', content: 'Solicitações e decisões corporativas do Grupo Sorrisos.' }, { property: 'og:title', content: 'Aprovações | Grupo Sorrisos' }, { property: 'og:description', content: 'Acompanhamento de aprovações e solicitações.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: AprovacoesPage });
 
-// Demo: o "eu" é o approver da primeira etapa pendente; aqui usamos u2 (Sofia — Diretora)
-const ME_ID = "u2";
-
 type Tab = "pendentes" | "minhas" | "todas";
 
+const currentMonth = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+};
+
 export default function AprovacoesPage() {
+  const auth = useAuth();
+  const meId = auth.user?.id ?? "";
   const all = useApprovals();
   const [tab, setTab] = useState<Tab>("pendentes");
   const [open, setOpen] = useState<ApprovalRequest | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const myPending = (r: ApprovalRequest) => {
     const current = r.steps.find(s => s.status === "pendente");
-    return current?.approverId === ME_ID && r.status === "pendente";
+    return current?.approverId === meId && r.status === "pendente";
   };
 
   const filtered = useMemo(() => {
     if (tab === "pendentes") return all.filter(myPending);
-    if (tab === "minhas") return all.filter(r => r.requesterId === ME_ID);
+    if (tab === "minhas") return all.filter(r => r.requesterId === meId);
     return all;
-  }, [all, tab]);
+  }, [all, tab, meId]);
 
   const kpis = useMemo(() => ({
     pendingForMe: all.filter(myPending).length,
     totalPending: all.filter(r => r.status === "pendente").length,
-    approvedThisMonth: all.filter(r => r.status === "aprovado" && (r.steps.at(-1)?.decidedAt || "").startsWith("2026-06")).length,
+    approvedThisMonth: all.filter(r => r.status === "aprovado" && (r.steps.at(-1)?.decidedAt || "").startsWith(currentMonth())).length,
     valuePending: all.filter(r => r.status === "pendente").reduce((s, r) => s + (r.amount || 0), 0),
-  }), [all]);
+  }), [all, meId]);
 
   return (
-    <AppShell title="Aprovações & Workflows" subtitle="Solicitações que precisam de decisão" primaryAction={<Button size="sm"><Plus className="h-4 w-4 mr-1" /> Nova Solicitação</Button>}>
+    <AppShell title="Aprovações & Workflows" subtitle="Solicitações que precisam de decisão" primaryAction={<Button size="sm" onClick={() => setCreating(true)}><Plus className="h-4 w-4 mr-1" /> Nova Solicitação</Button>}>
+      <CreateApprovalWizard open={creating} requesterId={meId} onClose={() => setCreating(false)} />
       <div className="p-4 md:p-8 space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KPI icon={AlertTriangle} label="Aguardando minha decisão" value={String(kpis.pendingForMe)} tone="warning" />
@@ -136,6 +146,8 @@ function StepIndicator({ steps }: { steps: ApprovalRequest["steps"] }) {
 }
 
 function ApprovalDrawer({ req, onClose }: { req: ApprovalRequest | null; onClose: () => void }) {
+  const auth = useAuth();
+  const meId = auth.user?.id ?? "";
   const [note, setNote] = useState("");
   if (!req) return null;
   const typeMeta = approvalTypeMeta[req.type];
@@ -143,7 +155,7 @@ function ApprovalDrawer({ req, onClose }: { req: ApprovalRequest | null; onClose
   const requester = getUser(req.requesterId);
   const client = getClient(req.relatedClientId);
   const currentStep = req.steps.find(s => s.status === "pendente");
-  const isMyTurn = currentStep?.approverId === ME_ID && req.status === "pendente";
+  const isMyTurn = currentStep?.approverId === meId && req.status === "pendente";
 
   const decide = (decision: "aprovado" | "rejeitado") => {
     if (!currentStep) return;
@@ -240,6 +252,59 @@ function ApprovalDrawer({ req, onClose }: { req: ApprovalRequest | null; onClose
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const localToday = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
+function CreateApprovalWizard({ open, onClose, requesterId }: { open: boolean; onClose: () => void; requesterId: string }) {
+  const people = useUserProfiles();
+  const [step, setStep] = useState(0);
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState<ApprovalType>("despesa");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [approverId, setApproverId] = useState("");
+
+  const close = () => {
+    setStep(0); setTitle(""); setType("despesa"); setAmount(""); setDescription(""); setApproverId("");
+    onClose();
+  };
+
+  const approver = approverId || people[0]?.id || requesterId;
+  const submit = () => {
+    if (!title.trim() || !requesterId || !approver) return;
+    const value = Number(amount.replace(",", "."));
+    approvalsStore.addRequest({
+      id: `ap_${Date.now().toString(36)}`,
+      title: title.trim(),
+      type,
+      requesterId,
+      amount: Number.isFinite(value) && value > 0 ? value : undefined,
+      description: description.trim(),
+      createdAt: localToday(),
+      status: "pendente",
+      steps: [{ id: `st_${Date.now().toString(36)}`, order: 1, approverId: approver, status: "pendente" }],
+    });
+    close();
+  };
+
+  return (
+    <WizardShell open={open} onClose={close} badge="Nova solicitação" headline="Peça uma decisão." sub={title || "Despesa, contrato, compra ou viagem"} steps={[{ title: "Pedido", desc: "O que precisa de decisão", icon: FileText }, { title: "Aprovador", desc: "Quem decide", icon: ShieldCheck }, { title: "Revisão", desc: "Confirme e envie", icon: CheckCircle2 }]} step={step} setStep={setStep} footer={<WizardFooter step={step} last={2} setStep={setStep} onClose={close} onFinish={submit} finishLabel="Enviar solicitação" canNext={step === 0 ? title.trim().length > 0 : true} />}>
+      {step === 0 && <div className="space-y-4 max-w-xl">
+        <div className="space-y-2"><Label htmlFor="approval-title">Título</Label><Input id="approval-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex.: Reembolso de visita técnica" /></div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="space-y-2"><Label htmlFor="approval-type">Tipo</Label><select id="approval-type" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={type} onChange={e => setType(e.target.value as ApprovalType)}>{(Object.keys(approvalTypeMeta) as ApprovalType[]).map(key => <option key={key} value={key}>{approvalTypeMeta[key].label}</option>)}</select></div>
+          <div className="space-y-2"><Label htmlFor="approval-amount">Valor</Label><Input id="approval-amount" inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0,00" /></div>
+        </div>
+        <div className="space-y-2"><Label htmlFor="approval-description">Descrição</Label><Textarea id="approval-description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Contexto para quem vai decidir" /></div>
+      </div>}
+      {step === 1 && <div className="space-y-2 max-w-xl"><Label htmlFor="approval-person">Quem aprova</Label><select id="approval-person" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={approver} onChange={e => setApproverId(e.target.value)}>{people.map(person => <option key={person.id} value={person.id}>{person.name}</option>)}</select></div>}
+      {step === 2 && <div className="space-y-2 max-w-xl text-sm"><div className="font-semibold text-base">{title}</div><div className="text-muted-foreground">{approvalTypeMeta[type].label}{amount ? ` · R$ ${amount}` : ""}</div><div>{description || "Sem descrição"}</div><div>Aprovador: {people.find(person => person.id === approver)?.name ?? "Você"}</div></div>}
+    </WizardShell>
   );
 }
 

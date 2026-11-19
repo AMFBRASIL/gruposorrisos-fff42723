@@ -10,9 +10,9 @@ import {
   CalendarDays, Sparkles, FileText, Users, CheckCircle2,
   ArrowRight, ArrowLeft, X, Plus, Trash2, PenTool, Tag, Building2,
 } from "lucide-react";
-import { documentsStore } from "@/lib/store";
+import { documentsStore, useClients, useProjects, useUserProfiles } from "@/lib/store";
 import {
-  documentTypeMeta, clients, users, projects,
+  documentTypeMeta,
   type Document, type DocumentType, type DocumentSignatory,
 } from "@/lib/mock-data";
 import wizardBg from "@/assets/wizard-bg.jpg";
@@ -30,6 +30,9 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 8)}`;
 
 export function CreateDocumentWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const clients = useClients();
+  const users = useUserProfiles();
+  const projects = useProjects();
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<DocumentType>("contrato");
@@ -47,6 +50,10 @@ export function CreateDocumentWizard({ open, onClose }: { open: boolean; onClose
     setClientId(undefined); setProjectId(undefined); setOwnerId(users[0]?.id || "");
     setValue(""); setExpiresAt(""); setTagsInput(""); setSignatories([]);
   }, [open]);
+
+  useEffect(() => {
+    if (open && !ownerId && users[0]) setOwnerId(users[0].id);
+  }, [open, ownerId, users]);
 
   const tags = tagsInput.split(",").map(t => t.trim()).filter(Boolean);
 

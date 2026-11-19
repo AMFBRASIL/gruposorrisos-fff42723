@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useStock, transferFlow, transferLabels, advanceTransfer, getClinic, getMaterial } from "@/lib/stock";
-import { useSession } from "@/lib/erp";
+import { toast } from "sonner";
+import { useStock, transferFlow, transferLabels, advanceTransfer, getClinic, getMaterial, useStockSession } from "@/lib/stock-live";
 import { ArrowRight, Plus, Send, Truck, CheckCircle2, Boxes } from "lucide-react";
 import { useState } from "react";
 import { StockStat, ChartCard, tooltipStyle, axisProps } from "@/components/stock-ui";
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/transferencias")({
 
 function TransfPage() {
   const s = useStock();
-  const ses = useSession();
+  const ses = useStockSession();
   const [open, setOpen] = useState(false);
   const scoped = s.transfers.filter(t => ses.scope.includes(t.fromId) || ses.scope.includes(t.toId));
   const c = (f: (t: typeof scoped[number]) => boolean) => scoped.filter(f).length;
@@ -54,7 +54,7 @@ function TransfPage() {
                       <div className="flex items-center justify-between"><span className="font-mono text-xs">{t.number}</span><span className="text-xs text-muted-foreground">{t.date.split("-").reverse().join("/")}</span></div>
                       <div className="text-sm flex items-center gap-1 flex-wrap">{getClinic(t.fromId).name}<ArrowRight className="h-3 w-3" />{getClinic(t.toId).name}</div>
                       <ul className="text-xs text-muted-foreground">{t.items.map(i => <li key={i.materialId}>{i.qty}× {getMaterial(i.materialId).name}</li>)}</ul>
-                      {st !== "concluida" && ses.can("estoque.movimentar") && <Button size="sm" variant="outline" className="w-full" onClick={() => advanceTransfer(t.id)}>Avançar para {transferLabels[transferFlow[transferFlow.indexOf(st) + 1]]}</Button>}
+                      {st !== "concluida" && ses.can("estoque.movimentar") && <Button size="sm" variant="outline" className="w-full" onClick={() => { void advanceTransfer(t.id).then(error => { if (error) toast.error(error); }); }}>Avançar para {transferLabels[transferFlow[transferFlow.indexOf(st) + 1]]}</Button>}
                     </Card>
                   ))}
                 </div>

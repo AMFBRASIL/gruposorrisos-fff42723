@@ -23,7 +23,7 @@ export const Route = createFileRoute("/calendario")({
 
 function CalendarPage() {
   const tasks = useTasks();
-  const [cursor, setCursor] = useState(new Date(2026, 5, 1));
+  const [cursor, setCursor] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); });
   const [open, setOpen] = useState<Task | null>(null);
   const [createFor, setCreateFor] = useState<string | null>(null);
 
@@ -53,7 +53,7 @@ function CalendarPage() {
             <h2 className="text-lg font-semibold capitalize">{monthName}</h2>
             <div className="flex gap-1">
               <Button size="icon" variant="outline" onClick={() => setCursor(new Date(year, month - 1, 1))}><ChevronLeft className="h-4 w-4" /></Button>
-              <Button size="sm" variant="outline" onClick={() => setCursor(new Date(2026, 5, 1))}>Hoje</Button>
+              <Button size="sm" variant="outline" onClick={() => { const now = new Date(); setCursor(new Date(now.getFullYear(), now.getMonth(), 1)); }}>Hoje</Button>
               <Button size="icon" variant="outline" onClick={() => setCursor(new Date(year, month + 1, 1))}><ChevronRight className="h-4 w-4" /></Button>
             </div>
           </div>
@@ -62,7 +62,7 @@ function CalendarPage() {
           </div>
           <div className="grid grid-cols-7 gap-1">
             {cells.map((c, i) => {
-              const isToday = c.iso === "2026-06-10";
+              const isToday = c.iso === toIso(new Date());
               return (
                 <div
                   key={i}

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
-import { COLUMNS, projects, type Task } from "@/lib/mock-data";
-import { useTasks, tasksStore } from "@/lib/store";
+import { COLUMNS, type Task } from "@/lib/mock-data";
+import { useProjects, useTasks, tasksStore } from "@/lib/store";
 import { TaskCard } from "@/components/task-card";
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable, useDraggable, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { useMemo, useState } from "react";
@@ -58,6 +58,7 @@ function Column({ id, title, tasks, onOpen, onCreate }: { id: string; title: str
 
 function KanbanPage() {
   const tasks = useTasks();
+  const projects = useProjects();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [openTask, setOpenTask] = useState<Task | null>(null);

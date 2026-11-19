@@ -7,9 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StockStat } from "@/components/stock-ui";
 import { OrderSheet } from "@/components/order-dialogs";
-import { useErp, useSession, branchName } from "@/lib/erp";
-import { useStock, materials, balanceOf } from "@/lib/stock";
-import { useOrders, statusLabels, saveDraft, actions } from "@/lib/orders";
+import { useProcurementErp as useErp, useProcurementSession as useSession, branchName, useOrders, statusLabels, saveDraft, actions } from "@/lib/procurement-live";
+import { useStock, materials, balanceOf } from "@/lib/stock-live";
 import { PackageOpen, Truck, Hourglass, RefreshCcw } from "lucide-react";
 
 export const Route = createFileRoute("/centro-distribuicao")({
@@ -51,7 +50,7 @@ function CdPage() {
           <div className="space-y-2">{suggestions.length === 0 && <div className="text-sm text-muted-foreground">Nenhuma filial abaixo do mínimo.</div>}
             {suggestions.map(s => <div key={s.b.id} className="flex items-center justify-between rounded-md border border-border p-3 text-sm">
               <div><div className="font-medium">{s.b.name}</div><div className="text-xs text-muted-foreground">{s.items.length} item(ns) abaixo do mínimo</div></div>
-              <Button size="sm" variant="outline" onClick={() => { const r = saveDraft({ branchId: s.b.id, priority: "normal", desiredDate: "2026-11-18", notes: "Reposição automática", items: s.items }); if (!r.ok) return toast.error(r.error); const e = actions.submit(r.order.id); e ? toast.error(e) : toast.success(`Pedido ${r.order.number} criado`); }}>Gerar pedido</Button>
+              <Button size="sm" variant="outline" onClick={() => { void saveDraft({ branchId: s.b.id, priority: "normal", desiredDate: "2026-11-18", notes: "Reposição automática", items: s.items }).then(async (r) => { if (!r.ok) return toast.error(r.error); const e = await actions.submit(r.order.id); e ? toast.error(e) : toast.success(`Pedido ${r.order.number} criado`); }); }}>Gerar pedido</Button>
             </div>)}</div>
         </Card>
       </div>

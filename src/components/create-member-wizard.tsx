@@ -5,16 +5,21 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   CalendarDays, UserPlus, IdCard, Building2, CheckCircle2,
-  Sparkles, ArrowRight, ArrowLeft, X, Palette, Mail, ShieldCheck,
+  Sparkles, ArrowRight, ArrowLeft, X, Palette, Mail, ShieldCheck, MapPin,
 } from "lucide-react";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
 import { usersStore, useAccessProfiles, ACCESS_PAGES } from "@/lib/store";
+import { useDirectory, type DirectoryRole } from "@/lib/directory";
+import { useBranches } from "@/lib/branches-live";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
   { id: 0, title: "Identidade", desc: "Nome, e-mail e cor", icon: IdCard },
   { id: 1, title: "Perfil", desc: "Perfil de acesso", icon: ShieldCheck },
   { id: 2, title: "Departamento", desc: "Área de atuação", icon: Building2 },
-  { id: 3, title: "Revisão", desc: "Confirme e cadastre", icon: CheckCircle2 },
+  { id: 3, title: "Filial", desc: "Unidade ou todas", icon: MapPin },
+  { id: 4, title: "Revisão", desc: "Confirme e cadastre", icon: CheckCircle2 },
 ];
 
 const COLORS = [
@@ -28,14 +33,35 @@ const DEPARTMENTS = ["Operações", "Diretoria", "Financeiro", "TI", "Marketing"
 const initialsOf = (name: string) =>
   name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("") || "?";
 
+const folded = (value: string) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+function roleFor(roles: DirectoryRole[], profileName: string, allBranches: boolean) {
+  const name = folded(profileName);
+  const preferred = name.includes("diretor") ? "diret"
+    : name.includes("gerente") ? "geren"
+    : name.includes("supervisor") || name.includes("estoqu") ? "estoqu"
+    : "colabor";
+  const named = (list: DirectoryRole[]) => list.find((role) => folded(role.name).includes(preferred));
+  const assigned = roles.filter((role) => role.scope === "assigned");
+  const global = roles.filter((role) => role.scope === "all");
+  const fallback = named(assigned) ?? assigned.find((role) => folded(role.name).includes("colabor")) ?? assigned[0] ?? roles[0];
+  if (allBranches && preferred === "diret") return named(global) ?? fallback;
+  return fallback;
+}
+
 export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const profiles = useAccessProfiles();
+  const directory = useDirectory();
+  const liveBranches = useBranches();
+  const units = (liveBranches.length ? liveBranches.filter((branch) => branch.active) : directory.branches)
+    .map((branch) => ({ id: branch.id, name: branch.name }));
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [color, setColor] = useState(COLORS[0]);
   const [profileId, setProfileId] = useState<string>(profiles[0]?.id ?? "");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
+  const [branchChoice, setBranchChoice] = useState("all");
 
   const prettyDate = new Date().toLocaleDateString("pt-BR", {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
@@ -43,29 +69,45 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
 
   const reset = () => {
     setStep(0); setName(""); setEmail(""); setColor(COLORS[0]);
-    setProfileId(profiles[0]?.id ?? ""); setDepartment(DEPARTMENTS[0]);
+    setProfileId(profiles[0]?.id ?? ""); setDepartment(DEPARTMENTS[0]); setBranchChoice("all");
   };
 
   const close = () => { reset(); onClose(); };
 
   const selectedProfile = profiles.find(p => p.id === profileId) ?? profiles[0];
+  const branchReady = branchChoice === "all" ? units.length > 0 : units.some((unit) => unit.id === branchChoice);
+  const branchText = branchChoice === "all" ? "Todas as filiais" : units.find((unit) => unit.id === branchChoice)?.name ?? "Filial";
 
-  const submit = () => {
-    if (!name.trim() || !selectedProfile) return;
-    usersStore.addUser({
-      id: `u_${Date.now().toString(36)}`,
-      name: name.trim(),
-      email: email.trim() || `${name.trim().split(/\s+/)[0]?.toLowerCase()}@gruposorrisos.com.br`,
-      role: selectedProfile.name,
-      department,
-      initials: initialsOf(name),
-      color,
-      profileId: selectedProfile.id,
-    }, { ...selectedProfile.access });
-    close();
+  const submit = async () => {
+    if (!name.trim() || !selectedProfile || !branchReady) return;
+    try {
+      const role = roleFor(directory.roles, selectedProfile.name, branchChoice === "all");
+      const anchor = branchChoice === "all" ? units[0]?.id : branchChoice;
+      if (!role || !anchor) {
+        toast.error("Não foi possível definir a filial desse membro.");
+        return;
+      }
+      const memberships = [{ branchId: anchor, roleId: role.id }];
+      const password = await usersStore.addUser({
+        id: `u_${Date.now().toString(36)}`,
+        name: name.trim(),
+        email: email.trim() || `${name.trim().split(/\s+/)[0]?.toLowerCase()}@gruposorrisos.com.br`,
+        role: selectedProfile.name,
+        department,
+        initials: initialsOf(name),
+        color,
+        profileId: selectedProfile.id,
+        memberships,
+        seesAllBranches: branchChoice === "all",
+      }, { ...selectedProfile.access });
+      toast.success(password ? `Membro cadastrado. Senha inicial: ${password}` : "Membro cadastrado");
+      close();
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Não foi possível cadastrar o membro.");
+    }
   };
 
-  const canNext = step === 0 ? name.trim().length > 0 : true;
+  const canNext = step === 0 ? name.trim().length > 0 : step === 3 ? branchReady : true;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
@@ -247,6 +289,45 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                 {step === 3 && (
                   <div className="space-y-5">
                     <div>
+                      <h3 className="text-xl font-semibold">Qual é a filial?</h3>
+                      <p className="text-sm text-muted-foreground mt-1">Escolha a unidade desse membro ou libere a visão de todas as filiais.</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        type="button" onClick={() => setBranchChoice("all")}
+                        className={`rounded-xl border p-4 text-left transition-all sm:col-span-2 ${
+                          branchChoice === "all" ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${branchChoice === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                          <MapPin className="h-4 w-4" />
+                        </span>
+                        <div className="mt-2.5 text-sm font-semibold">Todas as filiais</div>
+                        <div className="text-xs text-muted-foreground mt-1">O membro poderá ver as unidades do grupo.</div>
+                      </button>
+                      {units.map((unit) => {
+                        const selected = branchChoice === unit.id;
+                        return (
+                          <button
+                            key={unit.id} type="button" onClick={() => setBranchChoice(unit.id)}
+                            className={`rounded-xl border p-4 text-left transition-all ${
+                              selected ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" : "border-border hover:border-primary/50"
+                            }`}
+                          >
+                            <span className={`flex h-9 w-9 items-center justify-center rounded-lg ${selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                              <Building2 className="h-4 w-4" />
+                            </span>
+                            <div className="mt-2.5 text-sm font-semibold">{unit.name}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {step === 4 && (
+                  <div className="space-y-5">
+                    <div>
                       <h3 className="text-xl font-semibold">Tudo certo?</h3>
                       <p className="text-sm text-muted-foreground mt-1">Revise as informações antes de cadastrar o membro.</p>
                     </div>
@@ -276,6 +357,12 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                             <span className="font-medium">{department}</span>
                           </div>
                         </Field>
+                        <Field label="Filial">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-primary" />
+                            <span className="font-medium">{branchText}</span>
+                          </div>
+                        </Field>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -295,7 +382,7 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                   Continuar <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               ) : (
-                <Button onClick={submit} disabled={!name.trim()}>
+                <Button onClick={submit} disabled={!name.trim() || !branchReady}>
                   <UserPlus className="h-4 w-4 mr-1" /> Cadastrar membro
                 </Button>
               )}

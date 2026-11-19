@@ -9,8 +9,8 @@ import {
   CalendarDays, Sparkles, Target, Building2, CheckCircle2,
   ArrowRight, ArrowLeft, X, TrendingUp,
 } from "lucide-react";
-import { dealsStore, useClients } from "@/lib/store";
-import { users, formatBRL, DEAL_STAGES, type Deal, type DealStage } from "@/lib/mock-data";
+import { dealsStore, useClients, useUserProfiles } from "@/lib/store";
+import { formatBRL, DEAL_STAGES, type Deal, type DealStage } from "@/lib/mock-data";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
@@ -29,6 +29,7 @@ const defaultProb: Record<DealStage, number> = {
 };
 
 export function CreateDealWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const users = useUserProfiles();
   const clients = useClients();
   const [step, setStep] = useState(0);
   const [title, setTitle] = useState("");
@@ -47,6 +48,12 @@ export function CreateDealWizard({ open, onClose }: { open: boolean; onClose: ()
     setValue(""); setStage("lead"); setProbability(10); setSource(SOURCES[0]);
     setExpectedCloseDate(""); setNotes("");
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!clientId && clients[0]) setClientId(clients[0].id);
+    if (!ownerId && users[0]) setOwnerId(users[0].id);
+  }, [open, clientId, ownerId, clients, users]);
 
   const pickStage = (s: DealStage) => { setStage(s); setProbability(defaultProb[s]); };
 

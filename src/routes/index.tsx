@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
 import { CheckCircle2, Clock, AlertTriangle, ListTodo, TrendingUp, Activity as ActivityIcon } from "lucide-react";
-import { useTasks } from "@/lib/store";
-import { daysUntil, projects, users, recentActivity, getUser } from "@/lib/mock-data";
+import { useProjects, useTasks, useUserProfiles } from "@/lib/store";
+import { daysUntil, getUser } from "@/lib/mock-data";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
 import { UserAvatar } from "@/components/task-card";
 import { Progress } from "@/components/ui/progress";
@@ -22,6 +22,8 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
   const tasks = useTasks();
+  const projects = useProjects();
+  const users = useUserProfiles();
   const total = tasks.length;
   const inProgress = tasks.filter(t => t.status !== "concluido" && t.status !== "backlog").length;
   const done = tasks.filter(t => t.status === "concluido").length;
@@ -48,10 +50,17 @@ function Dashboard() {
   }));
   const pieColors = ["var(--chart-1)","var(--chart-2)","var(--chart-3)","var(--chart-4)","var(--chart-5)","oklch(0.65 0.18 25)","oklch(0.7 0.18 340)"];
 
-  const trend = Array.from({ length: 14 }, (_, i) => ({
-    dia: `${i+1}`,
-    concluidas: Math.round(3 + Math.sin(i/2) * 2 + Math.random() * 2),
-  }));
+  const trend = Array.from({ length: 14 }, (_, i) => {
+    const day = new Date();
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() - (13 - i));
+    const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+    return { dia: String(day.getDate()), concluidas: tasks.filter(t => (t.completedAt ?? "").slice(0, 10) === iso).length };
+  });
+  const recentActivity = [...tasks]
+    .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""))
+    .slice(0, 5)
+    .map(task => ({ id: task.id, user: getUser(task.assigneeId)?.name ?? "Equipe", action: task.status === "concluido" ? "concluiu" : "registrou", target: task.title, at: task.dueDate || task.createdAt }));
 
   return (
     <AppShell title="Dashboard Executivo" subtitle="Visão geral das demandas do Grupo Sorrisos">

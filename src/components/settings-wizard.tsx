@@ -30,11 +30,18 @@ export interface WizardConfig {
   steps: WizardStep[];
 }
 
-export function SettingsWizard({ open, config, onClose }: { open: boolean; config: WizardConfig; onClose: () => void }) {
+export function SettingsWizard({ open, config, onClose, seed, onSave }: {
+  open: boolean;
+  config: WizardConfig;
+  onClose: () => void;
+  seed?: { selections?: Record<string, string>; values?: Record<string, string>; toggles?: Record<string, boolean>; presets?: Record<string, Record<string, string>> };
+  onSave?: (payload: { selections: Record<string, string>; values: Record<string, string>; toggles: Record<string, boolean> }) => Promise<void>;
+}) {
   const [step, setStep] = useState(0);
-  const [selections, setSelections] = useState<Record<string, string>>({});
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [toggles, setToggles] = useState<Record<string, boolean>>({});
+  const [busy, setBusy] = useState(false);
+  const [selections, setSelections] = useState<Record<string, string>>(seed?.selections ?? {});
+  const [values, setValues] = useState<Record<string, string>>(seed?.values ?? {});
+  const [toggles, setToggles] = useState<Record<string, boolean>>(seed?.toggles ?? {});
 
   const selectedOf = (s: WizardStep & { kind: "cards" }) => selections[s.id] ?? s.options[0]?.id;
   const selMap = () => {
@@ -52,12 +59,27 @@ export function SettingsWizard({ open, config, onClose }: { open: boolean; confi
   const fieldsOf = (s: WizardStep & { kind: "fields" }) => typeof s.fields === "function" ? s.fields(selMap()) : s.fields;
   const valueOf = (f: WizardField) => values[f.id] ?? f.defaultValue ?? "";
   const toggleOf = (t: WizardToggle) => toggles[t.id] ?? t.defaultChecked ?? false;
+  const collect = () => {
+    const nextValues: Record<string, string> = {};
+    const nextToggles: Record<string, boolean> = {};
+    for (const item of visibleSteps) {
+      if (item.kind === "fields") for (const field of fieldsOf(item)) nextValues[field.id] = valueOf(field);
+      if (item.kind === "toggles") for (const toggle of item.toggles) nextToggles[toggle.id] = toggleOf(toggle);
+    }
+    return { selections: selMap(), values: nextValues, toggles: nextToggles };
+  };
+  const finish = () => {
+    if (step < allSteps.length - 1) { setStep(step + 1); return; }
+    if (!onSave) { onClose(); return; }
+    setBusy(true);
+    void onSave(collect()).then(() => onClose()).catch(() => setBusy(false));
+  };
   const current = allSteps[Math.min(step, allSteps.length - 1)];
   return <WizardShell open={open} onClose={onClose} badge={`Configurações · ${config.title}`} headline={config.heading} bg={wizardBg}
-    steps={allSteps.map(s => ({ title: s.nav, desc: s.navDesc, icon: s.icon }))} step={Math.min(step, allSteps.length - 1)} setStep={setStep}
-    footer={<><Button variant="outline" onClick={step === 0 ? onClose : () => setStep(step - 1)}>{step === 0 ? "Cancelar" : "Voltar"}</Button><Button onClick={step < allSteps.length - 1 ? () => setStep(step + 1) : onClose}>{step < allSteps.length - 1 ? "Continuar" : "Salvar configurações"}</Button></>}>
+    steps={allSteps.map(s => ({ title: s.nav, desc: s.navDesc, icon: s.icon }))} step={Math.min(step, allSteps.length - 1)} setStep={busy ? () => undefined : setStep}
+    footer={<><Button variant="outline" disabled={busy} onClick={step === 0 ? onClose : () => setStep(step - 1)}>{step === 0 ? "Cancelar" : "Voltar"}</Button><Button disabled={busy} onClick={finish}>{busy ? "Salvando..." : step < allSteps.length - 1 ? "Continuar" : "Salvar configurações"}</Button></>}>
     <h3 className="text-lg font-semibold">{current.title}</h3>
-    {current.kind === "cards" && <div className="grid sm:grid-cols-2 gap-3">{current.options.map(o => { const Icon = o.icon ?? Sparkles; return <Button key={o.id} variant="outline" onClick={() => setSelections(s => ({ ...s, [current.id]: o.id }))} className={`h-auto whitespace-normal text-left justify-start p-5 gap-3 ${selectedOf(current) === o.id ? "border-primary bg-primary/5 ring-1 ring-primary" : ""}`}><Icon className="h-5 w-5 shrink-0" /><span><span className="block font-semibold">{o.label}</span><span className="block text-xs text-muted-foreground mt-1">{o.desc}</span></span></Button>; })}</div>}
+    {current.kind === "cards" && <div className="grid sm:grid-cols-2 gap-3">{current.options.map(o => { const Icon = o.icon ?? Sparkles; return <Button key={o.id} variant="outline" onClick={() => { setSelections(s => ({ ...s, [current.id]: o.id })); const preset = seed?.presets?.[o.id]; if (preset) setValues(v => ({ ...v, ...preset })); }} className={`h-auto whitespace-normal text-left justify-start p-5 gap-3 ${selectedOf(current) === o.id ? "border-primary bg-primary/5 ring-1 ring-primary" : ""}`}><Icon className="h-5 w-5 shrink-0" /><span><span className="block font-semibold">{o.label}</span><span className="block text-xs text-muted-foreground mt-1">{o.desc}</span></span></Button>; })}</div>}
     {current.kind === "fields" && <div className="grid sm:grid-cols-2 gap-4">{fieldsOf(current).map(f => <div key={f.id} className={f.full ? "sm:col-span-2" : ""}><Label htmlFor={`setting-${f.id}`}>{f.label}</Label><Input id={`setting-${f.id}`} className="mt-2 h-11" type={f.type ?? "text"} placeholder={f.placeholder} value={valueOf(f)} onChange={e => setValues(v => ({ ...v, [f.id]: e.target.value }))} /></div>)}</div>}
     {current.kind === "toggles" && <div className="divide-y divide-border">{current.toggles.map(t => <label key={t.id} className="flex items-center justify-between gap-4 py-4"><span><span className="block font-medium">{t.label}</span><span className="text-sm text-muted-foreground">{t.desc}</span></span><Switch checked={toggleOf(t)} onCheckedChange={v => setToggles(s => ({ ...s, [t.id]: v }))} /></label>)}</div>}
     {current.kind === "review" && <div className="divide-y divide-border">{visibleSteps.map(s => <section key={s.id} className="py-4 space-y-2"><h4 className="font-semibold">{s.nav}</h4>{s.kind === "cards" && <p>{s.options.find(o => o.id === selectedOf(s))?.label}</p>}{s.kind === "fields" && fieldsOf(s).map(f => <div key={f.id} className="flex justify-between gap-3 text-sm"><span className="text-muted-foreground">{f.label}</span><span className="break-all">{f.type === "password" ? "••••••••" : valueOf(f) || "—"}</span></div>)}{s.kind === "toggles" && s.toggles.map(t => <div key={t.id} className="flex justify-between gap-3 text-sm"><span>{t.label}</span><span>{toggleOf(t) ? "Ativado" : "Desativado"}</span></div>)}</section>)}</div>}

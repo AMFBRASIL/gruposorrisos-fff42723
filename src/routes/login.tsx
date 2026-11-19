@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, ShieldCheck, Zap } from "lucide-react";
+import { ApiError } from "@/lib/api";
+import { login } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -24,13 +26,23 @@ function LoginPage() {
   const navigate = useNavigate();
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("maria@gruposorrisos.com");
-  const [password, setPassword] = useState("••••••••");
+  const [email, setEmail] = useState("admin@gruposorrisos.com.br");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => navigate({ to: "/" }), 700);
+    setError("");
+    try {
+      await login({ email, password, remember });
+      await navigate({ to: "/" });
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : "Não foi possível entrar.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -88,7 +100,7 @@ function LoginPage() {
                 </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="password" type={showPwd ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="pl-9 pr-10 h-11" required />
+                  <Input id="password" type={showPwd ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="pl-9 pr-10 h-11" placeholder="Sua senha" required />
                   <button type="button" onClick={() => setShowPwd(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Mostrar/esconder senha">
                     {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -96,9 +108,11 @@ function LoginPage() {
               </div>
 
               <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-                <Checkbox defaultChecked id="remember" />
-                <span>Manter conectado por 30 dias</span>
+                <Checkbox checked={remember} onCheckedChange={(checked) => setRemember(checked === true)} id="remember" />
+                <span>Manter conectado por 90 dias</span>
               </label>
+
+              {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
               <Button type="submit" disabled={loading} className="w-full h-11 text-sm font-semibold group">
                 {loading ? "Entrando..." : <>Entrar <ArrowRight className="h-4 w-4 ml-1.5 transition-transform group-hover:translate-x-0.5" /></>}

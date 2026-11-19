@@ -3,13 +3,12 @@ import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useStock, getMaterial, getClinic, brl, type MovementType } from "@/lib/stock";
+import { useStock, getMaterial, getClinic, brl, useStockSession, type MovementType } from "@/lib/stock-live";
 import { StockStat, ChartCard, tooltipStyle, axisProps } from "@/components/stock-ui";
 import { NewMovementWizard } from "@/components/stock-wizards";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, Plus, Wallet } from "lucide-react";
 import { useState } from "react";
-import { useSession } from "@/lib/erp";
 
 export const Route = createFileRoute("/movimentacoes")({
   head: () => ({ meta: [
@@ -32,12 +31,12 @@ function MovPage() {
   const s = useStock();
   const [filter, setFilter] = useState<MovementType | "todas">("todas");
   const [open, setOpen] = useState(false);
-  const ses = useSession();
+  const ses = useStockSession();
   const rows = s.movements.filter(mv => (filter === "todas" || mv.type === filter) && (ses.scope.includes(mv.clinicId) || (mv.toClinicId !== undefined && ses.scope.includes(mv.toClinicId))));
   const scoped = s.movements.filter(mv => ses.scope.includes(mv.clinicId) || (mv.toClinicId !== undefined && ses.scope.includes(mv.toClinicId)));
   const sum = (t: MovementType) => scoped.filter(m => m.type === t).reduce((a, m) => a + m.qty, 0);
   const value = scoped.reduce((a, m) => a + m.qty * getMaterial(m.materialId).cost, 0);
-  const days = Array.from({ length: 14 }, (_, i) => { const d = new Date(Date.UTC(2026, 10, 11 - 13 + i)).toISOString().slice(0, 10); const of = (t: MovementType) => scoped.filter(m => m.date === d && m.type === t).reduce((a, m) => a + m.qty, 0); return { name: d.slice(8, 10) + "/" + d.slice(5, 7), Entradas: of("entrada"), Saídas: of("saida"), Transferências: of("transferencia") }; });
+  const days = Array.from({ length: 14 }, (_, i) => { const d = new Date(); d.setUTCDate(d.getUTCDate() - 13 + i); const iso = d.toISOString().slice(0, 10); const of = (t: MovementType) => scoped.filter(m => m.date === iso && m.type === t).reduce((a, m) => a + m.qty, 0); return { name: iso.slice(8, 10) + "/" + iso.slice(5, 7), Entradas: of("entrada"), Saídas: of("saida"), Transferências: of("transferencia") }; });
   return (
     <AppShell title="Movimentações" subtitle="Entradas, saídas e transferências" primaryAction={ses.can("estoque.movimentar") && <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova Movimentação</Button> || null}>
       <div className="p-4 md:p-8 space-y-5">

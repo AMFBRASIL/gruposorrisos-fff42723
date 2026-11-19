@@ -55,7 +55,8 @@ function DocumentosPage() {
       const days = Math.round((new Date(d.expiresAt).getTime() - Date.now()) / 86400000);
       return days >= 0 && days <= 30 && d.status !== "expirado" && d.status !== "arquivado";
     }).length;
-    const signedThisMonth = docs.filter(d => d.status === "assinado" && d.updatedAt.startsWith("2026-06")).length;
+    const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    const signedThisMonth = docs.filter(d => d.status === "assinado" && d.updatedAt.startsWith(monthKey)).length;
     const totalValue = docs.filter(d => d.status === "assinado" || d.status === "aguardando_assinatura").reduce((s, d) => s + (d.value || 0), 0);
     return { pendingSig, expiringSoon, signedThisMonth, totalValue, total: docs.length };
   }, [docs]);

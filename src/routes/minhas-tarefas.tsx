@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { useTasks } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { TaskCard } from "@/components/task-card";
 import { TaskDialog } from "@/components/task-dialog";
 import { useMemo, useState } from "react";
@@ -21,9 +22,10 @@ export const Route = createFileRoute("/minhas-tarefas")({
 
 function MyTasksPage() {
   const tasks = useTasks();
+  const auth = useAuth();
   const [open, setOpen] = useState<Task | null>(null);
-  const me = "u1";
-  const mine = useMemo(() => tasks.filter(t => t.assigneeId === me || t.participantIds.includes(me)), [tasks]);
+  const me = auth.user?.id ?? "";
+  const mine = useMemo(() => tasks.filter(t => t.assigneeId === me || t.participantIds.includes(me)), [tasks, me]);
 
   const groups = useMemo(() => {
     const overdue = mine.filter(t => t.status !== "concluido" && daysUntil(t.dueDate) < 0);

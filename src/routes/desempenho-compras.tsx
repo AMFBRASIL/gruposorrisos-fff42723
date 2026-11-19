@@ -1,10 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { AppShell } from '@/components/app-shell';
-import { useOrders } from '@/lib/orders';
-import { usePurchasing } from '@/lib/purchasing';
-import { useSupplierRequests } from '@/lib/supplier-orders';
-import { useSession } from '@/lib/erp';
-import { brl } from '@/lib/stock';
+import { useOrders, usePurchasing, useSupplierRequests, useProcurementSession as useSession } from '@/lib/procurement-live';
+import { brl } from '@/lib/stock-live';
 import { procurementMetrics } from '@/lib/procurement-rules';
 import { ChartCard, axisProps, tooltipStyle } from '@/components/stock-ui';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';

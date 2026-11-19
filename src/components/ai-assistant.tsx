@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sparkles, X, Send, Bot, Loader2 } from "lucide-react";
-import { useTasks, useProjects } from "@/lib/store";
-import { users } from "@/lib/mock-data";
+import { useProjects, useTasks, useUserProfiles } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { assistantReply } from "@/lib/ai-mock";
 
 interface Msg { role: "user" | "assistant"; text: string; }
@@ -40,6 +40,8 @@ export function AIAssistant() {
   const [thinking, setThinking] = useState(false);
   const tasks = useTasks();
   const projects = useProjects();
+  const users = useUserProfiles();
+  const auth = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function AIAssistant() {
     setInput("");
     setThinking(true);
     setTimeout(() => {
-      const reply = assistantReply(q, { tasks, projects, users, meId: users[0].id });
+      const reply = assistantReply(q, { tasks, projects, users, meId: auth.user?.id ?? users[0]?.id ?? "" });
       setMsgs(m => [...m, { role: "assistant", text: reply }]);
       setThinking(false);
     }, 600 + Math.random() * 500);

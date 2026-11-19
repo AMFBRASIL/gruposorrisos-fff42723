@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
-import { useTasks, useUserProfiles } from "@/lib/store";
+import { useUserProfiles } from "@/lib/store";
+import { useWork } from "@/lib/work-live";
 import { Card } from "@/components/ui/card";
 import { Mail, Briefcase, UserPlus } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/equipe")({
 });
 
 function TeamPage() {
-  const tasks = useTasks();
+  const tasks = useWork().tasks;
   const members = useUserProfiles();
   const [memberOpen, setMemberOpen] = useState(false);
 
@@ -48,7 +49,7 @@ function TeamPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold truncate">{u.name}</h3>
-                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Briefcase className="h-3 w-3" /> {u.role} • {u.department}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1"><Briefcase className="h-3 w-3" /> {u.role} • {u.department}{u.branch ? ` • ${u.branch}` : ""}</p>
                 </div>
               </div>
               <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> {u.email}</div>

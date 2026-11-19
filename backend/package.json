@@ -1,0 +1,29 @@
+{
+  "name": "gruposorrisos-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/modules/auth/password.test.ts src/modules/directory/directory.rules.test.ts src/modules/stock/stock.rules.test.ts src/modules/mail/mail.rules.test.ts src/modules/settings/settings.rules.test.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/rate-limit": "^10.3.0",
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.2",
+    "jose": "^6.1.0",
+    "mysql2": "^3.15.3",
+    "nodemailer": "^10.5.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

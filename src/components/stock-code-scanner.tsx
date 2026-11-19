@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { ScanLine, Camera, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { materials } from '@/lib/stock';
+import { materials as demoMaterials, type Material } from '@/lib/stock';
 import { resolveCode } from '@/lib/stock-intelligence';
 import { toast } from 'sonner';
-export function StockCodeScanner({ onMaterial }: { onMaterial: (id: string) => void }) {
+export function StockCodeScanner({ onMaterial, catalog = demoMaterials }: { onMaterial: (id: string) => void; catalog?: Material[] }) {
   const [code, setCode] = useState(''), [active, setActive] = useState(false), [busy, setBusy] = useState(false);
   const video = useRef<HTMLVideoElement>(null), control = useRef<{ stop: () => void } | null>(null), alive = useRef(true);
-  const select = (value: string) => { const m = resolveCode(value, materials); if (!m) { toast.error('Código não encontrado'); return; } onMaterial(m.id); setCode(''); toast.success(m.name); };
+  const select = (value: string) => { const m = resolveCode(value, catalog); if (!m) { toast.error('Código não encontrado'); return; } onMaterial(m.id); setCode(''); toast.success(m.name); };
   const stop = () => { alive.current = false; control.current?.stop(); control.current = null; const stream = video.current?.srcObject; if (stream instanceof MediaStream) stream.getTracks().forEach(t => t.stop()); setActive(false); };
   useEffect(() => () => { alive.current = false; control.current?.stop(); }, []);
   const start = async () => {

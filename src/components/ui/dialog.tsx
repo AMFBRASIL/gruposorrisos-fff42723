@@ -34,7 +34,9 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
-  const customLayout = className?.split(/\s+/).includes("p-0");
+  const tokens = className?.split(/\s+/) ?? [];
+  const customLayout = tokens.includes("p-0");
+  const wideSheet = tokens.includes("wide-sheet");
   return (
   <DialogPortal>
     <DialogOverlay />
@@ -44,7 +46,7 @@ const DialogContent = React.forwardRef<
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 rounded-lg motion-reduce:animate-none",
         className,
-        customLayout ? "!w-[96vw] !max-w-6xl !max-h-[90dvh]" : "!w-[96vw] !max-w-5xl !h-[86dvh] !max-h-[860px] !p-0 !gap-0 !overflow-hidden",
+        customLayout ? (wideSheet ? "!w-[96vw] !max-w-[1440px] !max-h-[94dvh]" : "!w-[96vw] !max-w-6xl !max-h-[90dvh]") : "!w-[96vw] !max-w-5xl !h-[86dvh] !max-h-[860px] !p-0 !gap-0 !overflow-hidden",
       )}
       {...props}
     >

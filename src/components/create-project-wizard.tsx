@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,8 +10,8 @@ import {
   Sparkles, ArrowRight, ArrowLeft, X, Palette, Crown, Rocket, PauseCircle, Compass,
   Zap, Flame, AlertTriangle, Circle, ChevronRight, LayoutTemplate, FileEdit,
 } from "lucide-react";
-import { users, priorityMeta, projectTemplates, type Priority, type Project, type ProjectTemplate } from "@/lib/mock-data";
-import { projectsStore, applyTemplateToProject } from "@/lib/store";
+import { priorityMeta, type Priority, type Project, type ProjectTemplate } from "@/lib/mock-data";
+import { applyTemplateToProject, projectsStore, useTemplates, useUserProfiles } from "@/lib/store";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
@@ -42,18 +42,30 @@ const PRIORITY_META: Record<Priority, { icon: typeof Circle; desc: string }> = {
   critica: { icon: AlertTriangle, desc: "Bloqueia o negócio" },
 };
 
+const localToday = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+const localPlusDays = (days: number) => {
+  const now = new Date();
+  now.setDate(now.getDate() + days);
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
 export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const users = useUserProfiles();
+  const projectTemplates = useTemplates();
   const [step, setStep] = useState(0);
   const [template, setTemplate] = useState<ProjectTemplate | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState(COLORS[0]);
   const [status, setStatus] = useState<Project["status"]>("planejamento");
-  const [ownerId, setOwnerId] = useState(users[0].id);
-  const [teamIds, setTeamIds] = useState<string[]>([users[0].id]);
+  const [ownerId, setOwnerId] = useState("");
+  const [teamIds, setTeamIds] = useState<string[]>([]);
   const [priority, setPriority] = useState<Priority>("normal");
-  const [startDate, setStartDate] = useState("2026-06-11");
-  const [endDate, setEndDate] = useState("2026-07-11");
+  const [startDate, setStartDate] = useState(localToday);
+  const [endDate, setEndDate] = useState(localPlusDays(30));
 
   const applyTemplate = (tpl: ProjectTemplate | null) => {
     setTemplate(tpl);
@@ -79,15 +91,22 @@ export function CreateProjectWizard({ open, onClose }: { open: boolean; onClose:
     setTeamIds(list => list.includes(id) ? list : [...list, id]);
   };
 
+  useEffect(() => {
+    if (!ownerId && users[0]) {
+      setOwnerId(users[0].id);
+      setTeamIds((list) => list.length ? list : [users[0].id]);
+    }
+  }, [ownerId, users]);
+
   const reset = () => {
     setStep(0); setTemplate(null); setName(""); setDescription(""); setColor(COLORS[0]);
-    setStatus("planejamento"); setOwnerId(users[0].id); setTeamIds([users[0].id]);
-    setPriority("normal"); setStartDate("2026-06-11"); setEndDate("2026-07-11");
+    setStatus("planejamento"); setOwnerId(users[0]?.id ?? ""); setTeamIds(users[0] ? [users[0].id] : []);
+    setPriority("normal"); setStartDate(localToday()); setEndDate(localPlusDays(30));
   };
   const close = () => { reset(); onClose(); };
 
   const submit = () => {
-    if (!name.trim()) return;
+    if (!name.trim() || !ownerId) return;
     const id = `p_${Date.now().toString(36)}`;
     projectsStore.addProject({
       id, name: name.trim(), description: description.trim(),

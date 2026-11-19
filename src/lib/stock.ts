@@ -6,6 +6,8 @@ export type Material = {
   id: string; code: string; sku: string; name: string; category: string; brand: string;
   unit: string; cost: number; min: number; max: number; lotControl: boolean;
   barcode?: string; approvalCertificate?: string; supplierId?: string; manufacturer?: string; description?: string;
+  averageCost?: number; expiryControl?: boolean; supplier?: string; anvisa?: string; caExpires?: string;
+  abcClass?: string; createdAt?: string; updatedAt?: string;
 };
 export type Balance = { materialId: string; clinicId: string; qty: number; reserved: number };
 export type Lot = { id: string; materialId: string; clinicId: string; lot: string; expires: string; qty: number };

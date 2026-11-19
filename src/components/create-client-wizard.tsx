@@ -8,8 +8,8 @@ import {
   CalendarDays, Sparkles, Building2, Users, CheckCircle2,
   ArrowRight, ArrowLeft, X, TrendingUp,
 } from "lucide-react";
-import { clientsStore } from "@/lib/store";
-import { users, formatBRL, type Client } from "@/lib/mock-data";
+import { clientsStore, useUserProfiles } from "@/lib/store";
+import { formatBRL, type Client } from "@/lib/mock-data";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
 const STEPS = [
@@ -33,6 +33,7 @@ const initials = (n: string) =>
   n.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("") || "CL";
 
 export function CreateClientWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const users = useUserProfiles();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [segment, setSegment] = useState(SEGMENTS[0]);
@@ -51,6 +52,10 @@ export function CreateClientWizard({ open, onClose }: { open: boolean; onClose: 
     setContactName(""); setContactEmail(""); setContactPhone("");
     setStatus("prospect"); setOwnerId(users[0]?.id || ""); setLtv("");
   }, [open]);
+
+  useEffect(() => {
+    if (open && !ownerId && users[0]) setOwnerId(users[0].id);
+  }, [open, ownerId, users]);
 
   const canNext =
     step === 0 ? name.trim().length > 0 :

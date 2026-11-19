@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Building2, Contact, Truck, FileCheck2, KeyRound } from 'lucide-react';
-import { addSupplier, updateSupplier, type Supplier } from '@/lib/purchasing';
+import { addSupplier, updateSupplier } from '@/lib/procurement-live';
+import type { Supplier } from '@/lib/purchasing';
 import { WizardShell, WizardFooter, ReviewGrid } from './erp-wizard';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -16,7 +17,7 @@ export function SupplierRegistrationWizard({ supplier, onClose }: { supplier?: S
   const passwordError = validateDemoPassword(password, confirmation);
   const [form, setForm] = useState<Omit<Supplier, 'id'>>(supplier ?? { name: '', cnpj: '', contact: '', email: '', phone: '', address: '', city: '', state: '', notes: '', leadDays: 5, rating: 0, categories: [] });
   const field = (key: 'name' | 'cnpj' | 'contact' | 'email' | 'phone' | 'address' | 'city' | 'state', label: string) => <div className="space-y-2" key={key}><Label htmlFor={`register-${key}`}>{label}</Label><Input id={`register-${key}`} type={key === 'email' ? 'email' : 'text'} value={form[key] ?? ''} onChange={e => setForm({ ...form, [key]: e.target.value })} /></div>;
-  const save = () => { if (passwordError) return toast.error(passwordError); const error = supplier ? updateSupplier({ ...form, id: supplier.id }) : addSupplier(form); if (error) return toast.error(error); toast.success(password ? 'Fornecedor atualizado · troca de senha simulada, sem gravação' : supplier ? 'Fornecedor atualizado' : 'Fornecedor cadastrado'); onClose(); };
+  const save = () => { if (passwordError) return toast.error(passwordError); void Promise.resolve(supplier ? updateSupplier({ ...form, id: supplier.id }) : addSupplier(form)).then(error => { if (error) return toast.error(error); toast.success(password ? 'Fornecedor atualizado · troca de senha simulada, sem gravação' : supplier ? 'Fornecedor atualizado' : 'Fornecedor cadastrado'); onClose(); }); };
   return <WizardShell open onClose={onClose} badge="Cadastro de fornecedores" headline={supplier ? 'Editar fornecedor' : 'Novo fornecedor'} sub={form.name || 'Grupo | Sorrisos'} step={step} setStep={setStep} steps={[{ title: 'Identificação', desc: 'Empresa e documento', icon: Building2 }, { title: 'Contato e endereço', desc: 'Responsável e localização', icon: Contact }, { title: 'Condições comerciais', desc: 'Categorias e prazo de entrega', icon: Truck }, { title: 'Acesso ao portal', desc: 'Situação, usuário e perfil', icon: KeyRound }, { title: 'Revisão', desc: 'Conferência do cadastro', icon: FileCheck2 }]} footer={<WizardFooter step={step} last={4} setStep={setStep} onClose={onClose} onFinish={save} finishLabel="Salvar fornecedor" canNext={!!form.name.trim() && !passwordError} />}>
     {step === 0 && <div className="grid sm:grid-cols-2 gap-4">{field('name', 'Nome / razão social')}{field('cnpj', 'CNPJ')}</div>}
     {step === 1 && <div className="grid sm:grid-cols-2 gap-4">{field('contact', 'Contato responsável')}{field('email', 'E-mail')}{field('phone', 'Telefone')}{field('address', 'Endereço')}{field('city', 'Cidade')}{field('state', 'Estado')}</div>}

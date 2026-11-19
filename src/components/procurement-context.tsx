@@ -1,10 +1,7 @@
-import { useOrders } from '@/lib/orders';
-import { usePurchasing } from '@/lib/purchasing';
-import { useSupplierRequests } from '@/lib/supplier-orders';
-import { budgetImpact, useBudgets } from '@/lib/procurement-budget';
+import { useOrders, usePurchasing, useSupplierRequests, useBudgets, useProcurementErp as useErp } from '@/lib/procurement-live';
+import { budgetImpact } from '@/lib/procurement-budget';
 import { duplicateOrders } from '@/lib/procurement-rules';
-import { brl, getMaterial } from '@/lib/stock';
-import { useErp } from '@/lib/erp';
+import { brl, getMaterial } from '@/lib/stock-live';
 
 export function ProcurementContext({ branchId, items, excludeId }: { branchId: string; items: { materialId: string; requested: number; unitPrice?: number }[]; excludeId?: string }) {
   const orders = useOrders(), requests = useSupplierRequests(), { pos } = usePurchasing(), budgets = useBudgets(), erp = useErp();

@@ -3,14 +3,16 @@ import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useStock, materials, categories, clinics, balanceOf, brl } from "@/lib/stock";
-import { Search, Plus, Package, AlertTriangle, PackageX, Wallet } from "lucide-react";
+import { useStock, materials, categories, clinics, balanceOf, brl, useStockSession, stockInsights } from "@/lib/stock-live";
+import { Search, Plus, Package, AlertTriangle, PackageX, Wallet, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StockStat, ChartCard, chartColors, tooltipStyle, axisProps } from "@/components/stock-ui";
 import { NewMaterialWizard } from "@/components/stock-wizards";
+import { MaterialResupplyWizard } from "@/components/material-resupply";
+import { MaterialDetail } from "@/components/material-detail";
+import type { Material } from "@/lib/stock";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { useMemo, useState } from "react";
-import { useSession } from "@/lib/erp";
 
 export const Route = createFileRoute("/materiais")({
   head: () => ({ meta: [
@@ -27,10 +29,14 @@ function MateriaisPage() {
   const s = useStock();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("Todas");
-  const ses = useSession();
+  const ses = useStockSession();
   const [localClinic, setClinic] = useState("all");
   const clinic = ses.filter !== "all" ? ses.filter : localClinic;
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Material | null>(null);
+  const [resupply, setResupply] = useState(false);
+  const shortages = stockInsights(clinic === "all" ? ses.scope : [clinic]).filter((row) => row.replenish > 0).length;
   const cid = clinic === "all" ? undefined : clinic;
   const info = materials.map(mt => { const qty = balanceOf(s, mt.id, cid); const min = cid ? mt.min : mt.min * clinics.length; return { mt, qty, min, st: qty === 0 ? 2 : qty < min ? 1 : 0 }; });
   const stockValue = info.reduce((a, r) => a + r.qty * r.mt.cost, 0);
@@ -40,7 +46,7 @@ function MateriaisPage() {
     (cat === "Todas" || mt.category === cat) && `${mt.name} ${mt.code} ${mt.sku} ${mt.brand} ${mt.barcode || ""} ${mt.manufacturer || ""}`.toLowerCase().includes(q.toLowerCase())), [q, cat, s]);
 
   return (
-    <AppShell title="Materiais e Produtos" subtitle={`${materials.length} itens cadastrados`} primaryAction={ses.can("estoque.movimentar") ? <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Novo Material</Button> : null}>
+    <AppShell title="Materiais e Produtos" subtitle={`${materials.length} itens cadastrados`} primaryAction={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => setResupply(true)}><RefreshCcw className="h-4 w-4 mr-1" />Ressuprimento{shortages > 0 ? ` (${shortages})` : ""}</Button>{ses.can("estoque.movimentar") ? <Button size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" />Novo Material</Button> : null}</div>}>
       <div className="p-4 md:p-8 space-y-5">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StockStat label="Itens no catálogo" value={materials.length} icon={Package} hint={`${categories.length} categorias`} />
@@ -79,7 +85,7 @@ function MateriaisPage() {
                 const min = clinic === "all" ? mt.min * clinics.length : mt.min;
                 const st = qty === 0 ? { l: "Sem estoque", c: "bg-destructive/10 text-destructive border-destructive/30" } : qty < min ? { l: "Abaixo do mínimo", c: "bg-warning/10 text-warning border-warning/30" } : { l: "Normal", c: "bg-success/10 text-success border-success/30" };
                 return (
-                  <tr key={mt.id} className="hover:bg-muted/30">
+                  <tr key={mt.id} className="hover:bg-muted/30 cursor-pointer" onClick={() => setSelected(mt.id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelected(mt.id); } }} tabIndex={0}>
                     <td className="px-4 py-3 font-mono text-xs">{mt.code}</td>
                     <td className="px-4 py-3"><div className="font-medium">{mt.name}</div><div className="text-xs text-muted-foreground">{mt.manufacturer || mt.brand} · {mt.barcode || mt.sku}</div></td>
                     <td className="px-4 py-3 text-muted-foreground">{mt.category}</td>
@@ -95,7 +101,10 @@ function MateriaisPage() {
           </table>
         </Card>
       </div>
+      {resupply && <MaterialResupplyWizard branchId={clinic === "all" ? undefined : clinic} onClose={() => setResupply(false)} />}
       {open && <NewMaterialWizard open onClose={() => setOpen(false)} />}
+      {selected && !editing && <MaterialDetail materialId={selected} onClose={() => setSelected(null)} onEdit={(material) => setEditing(material)} />}
+      {editing && <NewMaterialWizard open material={editing} onClose={() => setEditing(null)} />}
     </AppShell>
   );
 }

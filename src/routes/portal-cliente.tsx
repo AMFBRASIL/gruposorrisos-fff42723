@@ -6,15 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { useDocuments, useInvoices, documentsStore, invoicesStore } from "@/lib/store";
-import { clients, projects, tasks, getUser, invoiceTotal, formatBRL, documentTypeMeta, documentStatusMeta, invoiceStatusMeta } from "@/lib/mock-data";
+import { useClients, useDocuments, useInvoices, useProjects, useTasks, documentsStore, invoicesStore } from "@/lib/store";
+import { getUser, invoiceTotal, formatBRL, documentTypeMeta, documentStatusMeta, invoiceStatusMeta } from "@/lib/mock-data";
 import { FileText, FileSignature, DollarSign, CheckCircle2, Clock, Download, ExternalLink, Building2, MessageCircle, AlertCircle, Calendar, TrendingUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export const Route = createFileRoute("/portal-cliente")({ head: () => ({ meta: [{ title: 'Portal do Cliente | Grupo Sorrisos' }, { name: 'description', content: 'Pedidos de Compras, respostas com CSV e preços, documentos e faturas do Grupo Sorrisos.' }, { property: 'og:title', content: 'Portal do Cliente | Grupo Sorrisos' }, { property: 'og:description', content: 'Responda pedidos de Compras com preços importados do CSV e acompanhe suas propostas.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }), component: PortalPage });
-
-// Cliente visualizando seu próprio portal (demo: Hospital Vida Plena — cli4)
-const CLIENT_ID = "cli4";
 
 function PortalPage() {
   return <div className="min-h-screen bg-background text-foreground"><header className="border-b border-border bg-background"><div className="max-w-7xl mx-auto px-5 md:px-10 py-5 flex items-center gap-3"><span className="h-10 w-10 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">GS</span><div><div className="font-semibold">Grupo | Sorrisos</div><div className="text-xs text-muted-foreground">Portal do Cliente · Fornecedores e parceiros</div></div></div></header><Tabs defaultValue="pedidos"><div className="max-w-7xl mx-auto px-5 md:px-10 pt-5"><TabsList className="h-auto flex-wrap justify-start"><TabsTrigger value="pedidos"><Building2 className="h-4 w-4 mr-2" />Pedidos de Compras</TabsTrigger><TabsTrigger value="conta"><FileText className="h-4 w-4 mr-2" />Projetos, documentos e faturas</TabsTrigger></TabsList></div><TabsContent value="pedidos" className="mt-0"><SupplierPortal embedded destination="/portal-cliente" /></TabsContent><TabsContent value="conta" className="mt-0"><ClientWorkspace /></TabsContent></Tabs></div>;
@@ -23,10 +20,17 @@ function PortalPage() {
 function ClientWorkspace() {
   const docs = useDocuments();
   const invs = useInvoices();
-  const [selectedClient, setSelectedClient] = useState(CLIENT_ID);
+  const clients = useClients();
+  const projects = useProjects();
+  const tasks = useTasks();
+  const [selectedClient, setSelectedClient] = useState("");
 
-  const client = useMemo(() => clients.find(c => c.id === selectedClient) ?? clients[0], [selectedClient]);
-  const clientProjects = useMemo(() => projects.filter(p => tasks.some(t => t.projectId === p.id)).slice(0, 4), []);
+  useEffect(() => {
+    if (!clients.some((item) => item.id === selectedClient) && clients[0]) setSelectedClient(clients[0].id);
+  }, [clients, selectedClient]);
+
+  const client = useMemo(() => clients.find(c => c.id === selectedClient) ?? clients[0], [clients, selectedClient]);
+  const clientProjects = useMemo(() => projects.filter(p => tasks.some(t => t.projectId === p.id)).slice(0, 4), [projects, tasks]);
   const clientDocs = useMemo(() => docs.filter(d => d.clientId === selectedClient && d.status !== "arquivado"), [docs, selectedClient]);
   const clientInvs = useMemo(() => invs.filter(i => i.clientId === selectedClient), [invs, selectedClient]);
   const pendingSigs = clientDocs.filter(d => d.signatories.some(s => s.email.includes(client?.name?.toLowerCase().split(" ")[0] || "") || s.status === "pendente") && d.status === "aguardando_assinatura");
@@ -34,7 +38,7 @@ function ClientWorkspace() {
   const totalPaid = clientInvs.filter(i => i.status === "paga").reduce((s, i) => s + invoiceTotal(i), 0);
   const totalDue = clientInvs.filter(i => i.status === "enviada" || i.status === "vencida").reduce((s, i) => s + invoiceTotal(i), 0);
 
-  if (!client) return null;
+  if (!client) return <p className="max-w-7xl mx-auto px-5 md:px-10 py-10 text-sm text-muted-foreground">Nenhum cliente cadastrado ainda.</p>;
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       {/* Header */}

@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StockStat, ChartCard, tooltipStyle, axisProps } from "@/components/stock-ui";
 import { NewInventoryWizard } from "@/components/stock-wizards";
-import { useSession } from "@/lib/erp";
-import { useStock, getClinic, brl, daysUntil, clinics } from "@/lib/stock";
+import { useStock, getClinic, brl, daysUntil, clinics, useStockSession } from "@/lib/stock-live";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
 import { Plus, ClipboardCheck, Target, TrendingDown, TrendingUp, CalendarClock } from "lucide-react";
 
@@ -23,7 +22,7 @@ export const Route = createFileRoute("/inventarios")({
 });
 
 function InvPage() {
-  const st = useStock(); const ses = useSession();
+  const st = useStock(); const ses = useStockSession();
   const [open, setOpen] = useState(false);
   const list = st.inventories.filter(i => ses.scope.includes(i.branchId)).sort((a, b) => b.date.localeCompare(a.date) || b.number.localeCompare(a.number));
   const counted = list.reduce((a, i) => a + i.counted, 0);

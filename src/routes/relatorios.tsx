@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
-import { useTasks } from "@/lib/store";
-import { users, projects, daysUntil } from "@/lib/mock-data";
+import { useUserProfiles } from "@/lib/store";
+import { daysUntil } from "@/lib/mock-data";
+import { useWork } from "@/lib/work-live";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis } from "recharts";
 
 export const Route = createFileRoute("/relatorios")({
@@ -18,13 +19,15 @@ export const Route = createFileRoute("/relatorios")({
 });
 
 function ReportsPage() {
-  const tasks = useTasks();
+  const tasks = useWork().tasks;
+  const projects = useWork().projects;
+  const users = useUserProfiles();
   const byProject = projects.map(p => {
     const pt = tasks.filter(t => t.projectId === p.id);
     return { name: p.name.split(" ").slice(0,2).join(" "), concluidas: pt.filter(t => t.status === "concluido").length, atrasadas: pt.filter(t => t.status !== "concluido" && daysUntil(t.dueDate) < 0).length };
   });
 
-  const slaPct = Math.round(tasks.filter(t => t.status === "concluido").length / tasks.length * 100);
+  const slaPct = tasks.length ? Math.round(tasks.filter(t => t.status === "concluido").length / tasks.length * 100) : 0;
   const sla = [{ name: "SLA", value: slaPct, fill: "var(--chart-1)" }];
 
   const byDept = Array.from(new Set(tasks.map(t => t.department))).map(d => {

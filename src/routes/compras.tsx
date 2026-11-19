@@ -8,9 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSession, branchName } from "@/lib/erp";
-import { materials, getMaterial, brl } from "@/lib/stock";
-import { usePurchasing, poLabels, addQuote, approvePo, sendPo, receivePo, addSupplier, createRequisition } from "@/lib/purchasing";
+import { useProcurementSession as useSession, branchName, usePurchasing, poLabels, addQuote, approvePo, sendPo } from "@/lib/procurement-live";
+import { materials, getMaterial, brl, useStock } from "@/lib/stock-live";
 import { Star, Plus } from "lucide-react";
 import { PurchaseReceivingWizard } from '@/components/purchase-receiving-wizard';
 import { PurchaseCreationWizard } from '@/components/purchase-creation-wizard';
@@ -32,6 +31,7 @@ export const Route = createFileRoute("/compras")({
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
 function ComprasPage() {
+  useStock();
   const { pos, sup } = usePurchasing(); const ses = useSession();
   const canBuy = ses.can("compras.gerenciar");
   const [trace, setTrace] = useState<string | null>(null);
@@ -39,9 +39,10 @@ function ComprasPage() {
   const [receiving, setReceiving] = useState<PurchaseOrder | null>(null);
   const [creating, setCreating] = useState<'requisition' | 'supplier' | null>(null);
   const [quote, setQuote] = useState<{ supplierId: string; price: number | ''; days: string; freight: number | '' }>({ supplierId: "s1", price: "", days: "5", freight: 0 });
-  const [reqMat, setReqMat] = useState(materials[0].id); const [reqQty, setReqQty] = useState(50);
+  const [reqMat, setReqMat] = useState(materials[0]?.id ?? ""); const [reqQty, setReqQty] = useState(50);
   const [ns, setNs] = useState({ name: "", cnpj: "", contact: "", email: "" });
-  const t = (e: string | null, m: string) => e ? toast.error(e) : toast.success(m);
+  const t = (e: string | null | Promise<string | null>, m: string) => { void Promise.resolve(e).then((error) => error ? toast.error(error) : toast.success(m)); };
+  const quoteSupplier = sup.some((supplier) => supplier.id === quote.supplierId) ? quote.supplierId : sup[0]?.id ?? "";
   return (
     <AppShell title="Compras e Fornecedores" subtitle="Requisição → Cotação → Aprovação → Pedido → Recebimento → Entrada no estoque" primaryAction={null}>
       <div className="p-4 md:p-8">
@@ -59,10 +60,10 @@ function ComprasPage() {
                     <div className="flex flex-wrap gap-2">{i.quotes.length === 0 && <span className="text-muted-foreground text-xs">Sem cotações</span>}
                       {rankQuotes(i.quotes, i.qty, sup, mode).map(q => <Badge key={q.supplierId} variant="outline" className={i.chosen === q.supplierId ? "bg-success/10 text-success border-success/30" : ""}>{sup.find(s => s.id === q.supplierId)?.name}: {brl(q.unitPrice)} · {q.days}d · total {brl(q.total)} · avaliação {q.rating}</Badge>)}</div>
                     {canBuy && (p.status === "requisicao" || p.status === "cotacao") && <div className="flex flex-wrap gap-2 items-center">
-                      <select className={sel} value={quote.supplierId} onChange={e => setQuote({ ...quote, supplierId: e.target.value })}>{sup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                      <select className={sel} value={quoteSupplier} onChange={e => setQuote({ ...quote, supplierId: e.target.value })}>{sup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
                       <CurrencyInput aria-label={`Preço unitário ${getMaterial(i.materialId).name}`} className="w-36 h-9" value={quote.price} onValueChange={price => setQuote({ ...quote, price })} />
                       <CurrencyInput aria-label={`Frete ${getMaterial(i.materialId).name}`} className="w-36 h-9" value={quote.freight} onValueChange={freight => setQuote({ ...quote, freight })} /><Input placeholder="Prazo" className="w-20 h-9" value={quote.days} onChange={e => setQuote({ ...quote, days: e.target.value })} />
-                      <Button size="sm" variant="outline" onClick={() => Number(quote.price) > 0 ? t(addQuote(p.id, i.materialId, { supplierId: quote.supplierId, unitPrice: Number(quote.price), days: Number(quote.days), freight: Number(quote.freight) }), "Cotação registrada") : toast.error("Informe o preço")}>Registrar cotação</Button>
+                      <Button size="sm" variant="outline" onClick={() => Number(quote.price) > 0 && quoteSupplier ? t(addQuote(p.id, i.materialId, { supplierId: quoteSupplier, unitPrice: Number(quote.price), days: Number(quote.days), freight: Number(quote.freight) }), "Cotação registrada") : toast.error("Informe o preço")}>Registrar cotação</Button>
                     </div>}
                   </div>
                 ))}

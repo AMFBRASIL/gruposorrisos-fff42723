@@ -1,5 +1,5 @@
 import { ArrowRight, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight } from 'lucide-react';
-import { brl, getMaterial, getClinic, balanceOf, materials, type MovementType, useStock } from '@/lib/stock';
+import { brl, getMaterial, getClinic, balanceOf, materials, type MovementType, useStock } from '@/lib/stock-live';
 
 const volume = (qty: number) => qty.toLocaleString('pt-BR', { maximumFractionDigits: 3 });
 

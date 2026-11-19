@@ -8,30 +8,33 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { usePurchasing } from "@/lib/purchasing";
 import { WizardShell, WizardFooter, OptionCard, FieldLabel, ReviewGrid, selectCls } from "@/components/erp-wizard";
-import { useStock, materials, categories, clinics, getMaterial, getClinic, balanceOf, brl, addMaterial, registerMovements, applyInventory, createTransfer, addLot, type MovementType } from "@/lib/stock";
-import { useSession } from "@/lib/erp";
+import { useStock, materials, categories, clinics, getMaterial, getClinic, balanceOf, brl, addMaterial, updateMaterial, registerMovements, createTransfer, addLot, useStockSession, submitInventory, useAdvancedStock, type MovementType } from "@/lib/stock-live";
+import type { Material } from "@/lib/stock";
 import { StockCodeScanner } from './stock-code-scanner';
 import { MovementReview } from './movement-review';
-import { submitInventory, useAdvancedStock } from '@/lib/stock-advanced';
 import { Package, Tag, Boxes, FileCheck2, ArrowDownToLine, ArrowUpFromLine, ArrowLeftRight, MapPin, Hash, Route as RouteIcon, ListChecks, CalendarClock, Stethoscope, Trash2, Wrench, Scissors, Sparkles, ShieldCheck, Briefcase, FileText, Shapes, Search } from "lucide-react";
 
 const catIcons: Record<string, typeof Package> = { "Materiais odontológicos": Stethoscope, Descartáveis: Trash2, Equipamentos: Wrench, Instrumentais: Scissors, Limpeza: Sparkles, Escritório: Briefcase, EPIs: ShieldCheck, Administrativos: FileText, Outros: Shapes };
 const units = ["un", "cx", "pct", "fr", "kit", "par", "rolo", "l"];
 
-function useVisibleClinics() { const ses = useSession(); return clinics.filter(c => ses.visible.includes(c.id)); }
+function useVisibleClinics() { const ses = useStockSession(); return clinics.filter(c => ses.visible.includes(c.id)); }
 
-export function NewMaterialWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NewMaterialWizard({ open, onClose, material }: { open: boolean; onClose: () => void; material?: Material }) {
   const [step, setStep] = useState(0);
   const { sup } = usePurchasing();
   const manufacturers = [...new Set(materials.flatMap(m => [m.manufacturer || m.brand]).filter(Boolean))];
-  const [f, setF] = useState({ name: "", code: `MAT-${String(materials.length + 1).padStart(4, "0")}`, sku: "", barcode: "", approvalCertificate: "", supplierId: "", manufacturer: "", description: "", brand: "", category: categories[0], unit: "un", cost: 0, min: 10, max: 50, lotControl: true });
+  const [f, setF] = useState({ name: material?.name ?? "", code: material?.code ?? `MAT-${String(materials.length + 1).padStart(4, "0")}`, sku: material?.sku ?? "", barcode: material?.barcode ?? "", approvalCertificate: material?.approvalCertificate ?? "", supplierId: material?.supplierId ?? "", manufacturer: material?.manufacturer ?? "", description: material?.description ?? "", brand: material?.brand ?? "", category: material?.category ?? categories[0], unit: material?.unit ?? "un", cost: material?.cost ?? 0, min: material?.min ?? 10, max: material?.max ?? 50, lotControl: material?.lotControl ?? true });
   const [initial, setInitial] = useState<Record<string, number>>({});
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF({ ...f, [k]: v });
-  const steps = [{ title: "Categoria", desc: "Classifique o item no catálogo", icon: Tag }, { title: "Identificação", desc: "Nome, códigos, marca e custo", icon: Package }, { title: "Política de estoque", desc: "Mín/máx, lote e saldo inicial", icon: Boxes }, { title: "Revisão", desc: "Confirme o cadastro", icon: FileCheck2 }];
-  const finish = () => { const e = addMaterial(f, Object.entries(initial).map(([clinicId, qty]) => ({ clinicId, qty }))); if (e) return toast.error(e); toast.success("Material cadastrado"); onClose(); };
+  const unitOptions = f.unit && !units.includes(f.unit) ? [f.unit, ...units] : units;
+  const steps = [{ title: "Categoria", desc: "Classifique o item no catálogo", icon: Tag }, { title: "Identificação", desc: "Nome, códigos, marca e custo", icon: Package }, { title: "Política de estoque", desc: material ? "Mínimo, máximo e lote" : "Mín/máx, lote e saldo inicial", icon: Boxes }, { title: "Revisão", desc: material ? "Confirme as alterações" : "Confirme o cadastro", icon: FileCheck2 }];
+  const finish = () => {
+    const done = material ? updateMaterial(material.id, f) : addMaterial(f, Object.entries(initial).map(([clinicId, qty]) => ({ clinicId, qty })));
+    void done.then(e => { if (e) return toast.error(e); toast.success(material ? "Material atualizado" : "Material cadastrado"); onClose(); });
+  };
   return (
-    <WizardShell open={open} onClose={onClose} badge="Novo material" headline={<>Catálogo único<br /><span className="opacity-60">para todas as filiais.</span></>} sub="Padronize códigos, custos e políticas de reposição." steps={steps} step={step} setStep={setStep}
-      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel="Cadastrar material" canNext={step !== 1 || (f.name.trim().length > 1 && !!f.code.trim() && (f.category !== "EPIs" || !!f.approvalCertificate.trim()))} />}>
+    <WizardShell open={open} onClose={onClose} badge={material ? "Editar material" : "Novo material"} headline={material ? <>Cadastro atualizado<br /><span className="opacity-60">sem mexer no saldo.</span></> : <>Catálogo único<br /><span className="opacity-60">para todas as filiais.</span></>} sub={material ? "A alteração vale para todas as filiais. O estoque já lançado permanece." : "Padronize códigos, custos e políticas de reposição."} steps={steps} step={step} setStep={setStep}
+      footer={<WizardFooter step={step} last={3} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel={material ? "Salvar alterações" : "Cadastrar material"} canNext={step !== 1 || (f.name.trim().length > 1 && !!f.code.trim() && (f.category !== "EPIs" || !!f.approvalCertificate.trim()))} />}>
       {step === 0 && <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{categories.map(c => <OptionCard key={c} selected={f.category === c} onClick={() => set("category", c)} icon={catIcons[c] ?? Shapes} title={c} />)}</div>}
       {step === 1 && <div className="grid md:grid-cols-2 gap-4">
         <div className="md:col-span-2 space-y-1"><Label htmlFor="material-name">Nome do material *</Label><Input id="material-name" autoFocus required value={f.name} onChange={e => set("name", e.target.value)} placeholder="Ex.: Resina composta A2 4g" /></div>
@@ -44,7 +47,7 @@ export function NewMaterialWizard({ open, onClose }: { open: boolean; onClose: (
         <div className="space-y-1"><Label htmlFor="material-brand">Marca</Label><Input id="material-brand" value={f.brand} onChange={e => set("brand", e.target.value)} /></div>
         <div className="space-y-1"><Label htmlFor="material-cost">Custo unitário (R$)</Label><CurrencyInput id="material-cost" value={f.cost} onValueChange={value => set("cost", value === "" ? 0 : value)} /></div>
         <div className="md:col-span-2 space-y-1"><Label htmlFor="material-description">Descrição</Label><Textarea id="material-description" rows={3} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Descrição detalhada do material" /></div>
-        <div className="md:col-span-2"><FieldLabel>Unidade de medida</FieldLabel><div className="grid grid-cols-4 md:grid-cols-8 gap-2">{units.map(u => <OptionCard compact key={u} selected={f.unit === u} onClick={() => set("unit", u)} title={u} />)}</div></div>
+        <div className="md:col-span-2"><FieldLabel>Unidade de medida</FieldLabel><div className="grid grid-cols-4 md:grid-cols-8 gap-2">{unitOptions.map(u => <OptionCard compact key={u} selected={f.unit === u} onClick={() => set("unit", u)} title={u} />)}</div></div>
       </div>}
       {step === 2 && <>
         <div className="grid md:grid-cols-3 gap-4">
@@ -52,11 +55,11 @@ export function NewMaterialWizard({ open, onClose }: { open: boolean; onClose: (
           <div className="space-y-1"><Label>Estoque máximo (por filial)</Label><Input type="number" min={0} value={f.max} onChange={e => set("max", Number(e.target.value))} /></div>
           <div className="rounded-xl border border-border p-4 flex items-center justify-between"><div><div className="text-sm font-medium">Controle de lote</div><div className="text-xs text-muted-foreground">Rastrear lote e validade</div></div><Switch checked={f.lotControl} onCheckedChange={v => set("lotControl", v)} /></div>
         </div>
-        <div><FieldLabel>Saldo inicial por filial (opcional)</FieldLabel>
+        {!material && <div><FieldLabel>Saldo inicial por filial (opcional)</FieldLabel>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">{clinics.map(c => <div key={c.id} className="rounded-xl border border-border p-3 flex items-center gap-3"><MapPin className="h-4 w-4 text-muted-foreground" /><div className="flex-1 min-w-0"><div className="text-sm font-medium truncate">{c.name}</div><div className="text-[11px] text-muted-foreground">{c.city}</div></div><Input type="number" min={0} className="h-8 w-20" value={initial[c.id] ?? ""} onChange={e => setInitial({ ...initial, [c.id]: Number(e.target.value) })} /></div>)}</div>
-        </div>
+        </div>}
       </>}
-      {step === 3 && <ReviewGrid items={[["Material", f.name || "—"], ["Categoria", f.category], ["Código / SKU", `${f.code} · ${f.sku || "—"}`], ["Código de barras", f.barcode || "—"], ["CA", f.approvalCertificate || "—"], ["Fornecedor", sup.find(s => s.id === f.supplierId)?.name || "—"], ["Fabricante", f.manufacturer || "—"], ["Marca", f.brand || "—"], ["Descrição", f.description || "—"], ["Custo", brl(f.cost)], ["Mín / Máx", `${f.min} / ${f.max} ${f.unit}`], ["Saldo inicial", `${Object.values(initial).reduce((a, b) => a + (b || 0), 0)} ${f.unit}`]]} />}
+      {step === 3 && <ReviewGrid items={[["Material", f.name || "—"], ["Categoria", f.category], ["Código / SKU", `${f.code} · ${f.sku || "—"}`], ["Código de barras", f.barcode || "—"], ["CA", f.approvalCertificate || "—"], ["Fornecedor", sup.find(s => s.id === f.supplierId)?.name || material?.supplier || "—"], ["Fabricante", f.manufacturer || "—"], ["Marca", f.brand || "—"], ["Descrição", f.description || "—"], ["Custo", brl(f.cost)], ["Mín / Máx", `${f.min} / ${f.max} ${f.unit}`], ...(material ? [] : [["Saldo inicial", `${Object.values(initial).reduce((a, b) => a + (b || 0), 0)} ${f.unit}`] as [string, string]])]} />}
     </WizardShell>
   );
 }
@@ -77,11 +80,11 @@ function MaterialPicker({ value, selectedIds, onChange, clinicId }: { value?: st
 }
 
 export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const s = useStock(); const ses = useSession(); const vis = useVisibleClinics();
+  const s = useStock(); const vis = useVisibleClinics();
   const [step, setStep] = useState(0);
   const [type, setType] = useState<MovementType>("entrada");
-  const [clinicId, setClinic] = useState(vis[0]?.id ?? "cd");
-  const [toClinicId, setTo] = useState(clinics.find(c => c.id !== clinicId)?.id ?? "c1");
+  const [clinicId, setClinic] = useState(vis[0]?.id ?? clinics[0]?.id ?? "");
+  const [toClinicId, setTo] = useState(clinics.find(c => c.id !== (vis[0]?.id ?? clinics[0]?.id))?.id ?? "");
   const [reason, setReason] = useState("Compra"); const [doc, setDoc] = useState("");
   const [items, setItems] = useState<{ materialId: string; qty: number }[]>([]);
   const after = (i: { materialId: string; qty: number }) => balanceOf(s, i.materialId, clinicId) + (type === "entrada" ? i.qty : -i.qty);
@@ -89,8 +92,7 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
   const total = items.reduce((a, i) => a + i.qty * getMaterial(i.materialId).cost, 0);
   const steps = [{ title: "Tipo", desc: "Natureza da movimentação", icon: ArrowLeftRight }, { title: "Local e motivo", desc: "Filiais, motivo e documento", icon: MapPin }, { title: "Materiais", desc: "Um ou vários itens", icon: ListChecks }, { title: "Revisão", desc: "Impacto no saldo", icon: FileCheck2 }];
   const finish = () => {
-    const e = registerMovements(items.map(i => ({ type, materialId: i.materialId, clinicId, toClinicId: type === "transferencia" ? toClinicId : undefined, qty: i.qty, reason: doc ? `${reason} · ${doc}` : reason, user: ses.user.name })));
-    if (e) return toast.error(e); toast.success(`${items.length} movimentação(ões) registrada(s)`); onClose();
+    void registerMovements(items.map(i => ({ type, materialId: i.materialId, clinicId, toClinicId: type === "transferencia" ? toClinicId : undefined, qty: i.qty, reason: doc ? `${reason} · ${doc}` : reason }))).then(e => { if (e) return toast.error(e); toast.success(`${items.length} movimentação(ões) registrada(s)`); onClose(); });
   };
   return (
     <WizardShell open={open} onClose={onClose} badge="Nova movimentação" headline={<>Cada unidade<br /><span className="opacity-60">rastreada.</span></>} sub="Lance vários materiais de uma vez, com trilha de auditoria." steps={steps} step={step} setStep={setStep}
@@ -105,7 +107,7 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
         <div><FieldLabel>Motivo</FieldLabel><div className="grid grid-cols-2 md:grid-cols-4 gap-2">{moveMeta[type].reasons.map(r => <OptionCard compact key={r} selected={reason === r} onClick={() => setReason(r)} title={r} />)}</div></div>
       </>}
       {step === 2 && <>
-        <StockCodeScanner onMaterial={id => { setItems(prev => prev.some(i => i.materialId === id) ? prev.map(i => i.materialId === id ? { ...i, qty: i.qty + 1 } : i) : [...prev, { materialId: id, qty: 1 }]); }} />
+        <StockCodeScanner catalog={materials} onMaterial={id => { setItems(prev => prev.some(i => i.materialId === id) ? prev.map(i => i.materialId === id ? { ...i, qty: i.qty + 1 } : i) : [...prev, { materialId: id, qty: 1 }]); }} />
         <MaterialPicker selectedIds={items.map(i => i.materialId)} onChange={id => setItems(prev => prev.some(i => i.materialId === id) ? prev : [...prev, { materialId: id, qty: 1 }])} clinicId={clinicId} />
         <div className="rounded-xl border border-border divide-y divide-border">
           <div className="px-3 py-2 text-xs text-muted-foreground bg-muted/40 flex justify-between"><span>{items.length} material(is) selecionado(s) — clique nos cards para adicionar</span><span>{brl(total)}</span></div>
@@ -120,7 +122,7 @@ export function NewMovementWizard({ open, onClose }: { open: boolean; onClose: (
 
 export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const policy = useAdvancedStock();
-  const s = useStock(); const ses = useSession(); const vis = useVisibleClinics();
+  const s = useStock(); const ses = useStockSession(); const vis = useVisibleClinics();
   const allowedBranches = vis.filter(c => ses.can("inventario.realizar", c.id));
   const [step, setStep] = useState(0);
   const [branchId, setBranch] = useState(allowedBranches[0]?.id ?? "");
@@ -136,7 +138,7 @@ export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: 
   const vOut = -divs.filter(r => r.diff < 0).reduce((a, r) => a + r.diff * r.m.cost, 0);
   const accuracy = counted ? Math.round(((counted - divs.length) / counted) * 100) : 100;
   const steps = [{ title: "Filial", desc: "Onde será a contagem", icon: MapPin }, { title: "Escopo", desc: "Completo ou por categoria", icon: Boxes }, { title: "Contagem", desc: "Quantidade física por item", icon: ListChecks }, { title: "Conciliação", desc: "Divergências e ajustes", icon: FileCheck2 }];
-  const finish = () => { const r = submitInventory({ branchId, scope, blind, user: ses.user.name, counts: Object.fromEntries(rows.filter(x => x.cnt !== null).map(x => [x.m.id, x.cnt as number])) }); if (r.error) return toast.error(r.error); toast.success(r.pending ? 'Contagem enviada para aprovação · saldo não alterado' : `${r.record?.number} concluído`); onClose(); };
+  const finish = () => { void submitInventory({ branchId, scope, blind, user: ses.user.name, counts: Object.fromEntries(rows.filter(x => x.cnt !== null).map(x => [x.m.id, x.cnt as number])) }).then(r => { if (r.error) return toast.error(r.error); toast.success(r.pending ? 'Contagem enviada para aprovação · saldo não alterado' : `${r.record?.number} concluído`); onClose(); }); };
   if (allowedBranches.length === 0) return <WizardShell open={open} onClose={onClose} badge="Novo inventário" headline="Sem permissão" steps={[{ title: "Acesso", desc: "Seu perfil não pode inventariar nenhuma filial", icon: MapPin }]} step={0} setStep={() => {}} footer={<Button variant="outline" onClick={onClose}>Fechar</Button>}><p className="text-sm text-muted-foreground">Peça a um administrador a permissão de inventário.</p></WizardShell>;
   const shown = rows.filter(r => r.m.name.toLowerCase().includes(q.toLowerCase()) && true);
   return (
@@ -151,7 +153,7 @@ export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: 
         <div className="rounded-xl border border-border p-4 flex items-center justify-between"><div><div className="text-sm font-medium">Contagem cega</div><div className="text-xs text-muted-foreground">Esconde o saldo do sistema durante a contagem para evitar viés</div></div><Switch checked={blind} onCheckedChange={setBlind} /></div>
       </>}
       {step === 2 && <>
-        <StockCodeScanner onMaterial={id => { const m = getMaterial(id); if (!items.some(i => i.id === id)) return toast.error('Material fora do escopo'); setQ(m.name); setCounts(prev => ({ ...prev, [id]: String(Number(prev[id] || 0) + 1) })); }} />
+        <StockCodeScanner catalog={materials} onMaterial={id => { const m = getMaterial(id); if (!items.some(i => i.id === id)) return toast.error('Material fora do escopo'); setQ(m.name); setCounts(prev => ({ ...prev, [id]: String(Number(prev[id] || 0) + 1) })); }} />
         <div className="flex flex-col md:flex-row gap-3 md:items-center">
           <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Buscar item" value={q} onChange={e => setQ(e.target.value)} /></div>
           <div className="text-sm text-muted-foreground whitespace-nowrap">{counted}/{items.length} contados</div>
@@ -179,11 +181,11 @@ export function NewInventoryWizard({ open, onClose }: { open: boolean; onClose: 
 export function NewTransferWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const s = useStock(); const vis = useVisibleClinics();
   const [step, setStep] = useState(0);
-  const [fromId, setFrom] = useState("cd"); const [toId, setTo] = useState(vis.find(c => c.id !== "cd")?.id ?? "c1");
+  const [fromId, setFrom] = useState(clinics.find(c => c.kind === "cd")?.id ?? clinics[0]?.id ?? ""); const [toId, setTo] = useState(vis.find(c => c.kind !== "cd")?.id ?? clinics.find(c => c.id !== (clinics.find(x => x.kind === "cd")?.id ?? clinics[0]?.id))?.id ?? "");
   const [items, setItems] = useState<{ materialId: string; qty: number }[]>([]);
-  const [pick, setPick] = useState(materials[0].id);
+  const [pick, setPick] = useState(materials[0]?.id ?? "");
   const steps = [{ title: "Rota", desc: "Origem e destino", icon: RouteIcon }, { title: "Itens", desc: "Materiais e quantidades", icon: ListChecks }, { title: "Revisão", desc: "Confirme a solicitação", icon: FileCheck2 }];
-  const finish = () => { const e = createTransfer({ fromId, toId, items }); if (e) return toast.error(e); toast.success("Transferência solicitada"); onClose(); };
+  const finish = () => { void createTransfer({ fromId, toId, items }).then(e => { if (e) return toast.error(e); toast.success("Transferência solicitada"); onClose(); }); };
   const value = items.reduce((a, i) => a + i.qty * getMaterial(i.materialId).cost, 0);
   return (
     <WizardShell open={open} onClose={onClose} badge="Nova transferência" headline={<>Equilibre o estoque<br /><span className="opacity-60">entre as unidades.</span></>} sub="Solicitação → aprovação → separação → trânsito → recebimento." steps={steps} step={step} setStep={setStep}
@@ -194,7 +196,7 @@ export function NewTransferWizard({ open, onClose }: { open: boolean; onClose: (
       </>}
       {step === 1 && <>
         <MaterialPicker value={pick} onChange={setPick} clinicId={fromId} />
-        <Button variant="outline" disabled={items.some(i => i.materialId === pick)} onClick={() => setItems([...items, { materialId: pick, qty: 1 }])}>Adicionar {getMaterial(pick).name}</Button>
+        <Button variant="outline" disabled={!pick || items.some(i => i.materialId === pick)} onClick={() => setItems([...items, { materialId: pick, qty: 1 }])}>Adicionar {pick ? getMaterial(pick).name : "material"}</Button>
         <div className="rounded-xl border border-border divide-y divide-border">
           {items.length === 0 && <div className="p-6 text-center text-sm text-muted-foreground">Nenhum item adicionado.</div>}
           {items.map(i => { const m = getMaterial(i.materialId); const b = balanceOf(s, i.materialId, fromId); return <div key={i.materialId} className="flex items-center gap-3 p-3"><div className="flex-1"><div className="text-sm font-medium">{m.name}</div><div className={`text-xs ${b < i.qty ? "text-destructive" : "text-muted-foreground"}`}>Disponível na origem: {b} {m.unit}</div></div><Input type="number" min={1} className="h-8 w-24" value={i.qty} onChange={e => setItems(items.map(x => x.materialId === i.materialId ? { ...x, qty: Number(e.target.value) } : x))} /><Button size="icon" variant="ghost" aria-label="Remover" onClick={() => setItems(items.filter(x => x.materialId !== i.materialId))}><Trash2 className="h-4 w-4" /></Button></div>; })}
@@ -208,11 +210,11 @@ export function NewTransferWizard({ open, onClose }: { open: boolean; onClose: (
 export function NewLotWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
   const vis = useVisibleClinics();
   const [step, setStep] = useState(0);
-  const [materialId, setMaterial] = useState(materials.find(m => m.lotControl)?.id ?? materials[0].id);
-  const [clinicId, setClinic] = useState(vis[0]?.id ?? "cd");
+  const [materialId, setMaterial] = useState(materials.find(m => m.lotControl)?.id ?? materials[0]?.id ?? "");
+  const [clinicId, setClinic] = useState(vis[0]?.id ?? clinics[0]?.id ?? "");
   const [lot, setLot] = useState(""); const [expires, setExpires] = useState("2027-06-30"); const [qty, setQty] = useState(10);
   const steps = [{ title: "Material", desc: "Item com controle de lote", icon: Package }, { title: "Lote e validade", desc: "Número, data e quantidade", icon: Hash }, { title: "Revisão", desc: "Confirme o lote", icon: CalendarClock }];
-  const finish = () => { const e = addLot({ materialId, clinicId, lot, expires, qty }); if (e) return toast.error(e); toast.success("Lote registrado"); onClose(); };
+  const finish = () => { void addLot({ materialId, clinicId, lot, expires, qty }).then(e => { if (e) return toast.error(e); toast.success("Lote registrado"); onClose(); }); };
   return (
     <WizardShell open={open} onClose={onClose} badge="Novo lote" headline={<>Validade sob controle,<br /><span className="opacity-60">zero desperdício.</span></>} sub="Registre lotes para alertas de vencimento por filial." steps={steps} step={step} setStep={setStep}
       footer={<WizardFooter step={step} last={2} onClose={onClose} setStep={setStep} onFinish={finish} finishLabel="Registrar lote" canNext={step !== 1 || (lot.trim().length > 0 && qty > 0)} />}>

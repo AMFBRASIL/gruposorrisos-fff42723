@@ -171,3 +171,15 @@
   [data-dialog-layout="custom"] > div.grid > div.flex > div { padding-left: 16px; padding-right: 16px; }
   [data-dialog-layout="custom"] > div.grid > div.flex > div:last-child { flex-wrap: wrap; }
 }
+
+html[data-density="compact"] [data-app-shell] .p-8 { padding: 1.25rem; }
+html[data-density="compact"] [data-app-shell] .p-5 { padding: 0.9rem; }
+html[data-density="compact"] [data-app-shell] .p-4 { padding: 0.75rem; }
+html[data-density="compact"] [data-app-shell] .gap-4 { gap: 0.75rem; }
+html[data-density="compact"] [data-app-shell] .gap-3 { gap: 0.55rem; }
+html[data-motion="off"] [data-app-shell] *,
+html[data-motion="off"] [data-app-shell] *::before,
+html[data-motion="off"] [data-app-shell] *::after {
+  animation: none !important;
+  transition: none !important;
+}

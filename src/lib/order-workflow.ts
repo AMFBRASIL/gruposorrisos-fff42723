@@ -1,8 +1,18 @@
 import { useSyncExternalStore } from 'react';
 import { can, currentUser, getErp, type ErpUser, type ErpRole } from './erp';
 
-export type ApprovalStep = { id: string; name: string; assigneeType: 'user' | 'role'; assigneeId: string; hours: number; requireNote: boolean; minValue?: number; maxValue?: number; branchId?: string; category?: string };
-export type Workflow = { candidates?: ApprovalStep[]; name: string; steps: ApprovalStep[]; index: number; startedAt: string; decisions: { stepId: string; userId: string; at: string; note: string }[] };
+export type ApprovalStep = { id: string; name: string; assigneeType: 'user' | 'role'; assigneeId: string; hours: number; requireNote: boolean; minValue?: number; maxValue?: number; branchId?: string; category?: string; color?: string };
+export const stepColors = ['#2563eb', '#d97706', '#0f9f6e', '#7c3aed', '#dc2626', '#0891b2', '#db2777', '#4f46e5'];
+const stepHex = /^#[0-9a-fA-F]{6}$/;
+export const stepColor = (step: { color?: string }, index: number) => step.color && stepHex.test(step.color) ? step.color : stepColors[index % stepColors.length];
+export type StageMove = { stepId: string; userId: string; at: string; note?: string };
+export type Workflow = { candidates?: ApprovalStep[]; name: string; steps: ApprovalStep[]; index: number; startedAt: string; decisions: { stepId: string; userId: string; at: string; note: string }[]; situation?: number; moves?: StageMove[] };
+export function stageCursor(workflow?: Workflow | null) {
+  if (!workflow?.steps.length) return null;
+  const cursor = workflow.situation ?? workflow.index;
+  const finished = cursor >= workflow.steps.length;
+  return { cursor, finished, currentIndex: finished ? -1 : cursor, current: finished ? undefined : workflow.steps[cursor], next: !finished && cursor + 1 < workflow.steps.length ? workflow.steps[cursor + 1] : undefined, onLast: !finished && cursor === workflow.steps.length - 1 };
+}
 export type WorkflowEvent = { at: string; userId: string; action: string; note?: string };
 export type WorkflowTemplate = { name: string; steps: ApprovalStep[] };
 export type WorkflowKind = 'cd' | 'supplier';
@@ -16,6 +26,7 @@ export function validateTemplate(template: WorkflowTemplate, users: ErpUser[], r
   for (const step of template.steps) {
     if ((step.minValue !== undefined && (!Number.isFinite(step.minValue) || step.minValue < 0)) || (step.maxValue !== undefined && (!Number.isFinite(step.maxValue) || step.maxValue < (step.minValue ?? 0)))) return 'Faixa de valor inválida';
     if (!step.name.trim() || !Number.isFinite(step.hours) || step.hours <= 0) return 'Cada etapa precisa de nome e prazo maior que zero';
+    if (step.color && !stepHex.test(step.color)) return 'Escolha uma cor válida para cada etapa';
     if (step.assigneeType === 'user' ? !users.some(u => u.id === step.assigneeId) : !roles.some(r => r.id === step.assigneeId)) return 'Selecione um responsável válido';
   }
   if (!template.steps.some(s => !s.minValue && s.maxValue === undefined && !s.branchId && !s.category)) return 'Mantenha ao menos uma etapa geral para todos os pedidos';

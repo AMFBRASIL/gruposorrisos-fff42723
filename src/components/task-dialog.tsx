@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { type Task, type ChecklistItem, getUser, getProject, priorityMeta, COLUMNS, users } from "@/lib/mock-data";
-import { tasksStore, useTasks, useActiveTimer, timerStore } from "@/lib/store";
+import { type Task, type ChecklistItem, getUser, getProject, priorityMeta, COLUMNS, daysUntil } from "@/lib/mock-data";
+import { tasksStore, useTasks, useActiveTimer, timerStore, useUserProfiles } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { UserAvatar, PriorityBadge } from "@/components/task-card";
 import {
   Calendar, Clock, MessageSquare, Paperclip, CheckSquare2, Tag,
@@ -86,6 +87,8 @@ function fmtLong(d: string) {
 
 export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onClose: () => void }) {
   const allTasks = useTasks();
+  const users = useUserProfiles();
+  const auth = useAuth();
   const task = taskProp ? (allTasks.find(t => t.id === taskProp.id) ?? taskProp) : null;
   const [tab, setTab] = useState("descricao");
   const [newComment, setNewComment] = useState("");
@@ -117,7 +120,7 @@ export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onC
   const pct = task.checklist.length ? Math.round((done / task.checklist.length) * 100) : 0;
   const col = COLUMNS.find(c => c.id === task.status);
   const hoursPct = task.estimatedHours ? Math.min(100, (task.loggedHours / task.estimatedHours) * 100) : 0;
-  const isOverdue = !task.completedAt && new Date(task.dueDate) < new Date("2026-06-10");
+  const isOverdue = !task.completedAt && daysUntil(task.dueDate) < 0;
 
   const saveTitle = () => {
     if (titleDraft.trim() && titleDraft !== task.title) tasksStore.updateTask(task.id, { title: titleDraft.trim() });
@@ -137,11 +140,11 @@ export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onC
   const postComment = () => {
     if (!newComment.trim()) return;
     tasksStore.updateTask(task.id, {
-      comments: [...task.comments, { id: `cm${Date.now()}`, userId: "u1", text: newComment.trim(), at: new Date().toISOString().slice(0,10) }],
+      comments: [...task.comments, { id: `cm${Date.now()}`, userId: auth.user?.id ?? currentUser.id, text: newComment.trim(), at: new Date().toISOString().slice(0,10) }],
     });
     setNewComment("");
   };
-  const currentUser = users[0];
+  const currentUser = users.find((person) => person.id === auth.user?.id) ?? users[0] ?? { id: auth.user?.id ?? "", name: auth.user?.name ?? "Você", email: "", role: "", department: "", initials: "EU", color: "" };
   const uncheckItem = (cid: string) => {
     tasksStore.updateTask(task.id, {
       checklist: task.checklist.map(x => x.id === cid ? { ...x, done: false, doneAt: undefined, doneBy: undefined, doneNote: undefined } : x),
@@ -718,6 +721,7 @@ export function TaskDialog({ task: taskProp, onClose }: { task: Task | null; onC
 }
 
 function TimerButton({ taskId }: { taskId: string }) {
+  const auth = useAuth();
   const active = useActiveTimer();
   const running = active?.taskId === taskId;
   return (
@@ -725,7 +729,7 @@ function TimerButton({ taskId }: { taskId: string }) {
       variant={running ? "default" : "outline"}
       size="sm"
       className={running ? "bg-success text-success-foreground hover:bg-success/90" : ""}
-      onClick={() => running ? timerStore.stop() : timerStore.start(taskId, users[0].id)}
+      onClick={() => running ? timerStore.stop() : auth.user && timerStore.start(taskId, auth.user.id)}
     >
       <PlayCircle className="h-3.5 w-3.5" /> {running ? "Parar timer" : "Iniciar timer"}
     </Button>
