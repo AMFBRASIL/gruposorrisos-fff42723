@@ -33,4 +33,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // VPS/aaPanel needs a TCP Node listener; Lovable's default is cloudflare-module.
+  nitro: {
+    preset: "node-server",
+  },
 });
