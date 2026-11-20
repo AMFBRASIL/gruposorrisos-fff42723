@@ -5,14 +5,28 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { StockStat, ChartCard, chartColors, tooltipStyle, axisProps } from "@/components/stock-ui";
+import { StockStat } from "@/components/stock-ui";
 import { NewOrderDialog, OrderSheet, priorityMeta } from "@/components/order-dialogs";
-import { SupplierOrderDetail } from '@/components/supplier-order-detail';
-import { useProcurementSession as useSession, branchName, userName, useOrders, statusLabels, kanbanColumns, isLate, useSupplierRequests, supplierStatus, usePurchasing } from "@/lib/procurement-live";
+import { SupplierOrderDetail } from "@/components/supplier-order-detail";
+import {
+  useProcurementSession as useSession,
+  branchName,
+  userName,
+  useOrders,
+  statusLabels,
+  isLate,
+  useSupplierRequests,
+  supplierStatus,
+  usePurchasing,
+} from "@/lib/procurement-live";
 import type { Order, OrderStatus } from "@/lib/orders";
+import type { SupplierRequest } from "@/lib/supplier-orders";
 import { getMaterial, brl, useStock } from "@/lib/stock-live";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area } from "recharts";
-import { Plus, Search, ClipboardList, Hourglass, PackageOpen, Truck, CheckCircle2, AlertOctagon, List, Columns3, Gauge, Wallet, Siren, ArrowRight } from "lucide-react";
+import { stageCursor } from "@/lib/order-workflow";
+import {
+  Plus, Search, ClipboardList, Hourglass, PackageOpen, Truck, CheckCircle2,
+  AlertOctagon, Gauge, Wallet, Siren, ArrowRight, Building2, Warehouse,
+} from "lucide-react";
 
 export const Route = createFileRoute("/pedidos")({
   head: () => ({ meta: [
@@ -25,127 +39,317 @@ export const Route = createFileRoute("/pedidos")({
   component: PedidosPage,
 });
 
-const flowSteps: OrderStatus[] = ["enviado", "aprovado", "separacao", "transporte", "concluido"];
-const progress = (s: OrderStatus) => s === "rascunho" ? 5 : s === "recebido_parcial" ? 90 : s === "concluido" ? 100 : ["cancelado", "rejeitado"].includes(s) ? 0 : ((flowSteps.indexOf(s) + 1) / flowSteps.length) * 100;
 const orderValue = (o: Order) => o.items.reduce((a, i) => a + i.requested * getMaterial(i.materialId).cost, 0);
-const statusTone: Partial<Record<OrderStatus, string>> = { enviado: "bg-warning/10 text-warning border-warning/30", aprovado: "bg-info/10 text-info border-info/30", separacao: "bg-info/10 text-info border-info/30", transporte: "bg-primary/10 text-primary border-primary/30", recebido_parcial: "bg-warning/10 text-warning border-warning/30", concluido: "bg-success/10 text-success border-success/30", cancelado: "bg-destructive/10 text-destructive border-destructive/30", rejeitado: "bg-destructive/10 text-destructive border-destructive/30" };
+const requestValue = (r: SupplierRequest) => (r.versions.at(-1)?.items ?? r.items).reduce((a, i) => a + i.requested * (i.unitPrice ?? getMaterial(i.materialId).cost), 0);
 const fmt = (d: string) => d.slice(0, 10).split("-").reverse().join("/");
+
+const statusTone: Partial<Record<OrderStatus, string>> = {
+  rascunho: "bg-muted text-muted-foreground border-border",
+  enviado: "bg-warning/10 text-warning border-warning/30",
+  correcao: "bg-warning/10 text-warning border-warning/30",
+  rejeitado: "bg-destructive/10 text-destructive border-destructive/30",
+  aprovado: "bg-info/10 text-info border-info/30",
+  separacao: "bg-info/10 text-info border-info/30",
+  transporte: "bg-primary/10 text-primary border-primary/30",
+  recebido_parcial: "bg-warning/10 text-warning border-warning/30",
+  concluido: "bg-success/10 text-success border-success/30",
+  cancelado: "bg-destructive/10 text-destructive border-destructive/30",
+};
+
+const supplierTone: Record<string, string> = {
+  rascunho: "bg-muted text-muted-foreground border-border",
+  aguardando: "bg-warning/10 text-warning border-warning/30",
+  resposta: "bg-info/10 text-info border-info/30",
+  aprovado: "bg-success/10 text-success border-success/30",
+  correcao: "bg-warning/10 text-warning border-warning/30",
+};
+
+const STATUS_FILTERS: Array<{ id: string; label: string }> = [
+  { id: "todos", label: "Todos" },
+  { id: "enviado", label: "Aguardando" },
+  { id: "aprovado", label: "Aprovado" },
+  { id: "separacao", label: "Separação" },
+  { id: "transporte", label: "Transporte" },
+  { id: "concluido", label: "Concluído" },
+  { id: "cancelado", label: "Cancelado" },
+  { id: "rejeitado", label: "Rejeitado" },
+  { id: "aguardando", label: "Aguardando preços" },
+];
+
+type ListRow =
+  | { kind: "cd"; id: string; at: string; order: Order }
+  | { kind: "supplier"; id: string; at: string; request: SupplierRequest };
+
+function situationOf(order: Order) {
+  const stage = stageCursor(order.workflow);
+  return {
+    label: statusLabels[order.status],
+    tone: statusTone[order.status] ?? "",
+    stage: stage && !stage.finished ? stage.current?.name : stage?.finished ? "Concluído" : undefined,
+  };
+}
 
 function PedidosPage() {
   useStock();
-  const all = useOrders(); const ses = useSession();
-  const supplierRequests = useSupplierRequests(); const { sup } = usePurchasing();
-  const [target, setTarget] = useState('all'); const [supplierFilter, setSupplierFilter] = useState('all');
-  const [view, setView] = useState<"lista" | "kanban">("lista");
-  const [q, setQ] = useState(""); const [status, setStatus] = useState<OrderStatus | "todos">("todos"); const [prio, setPrio] = useState("todas");
-  const [newOpen, setNewOpen] = useState(false); const [editing, setEditing] = useState<Order | undefined>(); const [openId, setOpenId] = useState<string | null>(null);
+  const all = useOrders();
+  const ses = useSession();
+  const supplierRequests = useSupplierRequests();
+  const { sup } = usePurchasing();
+  const [channel, setChannel] = useState<"all" | "cd" | "supplier">("all");
+  const [supplierFilter, setSupplierFilter] = useState("all");
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("todos");
+  const [prio, setPrio] = useState("todas");
+  const [newOpen, setNewOpen] = useState(false);
+  const [editing, setEditing] = useState<Order | undefined>();
+  const [openId, setOpenId] = useState<string | null>(null);
   const [supplierOpen, setSupplierOpen] = useState<string | null>(null);
-  const scoped = all.filter(o => ses.scope.includes(o.branchId) || ses.scope.includes(o.sourceId));
-  const rows = useMemo(() => scoped.filter(o => (status === "todos" || o.status === status) && (prio === "todas" || o.priority === prio) && `${o.number} ${branchName(o.branchId)} ${userName(o.requesterId)}`.toLowerCase().includes(q.toLowerCase())), [scoped, status, prio, q]);
-  const n = (f: (o: Order) => boolean) => scoped.filter(f).length;
-  const open = all.find(o => o.id === openId) ?? null;
 
-  const approved = scoped.reduce((a, o) => a + o.items.reduce((b, i) => b + i.approved, 0), 0);
-  const shipped = scoped.reduce((a, o) => a + o.items.reduce((b, i) => b + i.shipped, 0), 0);
+  const scopedOrders = all.filter((o) => ses.scope.includes(o.branchId) || ses.scope.includes(o.sourceId));
+  const scopedRequests = supplierRequests.filter((r) => ses.scope.includes(r.branchId));
+  const n = (f: (o: Order) => boolean) => scopedOrders.filter(f).length;
+  const open = all.find((o) => o.id === openId) ?? null;
+
+  const late = scopedOrders.filter(isLate);
+  const urgent = scopedOrders.filter((o) => o.priority === "urgente" && !["concluido", "cancelado", "rejeitado"].includes(o.status));
+  const approved = scopedOrders.reduce((a, o) => a + o.items.reduce((b, i) => b + i.approved, 0), 0);
+  const shipped = scopedOrders.reduce((a, o) => a + o.items.reduce((b, i) => b + i.shipped, 0), 0);
   const fillRate = approved ? Math.round((shipped / approved) * 100) : 0;
-  const totalValue = scoped.reduce((a, o) => a + orderValue(o), 0);
-  const late = scoped.filter(isLate);
-  const urgent = scoped.filter(o => o.priority === "urgente" && !["concluido", "cancelado", "rejeitado"].includes(o.status));
+  const totalValue = scopedOrders.reduce((a, o) => a + orderValue(o), 0)
+    + scopedRequests.reduce((a, r) => a + requestValue(r), 0);
 
-  const byStatus = (Object.keys(statusLabels) as OrderStatus[]).map(s => ({ name: statusLabels[s], value: n(o => o.status === s) })).filter(x => x.value > 0);
-  const byBranch = Object.entries(scoped.reduce<Record<string, number>>((a, o) => { const k = branchName(o.branchId); a[k] = (a[k] ?? 0) + 1; return a; }, {})).map(([name, total]) => ({ name: name.replace(/^Clínica |^Unidade /, ""), total })).sort((a, b) => b.total - a.total).slice(0, 6);
-  const days = Array.from({ length: 14 }, (_, i) => { const d = new Date(Date.UTC(2026, 10, 11 - 13 + i)).toISOString().slice(0, 10); return { name: fmt(d).slice(0, 5), pedidos: scoped.filter(o => o.createdAt.slice(0, 10) === d).length }; });
+  const rows = useMemo(() => {
+    const list: ListRow[] = [];
+    if (channel !== "supplier") {
+      for (const order of scopedOrders) {
+        list.push({ kind: "cd", id: order.id, at: order.createdAt, order });
+      }
+    }
+    if (channel !== "cd") {
+      for (const request of scopedRequests) {
+        if (supplierFilter !== "all" && request.supplierId !== supplierFilter) continue;
+        list.push({ kind: "supplier", id: request.id, at: request.createdAt, request });
+      }
+    }
+
+    const needle = q.trim().toLowerCase();
+    return list
+      .filter((row) => {
+        if (row.kind === "cd") {
+          const o = row.order;
+          if (prio !== "todas" && o.priority !== prio) return false;
+          if (status === "todos") { /* ok */ }
+          else if (status === "aguardando") return false;
+          else if (status === "enviado") {
+            if (!["enviado", "correcao"].includes(o.status)) return false;
+          } else if (o.status !== status) return false;
+          if (!needle) return true;
+          return `${o.number} ${branchName(o.branchId)} ${userName(o.requesterId)}`.toLowerCase().includes(needle);
+        }
+        const r = row.request;
+        if (prio !== "todas" && r.priority !== prio) return false;
+        if (status === "todos") { /* ok */ }
+        else if (status === "aguardando") {
+          if (r.status !== "aguardando") return false;
+        } else if (status === "enviado") {
+          if (!["aguardando", "resposta", "correcao"].includes(r.status)) return false;
+        } else if (status === "aprovado") {
+          if (r.status !== "aprovado") return false;
+        } else if (status === "cancelado" || status === "rejeitado" || status === "separacao" || status === "transporte" || status === "concluido") {
+          return false;
+        } else if (r.status !== status) return false;
+        if (!needle) return true;
+        const supplier = sup.find((s) => s.id === r.supplierId)?.name ?? "";
+        return `${r.number} ${branchName(r.branchId)} ${supplier}`.toLowerCase().includes(needle);
+      })
+      .sort((a, b) => b.at.localeCompare(a.at));
+  }, [channel, scopedOrders, scopedRequests, supplierFilter, status, prio, q, sup]);
 
   return (
-    <AppShell title="Pedidos de Materiais" subtitle="Solicitação → Aprovação → Separação → Expedição → Recebimento" primaryAction={ses.can("pedidos.criar") ? <Button size="sm" onClick={() => { setEditing(undefined); setNewOpen(true); }}><Plus className="h-4 w-4 mr-1" />Novo Pedido</Button> : null}>
+    <AppShell
+      title="Pedidos de Materiais"
+      subtitle="Solicitação → Aprovação → Separação → Expedição → Recebimento"
+      primaryAction={ses.can("pedidos.criar") ? (
+        <Button size="sm" onClick={() => { setEditing(undefined); setNewOpen(true); }}>
+          <Plus className="h-4 w-4 mr-1" />Novo Pedido
+        </Button>
+      ) : null}
+    >
       <div className="p-4 md:p-8 space-y-5">
-        <div className="flex flex-wrap items-center gap-3 border-b border-border pb-4"><div className="flex gap-1">{[['all', 'Todos'], ['cd', 'Centro de Distribuição'], ['supplier', 'Fornecedores']].map(([value, label]) => <Button key={value} variant={target === value ? 'default' : 'outline'} size="sm" onClick={() => setTarget(value)}>{label}</Button>)}</div>{target !== 'cd' && <select aria-label="Filtrar fornecedor" className="h-9 border border-input rounded-md bg-background text-sm px-3" value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}><option value="all">Todos fornecedores</option>{sup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>}<Button className="ml-auto" variant="outline" size="sm" asChild><Link to="/fornecedores">Pedidos por fornecedor <ArrowRight className="h-4 w-4 ml-2" /></Link></Button></div>
-        {target !== 'cd' && <section className="space-y-3"><h2 className="font-semibold">Pedidos a fornecedores</h2><div className="overflow-x-auto border border-border rounded-lg"><table className="w-full text-sm"><thead className="bg-muted/50"><tr>{['Pedido', 'Fornecedor / filial', 'Itens', 'Valor de referência', 'Prazo', 'Situação', ''].map(h => <th className="px-4 py-3 text-left" key={h}>{h}</th>)}</tr></thead><tbody>{supplierRequests.filter(r => ses.scope.includes(r.branchId) && (supplierFilter === 'all' || r.supplierId === supplierFilter) && `${r.number} ${branchName(r.branchId)} ${sup.find(s => s.id === r.supplierId)?.name}`.toLowerCase().includes(q.toLowerCase())).map(r => <tr className="border-t border-border" key={r.id}><td className="px-4 py-3 font-mono">{r.number}</td><td className="px-4 py-3">{sup.find(s => s.id === r.supplierId)?.name}<div className="text-xs text-muted-foreground">{branchName(r.branchId)}</div></td><td className="px-4 py-3">{r.items.length}</td><td className="px-4 py-3 whitespace-nowrap">{brl((r.versions.at(-1)?.items ?? r.items).reduce((a, i) => a + i.requested * (i.unitPrice ?? getMaterial(i.materialId).cost), 0))}</td><td className="px-4 py-3">{fmt(r.desiredDate)}</td><td className="px-4 py-3"><Badge variant="outline">{supplierStatus[r.status]}</Badge></td><td><Button variant="ghost" size="sm" onClick={() => setSupplierOpen(r.id)}>Abrir</Button></td></tr>)}</tbody></table>{!supplierRequests.some(r => ses.scope.includes(r.branchId) && (supplierFilter === 'all' || r.supplierId === supplierFilter)) && <div className="text-center py-8 text-sm text-muted-foreground">Nenhum pedido a fornecedor.</div>}</div></section>}
-        {target !== 'supplier' && <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StockStat label="Pedidos" value={scoped.length} icon={ClipboardList} hint={`${n(o => o.status === "rascunho")} rascunhos`} />
-          <StockStat label="Aguardando aprovação" value={n(o => o.status === "enviado")} icon={Hourglass} tone="warning" />
-          <StockStat label="Em separação" value={n(o => o.status === "aprovado" || o.status === "separacao")} icon={PackageOpen} tone="info" />
-          <StockStat label="Em transporte" value={n(o => o.status === "transporte")} icon={Truck} tone="info" />
-          <StockStat label="Entregues" value={n(o => o.status === "concluido")} icon={CheckCircle2} tone="success" />
+          <StockStat label="Pedidos" value={scopedOrders.length + scopedRequests.length} icon={ClipboardList} hint={`${scopedOrders.length} CD · ${scopedRequests.length} fornecedor`} />
+          <StockStat label="Aguardando aprovação" value={n((o) => o.status === "enviado")} icon={Hourglass} tone="warning" />
+          <StockStat label="Em separação" value={n((o) => o.status === "aprovado" || o.status === "separacao")} icon={PackageOpen} tone="info" />
+          <StockStat label="Em transporte" value={n((o) => o.status === "transporte")} icon={Truck} tone="info" />
+          <StockStat label="Entregues" value={n((o) => o.status === "concluido")} icon={CheckCircle2} tone="success" />
           <StockStat label="Atrasados" value={late.length} icon={AlertOctagon} tone="destructive" />
           <StockStat label="Taxa de atendimento" value={`${fillRate}%`} icon={Gauge} tone="success" hint="expedido / aprovado" />
-          <StockStat label="Valor solicitado" value={brl(totalValue)} icon={Wallet} hint="custo médio" />
+          <StockStat label="Valor solicitado" value={brl(totalValue)} icon={Wallet} hint="CD + fornecedor" />
         </div>
 
         {(late.length > 0 || urgent.length > 0) && (
           <Card className="p-4 border-destructive/30 bg-destructive/5 flex flex-col md:flex-row md:items-center gap-3">
             <div className="flex items-center gap-2 font-semibold text-sm text-destructive"><Siren className="h-4 w-4" />Atenção</div>
             <div className="flex flex-wrap gap-2 flex-1">
-              {[...urgent, ...late.filter(o => !urgent.includes(o))].slice(0, 6).map(o => <button key={o.id} onClick={() => setOpenId(o.id)} className="rounded-full border border-border bg-card px-3 py-1 text-xs hover:border-primary/40"><span className="font-mono">{o.number}</span> · {branchName(o.branchId)} · {isLate(o) ? "atrasado" : "urgente"}</button>)}
+              {[...urgent, ...late.filter((o) => !urgent.includes(o))].slice(0, 6).map((o) => (
+                <button key={o.id} onClick={() => setOpenId(o.id)} className="rounded-full border border-border bg-card px-3 py-1 text-xs hover:border-primary/40">
+                  <span className="font-mono">{o.number}</span> · {branchName(o.branchId)} · {isLate(o) ? "atrasado" : "urgente"}
+                </button>
+              ))}
             </div>
           </Card>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-4">
-          <ChartCard title="Pedidos por status" desc="Distribuição atual do fluxo">
-            <ResponsiveContainer><PieChart><Pie data={byStatus} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>{byStatus.map((_, i) => <Cell key={i} fill={chartColors[i % chartColors.length]} />)}</Pie><Tooltip contentStyle={tooltipStyle} /></PieChart></ResponsiveContainer>
-          </ChartCard>
-          <ChartCard title="Volume por filial" desc="Filiais que mais solicitam">
-            <ResponsiveContainer><BarChart data={byBranch} layout="vertical" margin={{ left: 10 }}><CartesianGrid horizontal={false} stroke="var(--border)" /><XAxis type="number" {...axisProps} allowDecimals={false} /><YAxis type="category" dataKey="name" width={90} {...axisProps} /><Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)" }} /><Bar dataKey="total" fill="var(--chart-1)" radius={[0, 6, 6, 0]} /></BarChart></ResponsiveContainer>
-          </ChartCard>
-          <ChartCard title="Novos pedidos" desc="Últimos 14 dias">
-            <ResponsiveContainer><AreaChart data={days}><defs><linearGradient id="gp" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.4} /><stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="var(--border)" /><XAxis dataKey="name" {...axisProps} /><YAxis {...axisProps} allowDecimals={false} width={24} /><Tooltip contentStyle={tooltipStyle} /><Area dataKey="pedidos" stroke="var(--chart-1)" fill="url(#gp)" strokeWidth={2} /></AreaChart></ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        <Card className="p-3 flex flex-col lg:flex-row gap-3 lg:items-center">
-          <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Número, filial ou solicitante" value={q} onChange={e => setQ(e.target.value)} /></div>
-          <div className="flex gap-1 flex-wrap">
-            {(["todos", "enviado", "separacao", "transporte", "concluido"] as const).map(s => <button key={s} onClick={() => setStatus(s)} className={`h-8 px-3 rounded-full text-xs border transition-colors ${status === s ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>{s === "todos" ? "Todos" : statusLabels[s]}</button>)}
+        <Card className="p-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {([
+              ["all", "Todos"],
+              ["cd", "Centro de Distribuição"],
+              ["supplier", "Fornecedores"],
+            ] as const).map(([value, label]) => (
+              <Button key={value} variant={channel === value ? "default" : "outline"} size="sm" onClick={() => setChannel(value)}>
+                {label}
+              </Button>
+            ))}
+            {channel !== "cd" && (
+              <select
+                aria-label="Filtrar fornecedor"
+                className="h-9 border border-input rounded-md bg-background text-sm px-3"
+                value={supplierFilter}
+                onChange={(e) => setSupplierFilter(e.target.value)}
+              >
+                <option value="all">Todos fornecedores</option>
+                {sup.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            )}
+            <Button className="ml-auto" variant="outline" size="sm" asChild>
+              <Link to="/fornecedores">Pedidos por fornecedor <ArrowRight className="h-4 w-4 ml-2" /></Link>
+            </Button>
           </div>
-          <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={prio} onChange={e => setPrio(e.target.value)}><option value="todas">Todas prioridades</option>{Object.keys(priorityMeta).map(p => <option key={p} value={p}>{p}</option>)}</select>
-          <div className="flex gap-1 p-1 rounded-lg bg-muted">
-            <button onClick={() => setView("lista")} className={`px-3 h-8 rounded-md text-xs flex items-center gap-1 ${view === "lista" ? "bg-card shadow-sm font-medium" : "text-muted-foreground"}`}><List className="h-3 w-3" />Lista</button>
-            <button onClick={() => setView("kanban")} className={`px-3 h-8 rounded-md text-xs flex items-center gap-1 ${view === "kanban" ? "bg-card shadow-sm font-medium" : "text-muted-foreground"}`}><Columns3 className="h-3 w-3" />Kanban</button>
+
+          <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input className="pl-9" placeholder="Número, filial, solicitante ou fornecedor" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+            <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={prio} onChange={(e) => setPrio(e.target.value)}>
+              <option value="todas">Todas prioridades</option>
+              {Object.keys(priorityMeta).map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+
+          <div className="flex gap-1.5 flex-wrap">
+            {STATUS_FILTERS.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setStatus(item.id)}
+                className={`h-8 px-3 rounded-full text-xs border transition-colors ${
+                  status === item.id ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
         </Card>
 
-        {view === "lista" ? (
-          <Card className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs text-muted-foreground uppercase tracking-wide"><tr>{["Pedido", "Filial / Solicitante", "Itens", "Valor", "Prioridade", "Prazo", "Progresso", "Status", ""].map(h => <th key={h} className="text-left font-medium px-4 py-3">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-border">
-                {rows.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">Nenhum pedido encontrado.</td></tr>}
-                {rows.map(o => <tr key={o.id} className="hover:bg-muted/30 cursor-pointer group" onClick={() => setOpenId(o.id)}>
-                  <td className="px-4 py-3"><div className="font-mono text-xs font-semibold">{o.number}</div><div className="text-[11px] text-muted-foreground">{fmt(o.createdAt)}</div></td>
-                  <td className="px-4 py-3"><div className="font-medium">{branchName(o.branchId)}</div><div className="text-xs text-muted-foreground">{userName(o.requesterId)}</div></td>
-                  <td className="px-4 py-3">{o.items.length}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">{brl(orderValue(o))}</td>
-                  <td className="px-4 py-3"><Badge variant="outline" className={`capitalize ${priorityMeta[o.priority]}`}>{o.priority}</Badge></td>
-                  <td className={`px-4 py-3 whitespace-nowrap ${isLate(o) ? "text-destructive font-medium" : ""}`}>{fmt(o.desiredDate)}</td>
-                  <td className="px-4 py-3 w-36"><div className="h-1.5 rounded-full bg-muted overflow-hidden"><div className="h-full bg-primary" style={{ width: `${progress(o.status)}%` }} /></div></td>
-                  <td className="px-4 py-3"><Badge variant="outline" className={statusTone[o.status]}>{statusLabels[o.status]}</Badge></td>
-                  <td className="px-4 py-3"><Button size="sm" variant="outline" onClick={e => { e.stopPropagation(); setOpenId(o.id); }}>Acessar</Button></td>
-                </tr>)}
-              </tbody>
-            </table>
-          </Card>
-        ) : (
-          <div className="overflow-x-auto pb-2"><div className="flex gap-4 min-w-max">
-            {kanbanColumns.map(col => { const items = rows.filter(o => o.status === col); return (
-              <div key={col} className="w-80 shrink-0 rounded-xl bg-muted/40 p-3 border border-border">
-                <div className="flex justify-between items-center mb-3 px-1"><span className="text-sm font-semibold">{statusLabels[col]}</span><span className="text-xs rounded-full bg-card border border-border px-2">{items.length}</span></div>
-                <div className="space-y-2">{items.map(o => <Card key={o.id} className="p-4 cursor-pointer hover:shadow-md hover:border-primary/40 transition-all" onClick={() => setOpenId(o.id)}>
-                  <div className="flex justify-between"><span className="font-mono text-xs font-semibold">{o.number}</span><Badge variant="outline" className={`capitalize text-[10px] ${priorityMeta[o.priority]}`}>{o.priority}</Badge></div>
-                  <div className="text-sm font-medium mt-2">{branchName(o.branchId)}</div>
-                  <div className="text-xs text-muted-foreground">{o.items.length} itens · {brl(orderValue(o))}</div>
-                  <div className="mt-3 flex justify-between text-[11px] text-muted-foreground"><span>{userName(o.requesterId)}</span><span className={isLate(o) ? "text-destructive font-medium" : ""}>{fmt(o.desiredDate)}</span></div>
-                </Card>)}</div>
-              </div>
-            ); })}
-          </div></div>
-        )}
-        </>}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-semibold text-sm">Listagem de pedidos</h2>
+            <span className="text-xs text-muted-foreground">{rows.length} registro{rows.length === 1 ? "" : "s"}</span>
+          </div>
+
+          {rows.length === 0 && (
+            <Card className="p-10 text-center text-sm text-muted-foreground">Nenhum pedido encontrado com os filtros atuais.</Card>
+          )}
+
+          <div className="space-y-3">
+            {rows.map((row) => {
+              if (row.kind === "cd") {
+                const o = row.order;
+                const sit = situationOf(o);
+                return (
+                  <Card
+                    key={`cd-${o.id}`}
+                    className="p-4 border-border/70 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer"
+                    onClick={() => setOpenId(o.id)}
+                  >
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            <Warehouse className="h-3 w-3" /> CD
+                          </span>
+                          <span className="font-mono text-sm font-semibold">{o.number}</span>
+                          <Badge variant="outline" className={`capitalize ${priorityMeta[o.priority]}`}>{o.priority}</Badge>
+                          {isLate(o) && <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30">Atrasado</Badge>}
+                        </div>
+                        <div className="text-sm font-medium">{branchName(o.branchId)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {userName(o.requesterId)} · {o.items.length} ite{o.items.length === 1 ? "m" : "ns"} · {brl(orderValue(o))} · criado {fmt(o.createdAt)}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                        <div className="text-right mr-2">
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Prazo</div>
+                          <div className={`text-sm font-medium ${isLate(o) ? "text-destructive" : ""}`}>{fmt(o.desiredDate)}</div>
+                        </div>
+                        <div className="min-w-[10rem]">
+                          <Badge variant="outline" className={`w-full justify-center py-1.5 ${sit.tone}`}>{sit.label}</Badge>
+                          {sit.stage && <div className="mt-1 text-[11px] text-center text-muted-foreground">Etapa: {sit.stage}</div>}
+                        </div>
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setOpenId(o.id); }}>Abrir</Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              }
+
+              const r = row.request;
+              const supplier = sup.find((s) => s.id === r.supplierId)?.name ?? "Fornecedor";
+              return (
+                <Card
+                  key={`sup-${r.id}`}
+                  className="p-4 border-border/70 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer"
+                  onClick={() => setSupplierOpen(r.id)}
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                          <Building2 className="h-3 w-3" /> Fornecedor
+                        </span>
+                        <span className="font-mono text-sm font-semibold">{r.number}</span>
+                        <Badge variant="outline" className={`capitalize ${priorityMeta[r.priority as keyof typeof priorityMeta] ?? ""}`}>{r.priority}</Badge>
+                      </div>
+                      <div className="text-sm font-medium">{supplier}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {branchName(r.branchId)} · {r.items.length} ite{r.items.length === 1 ? "m" : "ns"} · {brl(requestValue(r))} · criado {fmt(r.createdAt)}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                      <div className="text-right mr-2">
+                        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Prazo</div>
+                        <div className="text-sm font-medium">{fmt(r.desiredDate)}</div>
+                      </div>
+                      <div className="min-w-[10rem]">
+                        <Badge variant="outline" className={`w-full justify-center py-1.5 ${supplierTone[r.status] ?? ""}`}>
+                          {supplierStatus[r.status as keyof typeof supplierStatus] ?? r.status}
+                        </Badge>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setSupplierOpen(r.id); }}>Abrir</Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
       </div>
+
       {newOpen && <NewOrderDialog open onClose={() => setNewOpen(false)} initial={editing} />}
       {supplierOpen && <SupplierOrderDetail id={supplierOpen} onClose={() => setSupplierOpen(null)} />}
-      <OrderSheet key={open?.id ?? 'closed'} order={open} onClose={() => setOpenId(null)} onEdit={o => { setOpenId(null); setEditing(o); setNewOpen(true); }} />
+      <OrderSheet key={open?.id ?? "closed"} order={open} onClose={() => setOpenId(null)} onEdit={(o) => { setOpenId(null); setEditing(o); setNewOpen(true); }} />
     </AppShell>
   );
 }
