@@ -8,6 +8,7 @@
     "dev:backend": "npm run dev --prefix backend",
     "build": "vite build",
     "build:dev": "node scripts/build-development.mjs",
+    "deploy:vps": "bash scripts/deploy-vps.sh",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
