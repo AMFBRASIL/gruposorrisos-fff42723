@@ -1,16 +1,16 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   CalendarDays, UserPlus, IdCard, Building2, CheckCircle2,
-  Sparkles, ArrowRight, ArrowLeft, X, Palette, Mail, ShieldCheck, MapPin,
+  Sparkles, ArrowRight, ArrowLeft, X, Palette, Mail, ShieldCheck, MapPin, Pencil, KeyRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import { usersStore, useAccessProfiles, ACCESS_PAGES } from "@/lib/store";
-import { useDirectory, type DirectoryRole } from "@/lib/directory";
+import { useDirectory, type DirectoryRole, type DirectoryUser } from "@/lib/directory";
 import { useBranches } from "@/lib/branches-live";
 import wizardBg from "@/assets/wizard-bg.jpg";
 
@@ -19,7 +19,7 @@ const STEPS = [
   { id: 1, title: "Perfil", desc: "Perfil de acesso", icon: ShieldCheck },
   { id: 2, title: "Departamento", desc: "Área de atuação", icon: Building2 },
   { id: 3, title: "Filial", desc: "Unidade ou todas", icon: MapPin },
-  { id: 4, title: "Revisão", desc: "Confirme e cadastre", icon: CheckCircle2 },
+  { id: 4, title: "Revisão", desc: "Confirme e salve", icon: CheckCircle2 },
 ];
 
 const COLORS = [
@@ -49,12 +49,13 @@ function roleFor(roles: DirectoryRole[], profileName: string, allBranches: boole
   return fallback;
 }
 
-export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CreateMemberWizard({ open, onClose, member = null }: { open: boolean; onClose: () => void; member?: DirectoryUser | null }) {
   const profiles = useAccessProfiles();
   const directory = useDirectory();
   const liveBranches = useBranches();
   const units = (liveBranches.length ? liveBranches.filter((branch) => branch.active) : directory.branches)
     .map((branch) => ({ id: branch.id, name: branch.name }));
+  const editing = Boolean(member?.id);
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -62,6 +63,8 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
   const [profileId, setProfileId] = useState<string>(profiles[0]?.id ?? "");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
   const [branchChoice, setBranchChoice] = useState("all");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
 
   const prettyDate = new Date().toLocaleDateString("pt-BR", {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
@@ -70,16 +73,50 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
   const reset = () => {
     setStep(0); setName(""); setEmail(""); setColor(COLORS[0]);
     setProfileId(profiles[0]?.id ?? ""); setDepartment(DEPARTMENTS[0]); setBranchChoice("all");
+    setPassword(""); setPasswordConfirm("");
   };
+
+  useEffect(() => {
+    if (!open) return;
+    if (!member) {
+      reset();
+      return;
+    }
+    setStep(0);
+    setName(member.name);
+    setEmail(member.email);
+    setColor(member.color || COLORS[0]);
+    setProfileId(member.profileId || profiles[0]?.id || "");
+    setDepartment(member.department || DEPARTMENTS[0]);
+    setBranchChoice(member.seesAllBranches ? "all" : member.memberships[0]?.branchId || "all");
+    setPassword("");
+    setPasswordConfirm("");
+  }, [open, member?.id]);
+
+  const departmentOptions = department && !DEPARTMENTS.includes(department)
+    ? [department, ...DEPARTMENTS]
+    : DEPARTMENTS;
+  const colorOptions = color && !COLORS.includes(color) ? [color, ...COLORS] : COLORS;
 
   const close = () => { reset(); onClose(); };
 
   const selectedProfile = profiles.find(p => p.id === profileId) ?? profiles[0];
   const branchReady = branchChoice === "all" ? units.length > 0 : units.some((unit) => unit.id === branchChoice);
   const branchText = branchChoice === "all" ? "Todas as filiais" : units.find((unit) => unit.id === branchChoice)?.name ?? "Filial";
+  const passwordValue = password.trim();
+  const passwordOk = !passwordValue || (passwordValue.length >= 8 && passwordValue === passwordConfirm.trim());
+  const passwordHint = !passwordValue
+    ? (editing ? "Deixe em branco para manter a senha atual." : "Se ficar vazio, o sistema gera uma senha temporária.")
+    : passwordValue.length < 8
+      ? "A senha precisa ter ao menos 8 caracteres."
+      : passwordValue !== passwordConfirm.trim()
+        ? "A confirmação precisa ser igual à senha."
+        : editing
+          ? "A senha será atualizada ao salvar."
+          : "Essa senha será usada no primeiro acesso.";
 
   const submit = async () => {
-    if (!name.trim() || !selectedProfile || !branchReady) return;
+    if (!name.trim() || !selectedProfile || !branchReady || !passwordOk) return;
     try {
       const role = roleFor(directory.roles, selectedProfile.name, branchChoice === "all");
       const anchor = branchChoice === "all" ? units[0]?.id : branchChoice;
@@ -88,8 +125,7 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
         return;
       }
       const memberships = [{ branchId: anchor, roleId: role.id }];
-      const password = await usersStore.addUser({
-        id: `u_${Date.now().toString(36)}`,
+      const payload = {
         name: name.trim(),
         email: email.trim() || `${name.trim().split(/\s+/)[0]?.toLowerCase()}@gruposorrisos.com.br`,
         role: selectedProfile.name,
@@ -99,15 +135,31 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
         profileId: selectedProfile.id,
         memberships,
         seesAllBranches: branchChoice === "all",
-      }, { ...selectedProfile.access });
-      toast.success(password ? `Membro cadastrado. Senha inicial: ${password}` : "Membro cadastrado");
+        ...(passwordValue ? { password: passwordValue } : {}),
+      };
+      if (editing && member) {
+        await usersStore.updateUser({ ...payload, id: member.id }, { ...selectedProfile.access });
+        toast.success(passwordValue ? "Membro e senha atualizados" : "Membro atualizado");
+      } else {
+        const temporary = await usersStore.addUser({
+          ...payload,
+          id: `u_${Date.now().toString(36)}`,
+        }, { ...selectedProfile.access });
+        toast.success(
+          passwordValue
+            ? "Membro cadastrado com a senha informada"
+            : temporary
+              ? `Membro cadastrado. Senha inicial: ${temporary}`
+              : "Membro cadastrado",
+        );
+      }
       close();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "Não foi possível cadastrar o membro.");
+      toast.error(error instanceof ApiError ? error.message : editing ? "Não foi possível atualizar o membro." : "Não foi possível cadastrar o membro.");
     }
   };
 
-  const canNext = step === 0 ? name.trim().length > 0 : step === 3 ? branchReady : true;
+  const canNext = step === 0 ? name.trim().length > 0 && passwordOk : step === 3 ? branchReady : true;
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) close(); }}>
@@ -120,10 +172,11 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
             <div className="absolute inset-0 bg-gradient-to-br from-black/55 via-black/40 to-black/70" />
             <div className="relative">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur px-3 py-1 text-[11px] font-medium border border-white/20">
-                <Sparkles className="h-3 w-3" /> Novo membro
+                {editing ? <Pencil className="h-3 w-3" /> : <Sparkles className="h-3 w-3" />}
+                {editing ? "Editar membro" : "Novo membro"}
               </div>
               <h2 className="mt-5 text-2xl font-semibold leading-tight">
-                Faça a equipe<br />crescer junto.
+                {editing ? <>Atualize os dados<br />do colaborador.</> : <>Faça a equipe<br />crescer junto.</>}
               </h2>
               <p className="mt-2 text-sm text-white/75 capitalize">{prettyDate}</p>
             </div>
@@ -202,12 +255,40 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                         className="mt-2 h-11"
                       />
                     </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                          <KeyRound className="h-3.5 w-3.5" /> {editing ? "Nova senha" : "Senha"}
+                        </Label>
+                        <Input
+                          type="password"
+                          autoComplete="new-password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder={editing ? "Opcional" : "Opcional · gera automática"}
+                          className="mt-2 h-11"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">Confirmar senha</Label>
+                        <Input
+                          type="password"
+                          autoComplete="new-password"
+                          value={passwordConfirm}
+                          onChange={(e) => setPasswordConfirm(e.target.value)}
+                          placeholder="Repita a senha"
+                          className="mt-2 h-11"
+                          disabled={!passwordValue}
+                        />
+                      </div>
+                      <p className={`sm:col-span-2 text-xs ${passwordOk ? "text-muted-foreground" : "text-destructive"}`}>{passwordHint}</p>
+                    </div>
                     <div>
                       <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
                         <Palette className="h-3.5 w-3.5" /> Cor do avatar
                       </Label>
                       <div className="mt-3 flex flex-wrap gap-3">
-                        {COLORS.map(c => (
+                        {colorOptions.map(c => (
                           <button
                             key={c} type="button" onClick={() => setColor(c)}
                             aria-label={`Cor ${c}`}
@@ -266,7 +347,7 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                       <p className="text-sm text-muted-foreground mt-1">Escolha o departamento desse membro.</p>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {DEPARTMENTS.map(d => {
+                      {departmentOptions.map(d => {
                         const selected = department === d;
                         return (
                           <button
@@ -329,7 +410,9 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                   <div className="space-y-5">
                     <div>
                       <h3 className="text-xl font-semibold">Tudo certo?</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Revise as informações antes de cadastrar o membro.</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {editing ? "Revise as informações antes de salvar as alterações." : "Revise as informações antes de cadastrar o membro."}
+                      </p>
                     </div>
                     <div className="rounded-xl border bg-card/40 p-5 space-y-4">
                       <div className="flex items-start gap-3">
@@ -363,6 +446,16 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                             <span className="font-medium">{branchText}</span>
                           </div>
                         </Field>
+                        <Field label="Senha">
+                          <div className="flex items-center gap-2">
+                            <KeyRound className="h-4 w-4 text-primary" />
+                            <span className="font-medium">
+                              {passwordValue
+                                ? editing ? "Será atualizada" : "Definida manualmente"
+                                : editing ? "Mantém a atual" : "Será gerada"}
+                            </span>
+                          </div>
+                        </Field>
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground">
@@ -382,8 +475,8 @@ export function CreateMemberWizard({ open, onClose }: { open: boolean; onClose: 
                   Continuar <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               ) : (
-                <Button onClick={submit} disabled={!name.trim() || !branchReady}>
-                  <UserPlus className="h-4 w-4 mr-1" /> Cadastrar membro
+                <Button onClick={submit} disabled={!name.trim() || !branchReady || !passwordOk}>
+                  {editing ? <><Pencil className="h-4 w-4 mr-1" /> Salvar alterações</> : <><UserPlus className="h-4 w-4 mr-1" /> Cadastrar membro</>}
                 </Button>
               )}
             </div>

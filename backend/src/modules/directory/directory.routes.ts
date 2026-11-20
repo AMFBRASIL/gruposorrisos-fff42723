@@ -25,6 +25,7 @@ const userBody = z.object({
   department: z.string().trim().max(80).nullable().optional(),
   memberships: z.array(membership).optional(),
   seesAllBranches: z.boolean().optional(),
+  password: z.string().trim().min(8, "A senha precisa ter ao menos 8 caracteres.").max(120).optional(),
 });
 
 const profileBody = z.object({

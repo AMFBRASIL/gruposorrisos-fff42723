@@ -118,14 +118,17 @@ export function userName(id: string) {
   return state.users.find((user) => user.id === id)?.name ?? "Usuário";
 }
 
-export async function saveDirectoryUser(user: DirectoryUser) {
+export async function saveDirectoryUser(user: DirectoryUser & { department?: string | null; profileId?: string | null; seesAllBranches?: boolean }) {
   const exists = state.users.some((item) => item.id === user.id);
   const payload = {
     name: user.name,
     email: user.email,
     initials: user.initials,
     color: user.color,
+    department: user.department ?? null,
+    profileId: user.profileId ?? null,
     memberships: user.memberships,
+    seesAllBranches: Boolean(user.seesAllBranches),
   };
   const result = await authed<{ id: string; temporaryPassword?: string }>(exists ? `/api/directory/users/${user.id}` : "/api/directory/users", {
     method: exists ? "PATCH" : "POST",
@@ -240,24 +243,51 @@ export function useUserProfiles() {
   return toMembers(useDirectory());
 }
 
+type MemberInput = {
+  name: string;
+  email: string;
+  initials: string;
+  color: string;
+  department: string;
+  profileId?: string;
+  role?: string;
+  id?: string;
+  memberships?: { branchId: string; roleId: string }[];
+  seesAllBranches?: boolean;
+  password?: string;
+};
+
+function memberBody(user: MemberInput) {
+  return {
+    name: user.name,
+    email: user.email,
+    initials: user.initials,
+    color: user.color,
+    department: user.department,
+    profileId: user.profileId ?? null,
+    memberships: user.memberships ?? [],
+    seesAllBranches: Boolean(user.seesAllBranches),
+    ...(user.password?.trim() ? { password: user.password.trim() } : {}),
+  };
+}
+
 export const usersStore = {
   getSnapshot: () => toMembers(state),
   subscribe,
-  async addUser(user: { name: string; email: string; initials: string; color: string; department: string; profileId?: string; role?: string; id?: string; memberships?: { branchId: string; roleId: string }[]; seesAllBranches?: boolean }, _access?: Record<string, boolean>) {
+  async addUser(user: MemberInput, _access?: Record<string, boolean>) {
     const result = await authed<{ temporaryPassword?: string }>("/api/directory/users", {
       method: "POST",
-      body: JSON.stringify({
-        name: user.name,
-        email: user.email,
-        initials: user.initials,
-        color: user.color,
-        department: user.department,
-        profileId: user.profileId ?? null,
-        memberships: user.memberships ?? [],
-        seesAllBranches: Boolean(user.seesAllBranches),
-      }),
+      body: JSON.stringify(memberBody(user)),
     });
     await refreshDirectory();
     return result.temporaryPassword;
+  },
+  async updateUser(user: MemberInput & { id: string }, _access?: Record<string, boolean>) {
+    await authed(`/api/directory/users/${encodeURIComponent(user.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(memberBody(user)),
+    });
+    await refreshDirectory();
+    await reloadSessionUser().catch(() => undefined);
   },
 };

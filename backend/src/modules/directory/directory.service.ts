@@ -46,9 +46,14 @@ export class DirectoryService {
     department?: string | null;
     memberships?: MembershipInput[];
     seesAllBranches?: boolean;
+    password?: string;
   }, ip: string | null) {
     assertManager(actor);
     if (!input.id) await this.hooks?.assertNewEmail?.(input.email.trim().toLowerCase());
+    const password = input.password?.trim();
+    if (password && password.length < 8) {
+      throw new AppError(400, "VALIDATION", "A senha precisa ter ao menos 8 caracteres.");
+    }
     try {
       const created = await this.repository.saveUser({
         id: input.id,
@@ -61,6 +66,7 @@ export class DirectoryService {
         department: input.department,
         memberships: input.memberships ?? [],
         seesAllBranches: input.seesAllBranches,
+        password: password || undefined,
         ip,
       });
       if (created.temporaryPassword) {

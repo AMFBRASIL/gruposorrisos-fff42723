@@ -183,6 +183,7 @@ export class DirectoryRepository {
     department?: string | null;
     memberships: MembershipInput[];
     seesAllBranches?: boolean;
+    password?: string;
     ip: string | null;
   }) {
     const email = input.email.trim().toLowerCase();
@@ -195,8 +196,13 @@ export class DirectoryRepository {
     const memberships = await this.normalizeMemberships(input.memberships);
     const profileId = input.profileId === undefined ? await this.profileForMemberships(input.id, memberships) : input.profileId;
     const departmentId = input.department === undefined ? undefined : await this.departmentId(input.department);
-    const temporary = input.id ? undefined : temporaryPassword(randomBytes(12));
-    const passwordHash = temporary ? await hashPassword(temporary) : null;
+    const chosenPassword = input.password?.trim() || undefined;
+    const temporary = input.id || chosenPassword ? undefined : temporaryPassword(randomBytes(12));
+    const passwordHash = chosenPassword
+      ? await hashPassword(chosenPassword)
+      : temporary
+        ? await hashPassword(temporary)
+        : null;
 
     const userId = await transaction(this.pool, async (connection) => {
       if (!input.id) {
@@ -224,6 +230,10 @@ export class DirectoryRepository {
         fields.push("sees_all_branches = ?");
         params.push(input.seesAllBranches ? "1" : "0");
       }
+      if (passwordHash) {
+        fields.push("password_hash = ?", "failed_logins = 0", "locked_until = NULL");
+        params.push(passwordHash);
+      }
       params.push(input.id);
       const [updated] = await connection.query<ResultSetHeader>(
         `UPDATE users SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
@@ -231,7 +241,10 @@ export class DirectoryRepository {
       );
       if (!updated.affectedRows) throw new Error("NOT_FOUND");
       await this.replaceMemberships(connection, input.id, memberships);
-      await this.audit(connection, input.actorId, "users", input.id, "UPDATE", `Alterou ${input.name.trim()}`, input.ip);
+      const note = passwordHash
+        ? `Alterou ${input.name.trim()} e atualizou a senha`
+        : `Alterou ${input.name.trim()}`;
+      await this.audit(connection, input.actorId, "users", input.id, "UPDATE", note, input.ip);
       return input.id;
     });
 
