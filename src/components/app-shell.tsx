@@ -212,11 +212,10 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
   };
 
   return (
-    <div data-app-shell className="flex h-dvh w-full overflow-hidden bg-muted/40 text-foreground p-0 md:p-3 md:gap-3">
-      {/* Desktop sidebar — detached card */}
+    <div data-app-shell className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
+      {/* Desktop sidebar — flush to viewport edges */}
       <aside
-        className={`hidden md:flex shrink-0 flex-col rounded-lg border border-sidebar-border text-sidebar-foreground shadow-xl shadow-primary/10 overflow-hidden sticky top-3 self-start transition-[width] duration-200 ease-out ${collapsed ? "w-[72px]" : "w-64"}`}
-        style={{ height: "calc(100vh - 1.5rem)", background: "linear-gradient(180deg, var(--sidebar) 0%, color-mix(in oklab, var(--sidebar) 80%, black) 100%)" }}
+        className={`hidden md:flex h-dvh shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground overflow-hidden transition-[width] duration-200 ease-out ${collapsed ? "w-[72px]" : "w-64"}`}
       >
         <SidebarBody collapsed={collapsed} pathname={pathname} />
       </aside>
@@ -228,7 +227,7 @@ export function AppShell({ children, title, subtitle, actions, primaryAction }: 
         </SheetContent>
       </Sheet>
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col rounded-none md:rounded-lg bg-background border-0 md:border border-border overflow-hidden">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col h-dvh bg-background overflow-hidden">
         <header className="sticky top-0 z-20 flex items-center gap-2 md:gap-3 border-b border-border bg-background/85 backdrop-blur px-3 md:px-6 h-16">
           <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menu">
             <Menu className="h-5 w-5" />
